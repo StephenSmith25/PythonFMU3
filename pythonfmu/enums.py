@@ -16,6 +16,7 @@ class Fmi2Causality(Enum):
     input = 2
     output = 3
     local = 4
+    independent = 5
 
 
 class Fmi2Initial(Enum):

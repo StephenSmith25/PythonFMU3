@@ -1,13 +1,18 @@
 import sys
 import platform
 
+import platform
+
+def get_fmu_arch():
+    #is_64bits = sys.maxsize > 2 ** 32
+    system = platform.system()
+    is_x86 = platform.machine() in ["i386", "AMD64", "x86_64"]
+    platforms = {"Windows": "win", "Linux": "linux", "Darwin": "darwin"}
+    return "x86_64" if is_x86 else "x86" + "-" + platforms.get(system, "unknown")
 
 def get_platform() -> str:
     """Get FMU binary platform folder name."""
-    system = platform.system()
-    is_64bits = sys.maxsize > 2 ** 32
-    platforms = {"Windows": "win", "Linux": "linux", "Darwin": "darwin"}
-    return platforms.get(system, "unknown") + "64" if is_64bits else "32"
+    return get_fmu_arch()
 
 
 def get_lib_extension() -> str:

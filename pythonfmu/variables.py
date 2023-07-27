@@ -3,6 +3,7 @@ from abc import ABC
 from enum import Enum
 from typing import Any, Optional
 from xml.etree.ElementTree import Element, SubElement
+from collections import ChainMap
 
 from .enums import Fmi2Causality, Fmi2Initial, Fmi2Variability
 
@@ -29,6 +30,7 @@ class ScalarVariable(ABC):
     ):
         self.getter = getter
         self.setter = setter
+        self._type = None
         self.local_name = name.split(".")[-1]
         self.__attrs = {
             "name": name,
@@ -39,6 +41,7 @@ class ScalarVariable(ABC):
             "initial": initial,
             # 'canHandleMultipleSetPerTimeInstant': # Only for ME
         }
+        self._extras = {}
 
     @property
     def causality(self) -> Optional[Fmi2Causality]:
@@ -98,10 +101,10 @@ class ScalarVariable(ABC):
             xml.etree.ElementTree.Element: XML node
         """
         attrib = dict()
-        for key, value in self.__attrs.items():
+        for key, value in ChainMap(self._extras, self.__attrs).items():
             if value is not None:
                 attrib[key] = str(value.name if isinstance(value, Enum) else value)
-        return Element("ScalarVariable", attrib)
+        return Element(self._type, attrib)
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}" \
@@ -114,6 +117,7 @@ class Real(ScalarVariable):
     def __init__(self, name: str, start: Optional[Any] = None, **kwargs):
         super().__init__(name, **kwargs)
         self.__attrs = {"start": start}
+        self._type = "Float64"
 
     @property
     def start(self) -> Optional[Any]:
@@ -130,8 +134,9 @@ class Real(ScalarVariable):
                 # In order to not loose precision, a number of this type should be 
                 # stored on an XML file with at least 16 significant digits
                 attrib[key] = f"{value:.16g}"
+        self._extras = attrib
         parent = super().to_xml()
-        SubElement(parent, "Real", attrib)
+        #SubElement(parent, "Real", attrib)
 
         return parent
 
@@ -140,6 +145,7 @@ class Integer(ScalarVariable):
     def __init__(self, name: str, start: Optional[Any] = None, **kwargs):
         super().__init__(name, **kwargs)
         self.__attrs = {"start": start}
+        self._type = "Int32";
 
     @property
     def start(self) -> Optional[Any]:
@@ -155,7 +161,7 @@ class Integer(ScalarVariable):
             if value is not None:
                 attrib[key] = str(value)
         parent = super().to_xml()
-        SubElement(parent, "Integer", attrib)
+        #SubElement(parent, "Integer", attrib)
 
         return parent
 
@@ -164,6 +170,7 @@ class Boolean(ScalarVariable):
     def __init__(self, name: str, start: Optional[Any] = None, **kwargs):
         super().__init__(name, **kwargs)
         self.__attrs = {"start": start}
+        self._type = "Boolean"
 
     @property
     def start(self) -> Optional[Any]:
@@ -178,8 +185,9 @@ class Boolean(ScalarVariable):
         for key, value in self.__attrs.items():
             if value is not None:
                 attrib[key] = str(value).lower()
+        self._extras = attrib
         parent = super().to_xml()
-        SubElement(parent, "Boolean", attrib)
+        #SubElement(parent, "Boolean", attrib)
 
         return parent
 
@@ -188,6 +196,7 @@ class String(ScalarVariable):
     def __init__(self, name: str, start: Optional[Any] = None, **kwargs):
         super().__init__(name, **kwargs)
         self.__attrs = {"start": start}
+        self._type = "String"
 
     @property
     def start(self) -> Optional[Any]:
@@ -203,6 +212,6 @@ class String(ScalarVariable):
             if value is not None:
                 attrib[key] = str(value)
         parent = super().to_xml()
-        SubElement(parent, "String", attrib)
+        #SubElement(parent, "String", attrib)
 
         return parent

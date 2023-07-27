@@ -68,9 +68,9 @@ class Fmi2Slave(ABC):
         date_str = t.isoformat(timespec="seconds")
 
         attrib = dict(
-            fmiVersion="2.0",
+            fmiVersion="3.0",
             modelName=self.modelName,
-            guid=f"{self.guid!s}",
+            instantiationToken=f"{self.guid!s}",
             generationTool=f"PythonFMU {VERSION}",
             generationDateAndTime=date_str,
             variableNamingConvention="structured"
@@ -130,11 +130,14 @@ class Fmi2Slave(ABC):
             filter(lambda v: v.causality == Fmi2Causality.output, self.vars.values())
         )
 
+        continuous_state_derivatives = list(
+            filter(lambda v: v.causality == Fmi2Causality.output, self.vars.values())
+        )
+
         if outputs:
-            outputs_node = SubElement(structure, "Outputs")
-            for i, v in enumerate(self.vars.values()):
+            for _, v in enumerate(self.vars.values()):
                 if v.causality == Fmi2Causality.output:
-                    SubElement(outputs_node, "Unknown", attrib=dict(index=str(i + 1)))
+                    SubElement(structure, "Output", attrib=dict(valueReference=str(v.value_reference)))
 
         return root
 

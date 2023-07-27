@@ -49,9 +49,9 @@ else ()
 endif ()
 
 if ("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
-  set(TARGET_PLATFORM ${TARGET_PLATFORM}64)
+  set(TARGET_PLATFORM x86_64-${TARGET_PLATFORM})
 else ()
-  set(TARGET_PLATFORM ${TARGET_PLATFORM}32)
+  set(TARGET_PLATFORM x86-${TARGET_PLATFORM})
 endif ()
 
 message("Building pythonfmu-export for platform ${TARGET_PLATFORM}")
