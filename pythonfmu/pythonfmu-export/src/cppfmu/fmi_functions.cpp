@@ -8,19 +8,39 @@
 #include <exception>
 #include <limits>
 
+#define NOT_IMPLEMENTED_GETTER(name) fmi3Status fmi3Get##name(fmi3Status,     fmi3Instance c,
+    const fmi3ValueReference vr[],
+    size_t,
+    const #name values[],
+    size_t) { throw std::logic_error("fmi3Get" #name " not implemented yet."); }  
+#define NOT_IMPLEMENTED_SETTER(name) fmi3Status fmi3Set##name(fmi3Status) { throw std::logic_error("fmi3Set" #name " not implemented yet."); }  
 
 namespace
 {
 // A struct that holds all the data for one model instance.
 struct Component
 {
-    Component(
-        cppfmu::FMIString instanceName,
+    enum class State
+    {
+        StartAndEnd = 1 << 0,
+        ConfigurationMode = 1 << 1,
+        Instantiated = 1 << 2,
+        InitializationMode = 1 << 3,
+        EventMode = 1 << 4,
+        ContinuousTimeMode = 1 << 5,
+        StepMode = 1 << 6,
+        ClockActivationMode = 1 << 7,
+        StepDiscarded = 1 << 8,
+        ReconfigurationMode = 1 << 9,
+        IntermediateUpdateMode = 1 << 10,
+        Terminated = 1 << 11,
+        modelError = 1 << 12,
+        modelFatal = 1 << 13,
+    };
+    Component(cppfmu::FMIString instanceName,
         cppfmu::FMICallbackLogger logCallback,
-        cppfmu::FMIBoolean loggingOn)
-        : loggerSettings{std::make_shared<cppfmu::Logger::Settings>()}
-        , logger{this, instanceName, logCallback, loggerSettings}
-        , lastSuccessfulTime{std::numeric_limits<cppfmu::FMIReal>::quiet_NaN()}
+        cppfmu::FMIBoolean loggingOn) : loggerSettings{std::make_shared<cppfmu::Logger::Settings>()},
+        logger{this, instanceName, logCallback, loggerSettings}, lastSuccessfulTime{std::numeric_limits<cppfmu::FMIReal>::quiet_NaN()}
     {
         loggerSettings->debugLoggingEnabled = (loggingOn == cppfmu::FMITrue);
     }
@@ -28,6 +48,7 @@ struct Component
     // General
     std::shared_ptr<cppfmu::Logger::Settings> loggerSettings;
     cppfmu::Logger logger;
+    State state;
 
     // Co-simulation
     std::unique_ptr<cppfmu::SlaveInstance> slave;
@@ -50,7 +71,7 @@ const char* fmi3GetVersion()
 }
 
 
-fmi3Instance fmi3InstantiateCoSimulationType(
+fmi3Instance fmi3InstantiateCoSimulation(
     fmi3String instanceName,
     fmi3String instantiationToken,
     fmi3String fmuResourceLocation,
@@ -85,6 +106,33 @@ fmi3Instance fmi3InstantiateCoSimulationType(
         // functions->logger(nullptr, instanceName, fmi3Error, "", e.what());
         return nullptr;
     }
+}
+
+fmi3Instance fmi3InstantiateModelExchange(
+    fmi3String                 instanceName,
+    fmi3String                 instantiationToken,
+    fmi3String                 resourcePath,
+    fmi3Boolean                visible,
+    fmi3Boolean                loggingOn,
+    fmi3InstanceEnvironment    instanceEnvironment,
+    fmi3LogMessageCallback     logMessage)
+{
+    throw std::logic_error("Unsupported FMU instance type requested (only co-simulation is supported)");
+}
+
+fmi3Instance fmi3InstantiateScheduledExecution(
+    fmi3String                     instanceName,
+    fmi3String                     instantiationToken,
+    fmi3String                     resourcePath,
+    fmi3Boolean                    visible,
+    fmi3Boolean                    loggingOn,
+    fmi3InstanceEnvironment        instanceEnvironment,
+    fmi3LogMessageCallback         logMessage,
+    fmi3ClockUpdateCallback        clockUpdate,
+    fmi3LockPreemptionCallback     lockPreemption,
+    fmi3UnlockPreemptionCallback   unlockPreemption)
+{
+    throw std::logic_error("Unsupported FMU instance type requested (only co-simulation is supported)");
 }
 
 
@@ -145,6 +193,20 @@ fmi3Status fmi3ExitInitializationMode(fmi3Instance c)
         component->logger.Log(fmi3Error, "", e.what());
         return fmi3Error;
     }
+}
+
+fmi3Status fmi3EnterEventMode(fmi3Instance c)
+{
+    const auto component = reinterpret_cast<Component*>(c);
+    component->state = Component::State::EventMode;
+    return fmi3OK;
+}
+
+fmi3Status fmi3EnterStepMode(fmi3Instance c)
+{
+    const auto component = reinterpret_cast<Component*>(c);
+    component->state = Component::State::StepMode;
+    return fmi3OK;
 }
 
 
@@ -518,3 +580,7 @@ fmi3Status fmi3DoStep(
     }
 }
 }
+
+
+NOT_IMPLEMENTED_GETTER(Float32);
+NOT_IMPLEMENTED_SETTER(Float32);
