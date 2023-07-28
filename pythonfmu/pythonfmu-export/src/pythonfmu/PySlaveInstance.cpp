@@ -407,19 +407,19 @@ void PySlaveInstance::GetString(const cppfmu::FMIValueReference* vr, std::size_t
     });
 }
 
-void PySlaveInstance::GetFMUstate(fmi2FMUstate& state)
+void PySlaveInstance::GetFMUstate(fmi3FMUState& state)
 {
     py_safe_run([this, &state](PyGILState_STATE gilState) {
         auto f = PyObject_CallMethod(pInstance_, "_get_fmu_state", nullptr);
         if (f == nullptr) {
             handle_py_exception("[_get_fmu_state] PyObject_CallMethod", gilState);
         }
-        state = reinterpret_cast<fmi2FMUstate*>(f);
+        state = reinterpret_cast<fmi3FMUState*>(f);
         clearLogBuffer();
     });
 }
 
-void PySlaveInstance::SetFMUstate(const fmi2FMUstate& state)
+void PySlaveInstance::SetFMUstate(const fmi3FMUState& state)
 {
     py_safe_run([this, &state](PyGILState_STATE gilState) {
         auto pyState = reinterpret_cast<PyObject*>(state);
@@ -431,7 +431,7 @@ void PySlaveInstance::SetFMUstate(const fmi2FMUstate& state)
     });
 }
 
-void PySlaveInstance::FreeFMUstate(fmi2FMUstate& state)
+void PySlaveInstance::FreeFMUstate(fmi3FMUState& state)
 {
     py_safe_run([this, &state](PyGILState_STATE gilState) {
         auto f = reinterpret_cast<PyObject*>(state);
@@ -439,7 +439,7 @@ void PySlaveInstance::FreeFMUstate(fmi2FMUstate& state)
     });
 }
 
-size_t PySlaveInstance::SerializedFMUstateSize(const fmi2FMUstate& state)
+size_t PySlaveInstance::SerializedFMUstateSize(const fmi3FMUState& state)
 {
     size_t size;
     py_safe_run([this, &state, &size](PyGILState_STATE gilState) {
@@ -455,7 +455,7 @@ size_t PySlaveInstance::SerializedFMUstateSize(const fmi2FMUstate& state)
     return size;
 }
 
-void PySlaveInstance::SerializeFMUstate(const fmi2FMUstate& state, fmi2Byte* bytes, size_t size)
+void PySlaveInstance::SerializeFMUstate(const fmi3FMUState& state, fmi3Byte* bytes, size_t size)
 {
     py_safe_run([this, &state, &bytes, size](PyGILState_STATE gilState) {
         auto pyState = reinterpret_cast<PyObject*>(state);
@@ -475,10 +475,11 @@ void PySlaveInstance::SerializeFMUstate(const fmi2FMUstate& state, fmi2Byte* byt
     });
 }
 
-void PySlaveInstance::DeSerializeFMUstate(const fmi2Byte bytes[], size_t size, fmi2FMUstate& state)
+void PySlaveInstance::DeSerializeFMUstate(const fmi3Byte bytes[], size_t size, fmi3FMUState& state)
 {
     py_safe_run([this, &bytes, size, &state](PyGILState_STATE gilState) {
-        PyObject* pyStateBytes = PyBytes_FromStringAndSize(bytes, size);
+        char const * castedBytes = reinterpret_cast<char const*>(bytes);
+        PyObject* pyStateBytes = PyBytes_FromStringAndSize(castedBytes, size);
         if (pyStateBytes == nullptr) {
             handle_py_exception("[DeSerializeFMUstate] PyBytes_FromStringAndSize", gilState);
         }
@@ -486,7 +487,7 @@ void PySlaveInstance::DeSerializeFMUstate(const fmi2Byte bytes[], size_t size, f
         if (pyState == nullptr) {
             handle_py_exception("[DeSerializeFMUstate] PyObject_CallMethod", gilState);
         }
-        state = reinterpret_cast<fmi2FMUstate*>(pyState);
+        state = reinterpret_cast<fmi3FMUState*>(pyState);
         Py_DECREF(pyStateBytes);
         clearLogBuffer();
     });
@@ -538,7 +539,7 @@ PySlaveInstance::~PySlaveInstance()
 
 std::unique_ptr<pythonfmu::PyState> pyState = nullptr;
 
-cppfmu::UniquePtr<cppfmu::SlaveInstance> CppfmuInstantiateSlave(
+std::unique_ptr<cppfmu::SlaveInstance> CppfmuInstantiateSlave(
     cppfmu::FMIString instanceName,
     cppfmu::FMIString,
     cppfmu::FMIString fmuResourceLocation,
@@ -546,7 +547,6 @@ cppfmu::UniquePtr<cppfmu::SlaveInstance> CppfmuInstantiateSlave(
     cppfmu::FMIReal,
     cppfmu::FMIBoolean visible,
     cppfmu::FMIBoolean,
-    cppfmu::Memory memory,
     const cppfmu::Logger& logger)
 {
 
@@ -566,6 +566,5 @@ cppfmu::UniquePtr<cppfmu::SlaveInstance> CppfmuInstantiateSlave(
         pyState = std::make_unique<pythonfmu::PyState>();
     }
 
-    return cppfmu::AllocateUnique<pythonfmu::PySlaveInstance>(
-        memory, instanceName, resources, logger, visible);
+    return std::make_unique<pythonfmu::PySlaveInstance>(instanceName, resources, logger, visible);
 }

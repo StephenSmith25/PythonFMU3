@@ -9,6 +9,7 @@
 #include "cppfmu_common.hpp"
 
 #include <vector>
+#include <memory>
 
 namespace cppfmu
 {
@@ -31,7 +32,7 @@ namespace cppfmu
 class SlaveInstance
 {
 public:
-    /* Called from fmi2SetupExperiment() (FMI 2.0) or fmiInitializeSlave()
+    /* Called from fmi3SetupExperiment() (FMI 2.0) or fmiInitializeSlave()
      * (FMI 1.0).
      * Does nothing by default.
      */
@@ -42,29 +43,29 @@ public:
         FMIBoolean stopTimeDefined,
         FMIReal tStop);
 
-    /* Called from fmi2EnterInitializationMode() (FMI 2.0) or
+    /* Called from fmi3EnterInitializationMode() (FMI 2.0) or
      * fmiInitializeSlave() (FMI 1.0).
      * Does nothing by default.
      */
     virtual void EnterInitializationMode();
 
-    /* Called from fmi2ExitInitializationMode() (FMI 2.0) or
+    /* Called from fmi3ExitInitializationMode() (FMI 2.0) or
      * fmiInitializeSlave() (FMI 1.0).
      * Does nothing by default.
      */
     virtual void ExitInitializationMode();
 
-    /* Called from fmi2Terminate()/fmiTerminateSlave().
+    /* Called from fmi3Terminate()/fmiTerminateSlave().
      * Does nothing by default.
      */
     virtual void Terminate();
 
-    /* Called from fmi2Reset()/fmiResetSlave().
+    /* Called from fmi3Reset()/fmiResetSlave().
      * Does nothing by default.
      */
     virtual void Reset();
 
-    /* Called from fmi2SetXxx()/fmiSetXxx().
+    /* Called from fmi3SetXxx()/fmiSetXxx().
      * Throws std::logic_error by default.
      */
     virtual void SetReal(
@@ -84,7 +85,7 @@ public:
         std::size_t nvr,
         const FMIString value[]);
 
-    /* Called from fmi2GetXxx()/fmiGetXxx().
+    /* Called from fmi3GetXxx()/fmiGetXxx().
      * Throws std::logic_error by default.
      */
     virtual void GetReal(
@@ -104,22 +105,22 @@ public:
         std::size_t nvr,
         FMIString value[]) const;
 
-    // Called from fmi2DoStep()/fmiDoStep(). Must be implemented in model code.
+    // Called from fmi3DoStep()/fmiDoStep(). Must be implemented in model code.
     virtual bool DoStep(
         FMIReal currentCommunicationPoint,
         FMIReal communicationStepSize,
         FMIBoolean newStep,
         FMIReal& endOfStep) = 0;
 
-    virtual void GetFMUstate(fmi2FMUstate& state) = 0;
-    virtual void SetFMUstate(const fmi2FMUstate& state) = 0;
-    virtual void FreeFMUstate(fmi2FMUstate& state) = 0;
+    virtual void GetFMUstate(fmi3FMUState& state) = 0;
+    virtual void SetFMUstate(const fmi3FMUState& state) = 0;
+    virtual void FreeFMUstate(fmi3FMUState& state) = 0;
 
-    virtual size_t SerializedFMUstateSize(const fmi2FMUstate& state) = 0;
-    virtual void SerializeFMUstate(const fmi2FMUstate& state, fmi2Byte bytes[], size_t size) = 0;
-    virtual void DeSerializeFMUstate(const fmi2Byte bytes[], size_t size, fmi2FMUstate& state) = 0;
+    virtual size_t SerializedFMUstateSize(const fmi3FMUState& state) = 0;
+    virtual void SerializeFMUstate(const fmi3FMUState& state, fmi3Byte bytes[], size_t size) = 0;
+    virtual void DeSerializeFMUstate(const fmi3Byte bytes[], size_t size, fmi3FMUState& state) = 0;
 
-    // The instance is destroyed in fmi2FreeInstance()/fmiFreeSlaveInstance().
+    // The instance is destroyed in fmi3FreeInstance()/fmiFreeSlaveInstance().
     virtual ~SlaveInstance() CPPFMU_NOEXCEPT;
 };
 
@@ -134,7 +135,7 @@ public:
  * The simplest way to set this up is to use cppfmu::AllocateUnique() to
  * create the slave instance.
  *
- * Most of its parameters correspond to those of fmi2Instantiate() and
+ * Most of its parameters correspond to those of fmi3Instantiate() and
  * fmiInstantiateSlave(), except that 'functions' and 'loggingOn' have been
  * replaced with more convenient types:
  *
@@ -149,7 +150,7 @@ public:
  *
  * Note that this function is declared in the global namespace.
  */
-cppfmu::UniquePtr<cppfmu::SlaveInstance> CppfmuInstantiateSlave(
+std::unique_ptr<cppfmu::SlaveInstance> CppfmuInstantiateSlave(
     cppfmu::FMIString instanceName,
     cppfmu::FMIString fmuGUID,
     cppfmu::FMIString fmuResourceLocation,
@@ -157,7 +158,6 @@ cppfmu::UniquePtr<cppfmu::SlaveInstance> CppfmuInstantiateSlave(
     cppfmu::FMIReal timeout,
     cppfmu::FMIBoolean visible,
     cppfmu::FMIBoolean interactive,
-    cppfmu::Memory memory,
     const cppfmu::Logger& logger);
 
 

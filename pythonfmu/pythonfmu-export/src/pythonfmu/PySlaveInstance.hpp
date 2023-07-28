@@ -36,13 +36,13 @@ public:
     void GetBoolean(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIBoolean* value) const override;
     void GetString(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIString* value) const override;
 
-    void GetFMUstate(fmi2FMUstate& state) override;
-    void SetFMUstate(const fmi2FMUstate& state) override;
-    void FreeFMUstate(fmi2FMUstate& state) override;
+    void GetFMUstate(fmi3FMUState& State) override;
+    void SetFMUstate(const fmi3FMUState& State) override;
+    void FreeFMUstate(fmi3FMUState& State) override;
 
-    size_t SerializedFMUstateSize(const fmi2FMUstate& state) override;
-    void SerializeFMUstate(const fmi2FMUstate& state, fmi2Byte bytes[], size_t size) override;
-    void DeSerializeFMUstate(const fmi2Byte bytes[], size_t size, fmi2FMUstate& state) override;
+    size_t SerializedFMUstateSize(const fmi3FMUState& State) override;
+    void SerializeFMUstate(const fmi3FMUState& State, fmi3Byte bytes[], size_t size) override;
+    void DeSerializeFMUstate(const fmi3Byte bytes[], size_t size, fmi3FMUState& State) override;
 
     void clearLogBuffer() const;
 
