@@ -8,12 +8,22 @@
 #include <exception>
 #include <limits>
 
-#define NOT_IMPLEMENTED_GETTER(name) fmi3Status fmi3Get##name(fmi3Status,     fmi3Instance c,
-    const fmi3ValueReference vr[],
-    size_t,
-    const #name values[],
-    size_t) { throw std::logic_error("fmi3Get" #name " not implemented yet."); }  
-#define NOT_IMPLEMENTED_SETTER(name) fmi3Status fmi3Set##name(fmi3Status) { throw std::logic_error("fmi3Set" #name " not implemented yet."); }  
+#define NOT_IMPLEMENTED throw std::logic_error("function " + std::string(__func__) + " not implemented")
+
+
+#define NOT_IMPLEMENTED_GETTER(suffix, var) fmi3Status fmi3Get##suffix( \
+    fmi3Instance c, \
+    const fmi3ValueReference vr[], \
+    size_t nValueReferences, \
+    var values[], \
+    size_t nValues) { NOT_IMPLEMENTED;}  
+
+#define NOT_IMPLEMENTED_SETTER(suffix, var) fmi3Status fmi3Set##suffix ( \
+    fmi3Instance c, \
+    const fmi3ValueReference vr[], \
+    size_t nValueReferences, \
+    const var values[], \
+    size_t nValues) { NOT_IMPLEMENTED;}  
 
 namespace
 {
@@ -139,9 +149,6 @@ fmi3Instance fmi3InstantiateScheduledExecution(
 void fmi3FreeInstance(fmi3Instance c)
 {
     const auto component = reinterpret_cast<Component*>(c);
-    // The Component object was allocated using cppfmu::AllocateUnique(),
-    // which uses cppfmu::New() internally, so we use cppfmu::Delete() to
-    // release it again.
     delete component;
 }
 
@@ -193,6 +200,28 @@ fmi3Status fmi3ExitInitializationMode(fmi3Instance c)
         component->logger.Log(fmi3Error, "", e.what());
         return fmi3Error;
     }
+}
+
+fmi3Status fmi3EnterConfigurationMode(fmi3Instance c)
+{
+    
+    const auto component = reinterpret_cast<Component*>(c);
+    component->state = Component::State::ConfigurationMode;
+    return fmi3OK;
+
+}
+
+fmi3Status fmi3ExitConfigurationMode(fmi3Instance c)
+{
+    const auto component = reinterpret_cast<Component*>(c);
+    if (component->state == Component::State::ConfigurationMode)
+    {
+        component->state = Component::State::Instantiated;
+
+    } else{
+        component->state = Component::State::StepMode;
+    }
+    return fmi3OK;
 }
 
 fmi3Status fmi3EnterEventMode(fmi3Instance c)
@@ -323,7 +352,7 @@ fmi3Status fmi3GetString(
 }
 
 
-fmi3Status fmi3SetReal(
+fmi3Status fmi3SetFloat64(
     fmi3Instance c,
     const fmi3ValueReference vr[],
     size_t nvr,
@@ -492,7 +521,7 @@ fmi3Status fmi3SerializeFMUState(
     }
 }
 
-fmi3Status fmi3DeSerializeFMUState(
+fmi3Status fmi3DeserializeFMUState(
     fmi3Instance c,
     const fmi3Byte bytes[],
     size_t size,
@@ -581,6 +610,91 @@ fmi3Status fmi3DoStep(
 }
 }
 
+// NOT IMPLEMENTED
 
-NOT_IMPLEMENTED_GETTER(Float32);
-NOT_IMPLEMENTED_SETTER(Float32);
+NOT_IMPLEMENTED_GETTER(Float32, fmi3Float32);
+NOT_IMPLEMENTED_SETTER(Float32, fmi3Float32);
+
+NOT_IMPLEMENTED_GETTER(Int8, fmi3Int8);
+NOT_IMPLEMENTED_SETTER(Int8, fmi3Int8);
+NOT_IMPLEMENTED_GETTER(Int16, fmi3Int16);
+NOT_IMPLEMENTED_SETTER(Int16, fmi3Int16);
+NOT_IMPLEMENTED_GETTER(Int64, fmi3Int64);
+NOT_IMPLEMENTED_SETTER(Int64, fmi3Int64);
+
+NOT_IMPLEMENTED_GETTER(UInt8, fmi3UInt8);
+NOT_IMPLEMENTED_SETTER(UInt8, fmi3UInt8);
+NOT_IMPLEMENTED_GETTER(UInt16, fmi3UInt16);
+NOT_IMPLEMENTED_SETTER(UInt16, fmi3UInt16);
+NOT_IMPLEMENTED_GETTER(UInt32, fmi3UInt32);
+NOT_IMPLEMENTED_SETTER(UInt32, fmi3UInt32);
+NOT_IMPLEMENTED_GETTER(UInt64, fmi3UInt64);
+NOT_IMPLEMENTED_SETTER(UInt64, fmi3UInt64);
+
+fmi3Status fmi3GetClock(fmi3Instance instance,
+    const fmi3ValueReference valueReferences[],
+    size_t nValueReferences,
+    fmi3Clock values[])
+{
+    NOT_IMPLEMENTED;
+}
+
+fmi3Status fmi3SetClock(fmi3Instance instance,
+    const fmi3ValueReference valueReferences[],
+    size_t nValueReferences,
+    const fmi3Clock values[])
+{
+    NOT_IMPLEMENTED;
+}
+
+fmi3Status fmi3GetBinary(fmi3Instance instance,
+    const fmi3ValueReference valueReferences[],
+    size_t nValueReferences,
+    size_t valueSizes[],
+    fmi3Binary values[],
+    size_t nValues)
+{
+
+    NOT_IMPLEMENTED;
+}
+
+fmi3Status fmi3SetBinary(fmi3Instance instance,
+    const fmi3ValueReference valueReferences[],
+    size_t nValueReferences,
+    const size_t valueSizes[],
+    const fmi3Binary values[],
+    size_t nValues)
+{
+    NOT_IMPLEMENTED;
+}
+
+fmi3Status fmi3GetNumberOfVariableDependencies(fmi3Instance instance,
+    fmi3ValueReference valueReference,
+    size_t* nDependencies)
+{
+    NOT_IMPLEMENTED;
+}
+
+fmi3Status fmi3GetVariableDependencies(fmi3Instance instance,
+    fmi3ValueReference dependent,
+    size_t elementIndicesOfDependent[],
+    fmi3ValueReference independents[],
+    size_t elementIndicesOfIndependents[],
+    fmi3DependencyKind dependencyKinds[],
+    size_t nDependencies)
+{
+    NOT_IMPLEMENTED;
+}
+
+fmi3Status fmi3GetAdjointDerivative(fmi3Instance instance,
+    const fmi3ValueReference unknowns[],
+    size_t nUnknowns,
+    const fmi3ValueReference knowns[],
+    size_t nKnowns,
+    const fmi3Float64 seed[],
+    size_t nSeed,
+    fmi3Float64 sensitivity[],
+    size_t nSensitivity)
+{
+    NOT_IMPLEMENTED;
+}
