@@ -114,9 +114,9 @@ class ScalarVariable(ABC):
 
 
 class Real(ScalarVariable):
-    def __init__(self, name: str, start: Optional[Any] = None, **kwargs):
+    def __init__(self, name: str, start: Optional[Any] = None, derivative: Optional[Any] = None, **kwargs):
         super().__init__(name, **kwargs)
-        self.__attrs = {"start": start}
+        self.__attrs = {"start": start, "derivative": derivative}
         self._type = "Float64"
 
     @property
