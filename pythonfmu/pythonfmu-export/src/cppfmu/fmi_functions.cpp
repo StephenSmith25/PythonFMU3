@@ -559,7 +559,7 @@ fmi3Status fmi3GetDirectionalDerivative(
     return fmi3Error;
 }
 
-fmi3Status fmi3OutputDerivatives(
+fmi3Status fmi3GetOutputDerivatives(
     fmi3Instance c,
     const fmi3ValueReference[],
     size_t,
@@ -695,6 +695,163 @@ fmi3Status fmi3GetAdjointDerivative(fmi3Instance instance,
     size_t nSeed,
     fmi3Float64 sensitivity[],
     size_t nSensitivity)
+{
+    NOT_IMPLEMENTED;
+}
+
+fmi3Status fmi3GetIntervalDecimal(
+    fmi3Instance instance, 
+    const fmi3ValueReference valueReferences[],
+    size_t nValueReferences, 
+    fmi3Float64 intervals[],
+    fmi3IntervalQualifier qualifiers[])
+{
+  NOT_IMPLEMENTED;
+}
+
+fmi3Status fmi3GetIntervalFraction(
+    fmi3Instance instance,
+    const fmi3ValueReference valueReferences[],
+    size_t nValueReferences,
+    fmi3UInt64 intervalCounters[],
+    fmi3UInt64 resolutions[],
+    fmi3IntervalQualifier qualifiers[])
+{
+  NOT_IMPLEMENTED;
+}
+
+fmi3Status
+fmi3GetShiftDecimal(fmi3Instance instance, const fmi3ValueReference valueReferences[],
+    size_t nValueReferences, fmi3Float64 shifts[])
+{
+  NOT_IMPLEMENTED;
+}
+
+fmi3Status
+fmi3GetShiftFraction(fmi3Instance instance, const fmi3ValueReference valueReferences[],
+    size_t nValueReferences, fmi3UInt64 shiftCounters[], fmi3UInt64 resolutions[])
+{
+  NOT_IMPLEMENTED;
+}
+
+fmi3Status
+fmi3SetIntervalDecimal(fmi3Instance instance, const fmi3ValueReference valueReferences[],
+    size_t nValueReferences, const fmi3Float64 intervals[])
+{
+  NOT_IMPLEMENTED;
+}
+
+fmi3Status
+fmi3SetIntervalFraction(fmi3Instance instance, const fmi3ValueReference valueReferences[],
+    size_t nValueReferences, const fmi3UInt64 intervalCounters[],
+    const fmi3UInt64 resolutions[])
+{
+  NOT_IMPLEMENTED;
+}
+
+fmi3Status
+fmi3SetShiftDecimal(fmi3Instance instance, const fmi3ValueReference valueReferences[],
+    size_t nValueReferences, const fmi3Float64 shifts[])
+{
+  NOT_IMPLEMENTED;
+}
+
+fmi3Status
+fmi3SetShiftFraction(fmi3Instance instance, const fmi3ValueReference valueReferences[],
+    size_t nValueReferences, const fmi3UInt64 shiftCounters[],
+    const fmi3UInt64 resolutions[])
+{
+  NOT_IMPLEMENTED;
+}
+
+fmi3Status
+fmi3EvaluateDiscreteStates(fmi3Instance instance)
+{
+  NOT_IMPLEMENTED;
+}
+
+fmi3Status
+fmi3UpdateDiscreteStates(fmi3Instance instance, fmi3Boolean* discreteStatesNeedUpdate,
+    fmi3Boolean* terminateSimulation,
+    fmi3Boolean* nominalsOfContinuousStatesChanged,
+    fmi3Boolean* valuesOfContinuousStatesChanged,
+    fmi3Boolean* nextEventTimeDefined, fmi3Float64* nextEventTime)
+{
+  NOT_IMPLEMENTED;
+}
+
+fmi3Status fmi3ActivateModelPartition(fmi3Instance instance, fmi3ValueReference clockReference,
+    fmi3Float64 activationTime)
+{
+  NOT_IMPLEMENTED;
+}
+
+
+// model exchange functions
+fmi3Status
+fmi3EnterContinuousTimeMode(fmi3Instance instance)
+{
+    NOT_IMPLEMENTED;
+}
+
+fmi3Status
+fmi3CompletedIntegratorStep(fmi3Instance instance, fmi3Boolean noSetFMUStatePriorToCurrentPoint,
+                            fmi3Boolean* enterEventMode, fmi3Boolean* terminateSimulation)
+{
+    NOT_IMPLEMENTED;
+}
+
+/* Providing independent variables and re-initialization of caching */
+fmi3Status
+fmi3SetTime(fmi3Instance instance, fmi3Float64 time)
+{
+    NOT_IMPLEMENTED;
+}
+
+fmi3Status
+fmi3SetContinuousStates(fmi3Instance instance, const fmi3Float64 continuousStates[],
+    size_t nContinuousStates)
+{
+    NOT_IMPLEMENTED;
+}
+
+/* Evaluation of the model equations */
+fmi3Status
+fmi3GetContinuousStateDerivatives(fmi3Instance instance, fmi3Float64 derivatives[],
+    size_t nContinuousStates)
+{
+    NOT_IMPLEMENTED;
+}
+
+fmi3Status
+fmi3GetEventIndicators(fmi3Instance instance, fmi3Float64 eventIndicators[],
+    size_t nEventIndicators)
+{
+    NOT_IMPLEMENTED;
+}
+
+fmi3Status
+fmi3GetContinuousStates(fmi3Instance instance, fmi3Float64 continuousStates[],
+    size_t nContinuousStates)
+{
+    NOT_IMPLEMENTED;
+}
+
+fmi3Status
+fmi3GetNominalsOfContinuousStates(fmi3Instance instance, fmi3Float64 nominals[],
+    size_t nContinuousStates)
+{
+    NOT_IMPLEMENTED;
+}
+
+fmi3Status
+fmi3GetNumberOfEventIndicators(fmi3Instance instance, size_t* nEventIndicators)
+{
+    NOT_IMPLEMENTED;
+}
+
+fmi3Status
+fmi3GetNumberOfContinuousStates(fmi3Instance instance, size_t* nContinuousStates)
 {
     NOT_IMPLEMENTED;
 }
