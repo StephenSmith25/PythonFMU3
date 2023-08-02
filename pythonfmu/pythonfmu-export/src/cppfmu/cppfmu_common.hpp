@@ -18,13 +18,7 @@
 
 extern "C"
 {
-#ifdef CPPFMU_USE_FMI_1_0
-#   include "fmiFunctions.h"
-#elif CPPFMU_USE_FMI_2_0
-#   include "fmi/fmi3Functions.h"
-#else
-#   include "fmi/fmi3Functions.h"
-#endif
+#include "fmi/fmi3Functions.h"
 }
 
 
@@ -40,75 +34,27 @@ namespace cppfmu
 {
 
 // Aliases for FMI types and enums
-#ifdef CPPFMU_USE_FMI_1_0
-    typedef fmiReal FMIReal;
-    typedef fmiInteger FMIInteger;
-    typedef fmiBoolean FMIBoolean;
-    typedef fmiString FMIString;
-    typedef fmiCallbackFunctions FMICallbackFunctions;
-    typedef fmiCallbackAllocateMemory FMICallbackAllocateMemory;
-    typedef fmiCallbackFreeMemory FMICallbackFreeMemory;
-    typedef fmiCallbackLogger FMICallbackLogger;
-    typedef fmiComponent FMIComponent;
-    typedef fmiComponent FMIComponentEnvironment;
-    typedef fmiStatus FMIStatus;
-    typedef fmiValueReference FMIValueReference;
+typedef fmi3Float64 FMIReal;
+typedef fmi3Int32 FMIInteger;
+typedef fmi3Boolean FMIBoolean;
+typedef fmi3String FMIString;
+typedef fmi3LogMessageCallback FMICallbackLogger;
+typedef fmi3Instance FMIComponent;
+typedef fmi3InstanceEnvironment FMIComponentEnvironment;
+typedef fmi3Status FMIStatus;
+typedef fmi3ValueReference FMIValueReference;
 
-    const FMIBoolean FMIFalse = fmiFalse;
-    const FMIBoolean FMITrue = fmiTrue;
+const FMIBoolean FMIFalse = fmi3False;
+const FMIBoolean FMITrue = fmi3True;
 
-    const FMIStatus FMIOK = fmiOK;
-    const FMIStatus FMIWarning = fmiWarning;
-    const FMIStatus FMIDiscard = fmiDiscard;
-    const FMIStatus FMIError = fmiError;
-    const FMIStatus FMIFatal = fmiFatal;
-    const FMIStatus FMIPending = fmiPending;
-#elif CPP_FMU_USE_FMI_2_0
-    typedef fmi3Real FMIReal;
-    typedef fmi3Integer FMIInteger;
-    typedef fmi3Boolean FMIBoolean;
-    typedef fmi3String FMIString;
-    typedef fmi3CallbackFunctions FMICallbackFunctions;
-    typedef fmi3CallbackAllocateMemory FMICallbackAllocateMemory;
-    typedef fmi3CallbackFreeMemory FMICallbackFreeMemory;
-    typedef fmi3CallbackLogger FMICallbackLogger;
-    typedef fmi3Component FMIComponent;
-    typedef fmi3ComponentEnvironment FMIComponentEnvironment;
-    typedef fmi3Status FMIStatus;
-    typedef fmi3ValueReference FMIValueReference;
-
-    const FMIBoolean FMIFalse = fmi3False;
-    const FMIBoolean FMITrue = fmi3True;
-
-    const FMIStatus FMIOK = fmi3OK;
-    const FMIStatus FMIWarning = fmi3Warning;
-    const FMIStatus FMIDiscard = fmi3Discard;
-    const FMIStatus FMIError = fmi3Error;
-    const FMIStatus FMIFatal = fmi3Fatal;
-    const FMIStatus FMIPending = fmi3Pending;
-#else
-    typedef fmi3Float64 FMIReal;
-    typedef fmi3Int32 FMIInteger;
-    typedef fmi3Boolean FMIBoolean;
-    typedef fmi3String FMIString;
-    typedef fmi3LogMessageCallback FMICallbackLogger;
-    typedef fmi3Instance FMIComponent;
-    typedef fmi3InstanceEnvironment FMIComponentEnvironment;
-    typedef fmi3Status FMIStatus;
-    typedef fmi3ValueReference FMIValueReference;
-
-    const FMIBoolean FMIFalse = fmi3False;
-    const FMIBoolean FMITrue = fmi3True;
-
-    const FMIStatus FMIOK = fmi3OK;
-    const FMIStatus FMIWarning = fmi3Warning;
-    const FMIStatus FMIDiscard = fmi3Discard;
-    const FMIStatus FMIError = fmi3Error;
-    const FMIStatus FMIFatal = fmi3Fatal;
-
-#endif
+const FMIStatus FMIOK = fmi3OK;
+const FMIStatus FMIWarning = fmi3Warning;
+const FMIStatus FMIDiscard = fmi3Discard;
+const FMIStatus FMIError = fmi3Error;
+const FMIStatus FMIFatal = fmi3Fatal;
 
 using String = std::string;
+
 
 // ============================================================================
 // ERROR HANDLING
