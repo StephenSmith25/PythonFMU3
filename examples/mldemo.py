@@ -1,4 +1,4 @@
-from pythonfmu import Fmi2Causality, Fmi2Slave, Real
+from pythonfmu import Fmi3Causality, Fmi3Slave, Real
 
 import pathlib  # pathlib is included in the Python Standard Library
 
@@ -9,7 +9,7 @@ except ImportError: # Trick to be able to generate the FMU without TensorFlow an
     np, tf = None, None
 
 
-class MLDemo(Fmi2Slave):
+class MLDemo(Fmi3Slave):
     author = "Magnus Steinstø"
     description = "Limited range TensorFlow sin approximation"
 
@@ -37,9 +37,9 @@ class MLDemo(Fmi2Slave):
         self.sin_output_tf = 0.
         self.sin_output_ref = 0.
 
-        self.register_variable(Real("sin_input", causality=Fmi2Causality.input))
-        self.register_variable(Real("sin_output_tf", causality=Fmi2Causality.output))
-        self.register_variable(Real("sin_output_ref", causality=Fmi2Causality.output))
+        self.register_variable(Real("sin_input", causality=Fmi3Causality.input))
+        self.register_variable(Real("sin_output_tf", causality=Fmi3Causality.output))
+        self.register_variable(Real("sin_output_ref", causality=Fmi3Causality.output))
 
     def do_step(self, current_time, step_size):
         # Similar to model.predict() with less performance overhead

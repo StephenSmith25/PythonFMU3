@@ -1,7 +1,7 @@
-from pythonfmu.fmi2slave import Fmi2Slave, Fmi2Causality, Fmi2Variability, String, DefaultExperiment
+from pythonfmu.fmi3slave import Fmi3Slave, Fmi3Causality, Fmi3Variability, String, DefaultExperiment
 
 
-class PythonSlaveReadFile(Fmi2Slave):
+class PythonSlaveReadFile(Fmi3Slave):
 
     default_experiment = DefaultExperiment(start_time=0)
 
@@ -13,8 +13,8 @@ class PythonSlaveReadFile(Fmi2Slave):
 
         self.register_variable(
             String("file_content", getter=lambda: data,
-                   causality=Fmi2Causality.output,
-                   variability=Fmi2Variability.constant))
+                   causality=Fmi3Causality.output,
+                   variability=Fmi3Variability.constant))
 
     def do_step(self, current_time, step_size):
         return True

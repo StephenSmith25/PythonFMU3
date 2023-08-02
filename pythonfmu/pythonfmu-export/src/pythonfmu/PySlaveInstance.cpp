@@ -26,7 +26,7 @@ inline std::string findClassName(const std::string& fileName)
 {
     std::string line;
     std::ifstream infile(fileName);
-    std::string regexStr(R"(^class (\w+)\(\s*Fmi2Slave\s*\)\s*:)");
+    std::string regexStr(R"(^class (\w+)\(\s*Fmi3Slave\s*\)\s*:)");
     while (getline(infile, line)) {
         std::smatch m;
         std::regex re(regexStr);
@@ -76,7 +76,7 @@ PySlaveInstance::PySlaveInstance(std::string instanceName, std::string resources
         std::string className = findClassName(resources_ + "/" + moduleName + ".py");
         if (className.empty()) {
             cleanPyObject();
-            throw cppfmu::FatalError("Unable to find class extending Fmi2Slave!");
+            throw cppfmu::FatalError("Unable to find class extending Fmi3Slave!");
         }
 
         PyObject* pyClassName = Py_BuildValue("s", className.c_str());

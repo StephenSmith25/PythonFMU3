@@ -1,6 +1,6 @@
 import pytest
 
-from pythonfmu import Fmi2Slave
+from pythonfmu import Fmi3Slave
 from pythonfmu import __version__ as VERSION
 
 from .utils import FMI2PY, PY2FMI
@@ -9,9 +9,9 @@ from .utils import FMI2PY, PY2FMI
 
 
 @pytest.mark.parametrize("model", ["theModelName", None])
-def test_Fmi2Slave_constructor(model):
+def test_Fmi3Slave_constructor(model):
 
-    class Slave(Fmi2Slave):
+    class Slave(Fmi3Slave):
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
@@ -31,8 +31,8 @@ def test_Fmi2Slave_constructor(model):
         assert slave.instance_name == "slaveInstance"
 
 
-def test_Fmi2Slave_generation_tool():
-    class Slave(Fmi2Slave):
+def test_Fmi3Slave_generation_tool():
+    class Slave(Fmi3Slave):
         def do_step(self, t, dt):
             return True
     
@@ -49,9 +49,9 @@ def test_Fmi2Slave_generation_tool():
     2./3., 
     "hello_world"
 ])
-def test_Fmi2Slave_getters(fmi_type, value):
+def test_Fmi3Slave_getters(fmi_type, value):
     
-    class Slave(Fmi2Slave):
+    class Slave(Fmi3Slave):
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
@@ -79,9 +79,9 @@ def test_Fmi2Slave_getters(fmi_type, value):
     2./3., 
     "hello_world",
 ])
-def test_Fmi2Slave_setters(fmi_type, value):
+def test_Fmi3Slave_setters(fmi_type, value):
 
-    class Slave(Fmi2Slave):
+    class Slave(Fmi3Slave):
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
@@ -105,8 +105,8 @@ def test_Fmi2Slave_setters(fmi_type, value):
             set_method([0], [value])
 
 
-def test_Fmi2Slave_log_categories():
-    class Slave(Fmi2Slave):
+def test_Fmi3Slave_log_categories():
+    class Slave(Fmi3Slave):
         def do_step(self, t, dt):
             return True
     
@@ -122,9 +122,9 @@ def test_Fmi2Slave_log_categories():
 @pytest.mark.parametrize("new_categories", [
     dict(),
     {
-        "logStatusWarning": "Log messages with fmi2Warning status.",
-        "logStatusError": "Log messages with fmi2Error status.",
-        "logStatusFatal": "Log messages with fmi2Fatal status.",
+        "logStatusWarning": "Log messages with fmi3Warning status.",
+        "logStatusError": "Log messages with fmi3Error status.",
+        "logStatusFatal": "Log messages with fmi3Fatal status.",
         "logAll": "Log all messages."
     },
     {
@@ -132,8 +132,8 @@ def test_Fmi2Slave_log_categories():
         "logCustom2": "My second custom log category"
     }
 ])
-def test_Fmi2Slave_customized_log_categories(new_categories):
-    class Slave(Fmi2Slave):
+def test_Fmi3Slave_customized_log_categories(new_categories):
+    class Slave(Fmi3Slave):
         log_categories = new_categories
 
         def do_step(self, t, dt):

@@ -11,12 +11,12 @@ from xml.etree.ElementTree import Element, SubElement
 from .logmsg import LogMsg
 from .default_experiment import DefaultExperiment
 from ._version import __version__ as VERSION
-from .enums import Fmi2Type, Fmi2Status, Fmi2Causality, Fmi2Initial, Fmi2Variability
+from .enums import Fmi3Type, Fmi3Status, Fmi3Causality, Fmi3Initial, Fmi3Variability
 from .variables import Boolean, Integer, Real, ScalarVariable, String
 
 ModelOptions = namedtuple("ModelOptions", ["name", "value", "cli"])
 
-FMI2_MODEL_OPTIONS: List[ModelOptions] = [
+FMI3_MODEL_OPTIONS: List[ModelOptions] = [
     ModelOptions("needsExecutionTool", True, "no-external-tool"),
     ModelOptions("canHandleVariableCommunicationStepSize", True, "no-variable-step"),
     ModelOptions("canInterpolateInputs", False, "interpolate-inputs"),
@@ -26,15 +26,15 @@ FMI2_MODEL_OPTIONS: List[ModelOptions] = [
 ]
 
 
-class Fmi2Slave(ABC):
+class Fmi3Slave(ABC):
     """Abstract facade class to execute Python through FMI standard."""
 
     # Dictionary of (category, description) entries
     log_categories: Dict[str, str] = {
-        "logStatusWarning": "Log messages with fmi2Warning status.",
-        "logStatusDiscard": "Log messages with fmi2Discard status.",
-        "logStatusError": "Log messages with fmi2Error status.",
-        "logStatusFatal": "Log messages with fmi2Fatal status.",
+        "logStatusWarning": "Log messages with fmi3Warning status.",
+        "logStatusDiscard": "Log messages with fmi3Discard status.",
+        "logStatusError": "Log messages with fmi3Error status.",
+        "logStatusFatal": "Log messages with fmi3Fatal status.",
         "logAll": "Log all messages."
     }
 
@@ -89,7 +89,7 @@ class Fmi2Slave(ABC):
         root = Element("fmiModelDescription", attrib)
 
         options = dict()
-        for option in FMI2_MODEL_OPTIONS:
+        for option in FMI3_MODEL_OPTIONS:
             value = model_options.get(option.name, option.value)
             options[option.name] = str(value).lower()
         options["modelIdentifier"] = self.modelName
@@ -127,16 +127,16 @@ class Fmi2Slave(ABC):
 
         structure = SubElement(root, "ModelStructure")
         outputs = list(
-            filter(lambda v: v.causality == Fmi2Causality.output, self.vars.values())
+            filter(lambda v: v.causality == Fmi3Causality.output, self.vars.values())
         )
 
         continuous_state_derivatives = list(
-            filter(lambda v: v.causality == Fmi2Causality.output, self.vars.values())
+            filter(lambda v: v.causality == Fmi3Causality.output, self.vars.values())
         )
 
         if outputs:
             for _, v in enumerate(self.vars.values()):
-                if v.causality == Fmi2Causality.output:
+                if v.causality == Fmi3Causality.output:
                     SubElement(structure, "Output", attrib=dict(valueReference=str(v.value_reference)))
 
         return root
@@ -176,7 +176,7 @@ class Fmi2Slave(ABC):
                 owner = getattr(owner, s)
         if var.getter is None:
             var.getter = lambda: getattr(owner, var.local_name)
-        if var.setter is None and hasattr(owner, var.local_name) and var.variability != Fmi2Variability.constant:
+        if var.setter is None and hasattr(owner, var.local_name) and var.variability != Fmi3Variability.constant:
             var.setter = lambda v: setattr(owner, var.local_name, v)
 
     def setup_experiment(self, start_time: float):
@@ -313,7 +313,7 @@ class Fmi2Slave(ABC):
     def log(
         self,
         msg: str,
-        status: Fmi2Status = Fmi2Status.ok,
+        status: Fmi3Status = Fmi3Status.ok,
         category: Optional[str] = None,
         debug: bool = False
     ):
@@ -321,7 +321,7 @@ class Fmi2Slave(ABC):
         
         Args:
             msg (str) : Log message
-            status (Fmi2Status) : Optional, message status (default ok)
+            status (Fmi3Status) : Optional, message status (default ok)
             category (str or None) : Optional, message category (default derived from status)
             debug (bool) : Optional, is this a debug message (default False)
         """

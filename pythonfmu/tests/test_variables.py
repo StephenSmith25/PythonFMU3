@@ -3,8 +3,8 @@ from random import randint
 
 import pytest
 
-from pythonfmu import Fmi2Slave
-from pythonfmu.enums import Fmi2Causality, Fmi2Initial, Fmi2Variability
+from pythonfmu import Fmi3Slave
+from pythonfmu.enums import Fmi3Causality, Fmi3Initial, Fmi3Variability
 from pythonfmu.variables import Boolean, Integer, Real, ScalarVariable, String
 
 from .utils import PY2FMI
@@ -20,9 +20,9 @@ def test_ScalarVariable_reference_set_once_only():
         v.value_reference = 33
 
 
-@pytest.mark.parametrize("causality", list(Fmi2Causality) + [None])
-@pytest.mark.parametrize("initial", list(Fmi2Initial) + [None])
-@pytest.mark.parametrize("variability", list(Fmi2Variability) + [None])
+@pytest.mark.parametrize("causality", list(Fmi3Causality) + [None])
+@pytest.mark.parametrize("initial", list(Fmi3Initial) + [None])
+@pytest.mark.parametrize("variability", list(Fmi3Variability) + [None])
 @pytest.mark.parametrize("name, description", [
     ("var", None),
     ("var", "description of var"),
@@ -46,7 +46,7 @@ def test_ScalarVariable_constructor(causality, initial, variability, name, descr
 ])
 def test_ScalarVariable_getter(fmi_type, value):
 
-    class Slave(Fmi2Slave):
+    class Slave(Fmi3Slave):
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
@@ -70,7 +70,7 @@ def test_ScalarVariable_getter(fmi_type, value):
 ])
 def test_ScalarVariable_setter(fmi_type, value):
 
-    class Slave(Fmi2Slave):
+    class Slave(Fmi3Slave):
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)
@@ -94,9 +94,9 @@ def test_ScalarVariable_setter(fmi_type, value):
     assert getattr(slave, f"get_{fmi_type_name}")([0]) == [value]
 
 
-@pytest.mark.parametrize("causality", list(Fmi2Causality) + [None])
-@pytest.mark.parametrize("initial", list(Fmi2Initial) + [None])
-@pytest.mark.parametrize("variability", list(Fmi2Variability) + [None])
+@pytest.mark.parametrize("causality", list(Fmi3Causality) + [None])
+@pytest.mark.parametrize("initial", list(Fmi3Initial) + [None])
+@pytest.mark.parametrize("variability", list(Fmi3Variability) + [None])
 @pytest.mark.parametrize("name, description", [
     ("var", None),
     ("var", "description of var"),
@@ -123,13 +123,13 @@ def test_ScalarVariable_to_xml(causality, initial, variability, name, descriptio
     (Integer, 23),
     (Real, 15.),
     (String, "hello")])
-@pytest.mark.parametrize("causality", list(Fmi2Causality) + [None])
-@pytest.mark.parametrize("initial", list(Fmi2Initial) + [None])
-@pytest.mark.parametrize("variability", list(Fmi2Variability) + [None])
+@pytest.mark.parametrize("causality", list(Fmi3Causality) + [None])
+@pytest.mark.parametrize("initial", list(Fmi3Initial) + [None])
+@pytest.mark.parametrize("variability", list(Fmi3Variability) + [None])
 def test_ScalarVariable_start(var_type, value, causality, initial, variability):
     var_obj = var_type("var", causality=causality, description="a variable", initial=initial, variability=variability)
 
-    class PySlave(Fmi2Slave):
+    class PySlave(Fmi3Slave):
 
         def __init__(self, **kwargs):
             super().__init__(**kwargs)

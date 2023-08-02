@@ -4,8 +4,8 @@ import pytest
 from unittest.mock import call, MagicMock
 
 from pythonfmu.builder import FmuBuilder
-from pythonfmu.enums import Fmi2Status
-from pythonfmu.fmi2slave import Fmi2Slave
+from pythonfmu.enums import Fmi3Status
+from pythonfmu.fmi3slave import Fmi3Slave
 
 fmpy = pytest.importorskip(
     "fmpy", reason="fmpy is not available for testing the produced FMU"
@@ -31,25 +31,25 @@ def test_logger(tmp_path, debug_logging):
             status, 
             category, 
             debug
-        ) for debug, status in itertools.product([True, False], Fmi2Status)
+        ) for debug, status in itertools.product([True, False], Fmi3Status)
     ]
 
     fmu_calls = "\n".join([
-        '        self.log("{}", Fmi2Status.{}, "{}", {})'.format(c[0], c[1].name, c[2], c[3]) for c in log_calls
+        '        self.log("{}", Fmi3Status.{}, "{}", {})'.format(c[0], c[1].name, c[2], c[3]) for c in log_calls
     ])
 
-    slave_code = f"""from pythonfmu.fmi2slave import Fmi2Slave, Fmi2Status, Fmi2Causality, Integer, Real, Boolean, String
+    slave_code = f"""from pythonfmu.Fmi3Slave import Fmi3Slave, Fmi3Status, Fmi3Causality, Integer, Real, Boolean, String
 
 
-class {name}(Fmi2Slave):
+class {name}(Fmi3Slave):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         self.realIn = 22.0
         self.realOut = 0.0
-        self.register_variable(Real("realIn", causality=Fmi2Causality.input))
-        self.register_variable(Real("realOut", causality=Fmi2Causality.output))
+        self.register_variable(Real("realIn", causality=Fmi3Causality.input))
+        self.register_variable(Real("realOut", causality=Fmi3Causality.output))
 
 
     def do_step(self, current_time, step_size):
@@ -84,7 +84,7 @@ class {name}(Fmi2Slave):
         ) for c in filter(lambda c: debug_logging or not c[3], log_calls)
     ]
     
-    assert logger.call_count == len(Fmi2Status) * (1 + int(debug_logging))
+    assert logger.call_count == len(Fmi3Status) * (1 + int(debug_logging))
     logger.assert_has_calls(expected_calls)
 
 
@@ -100,25 +100,25 @@ def test_log_categories(tmp_path, debug_logging, categories):
             f"{status.name.upper()} - {debug} - {message}", 
             status,
             debug
-        ) for debug, status in itertools.product([True, False], Fmi2Status)
+        ) for debug, status in itertools.product([True, False], Fmi3Status)
     ]
 
     fmu_calls = "\n".join([
-        '        self.log("{}", Fmi2Status.{}, None, {})'.format(c[0], c[1].name, c[2]) for c in log_calls
+        '        self.log("{}", Fmi3Status.{}, None, {})'.format(c[0], c[1].name, c[2]) for c in log_calls
     ])
 
-    slave_code = f"""from pythonfmu.fmi2slave import Fmi2Slave, Fmi2Status, Fmi2Causality, Integer, Real, Boolean, String
+    slave_code = f"""from pythonfmu.Fmi3Slave import Fmi3Slave, Fmi3Status, Fmi3Causality, Integer, Real, Boolean, String
 
 
-class {name}(Fmi2Slave):
+class {name}(Fmi3Slave):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         self.realIn = 22.0
         self.realOut = 0.0
-        self.register_variable(Real("realIn", causality=Fmi2Causality.input))
-        self.register_variable(Real("realOut", causality=Fmi2Causality.output))
+        self.register_variable(Real("realIn", causality=Fmi3Causality.input))
+        self.register_variable(Real("realOut", causality=Fmi3Causality.output))
 
 
     def do_step(self, current_time, step_size):
@@ -136,15 +136,15 @@ class {name}(Fmi2Slave):
     logger = MagicMock()
 
     # Load the model
-    callbacks = fmpy.fmi2.fmi2CallbackFunctions()
-    callbacks.logger = fmpy.fmi2.fmi2CallbackLoggerTYPE(logger)
-    callbacks.allocateMemory = fmpy.fmi2.fmi2CallbackAllocateMemoryTYPE(fmpy.calloc)
-    callbacks.freeMemory = fmpy.fmi2.fmi2CallbackFreeMemoryTYPE(fmpy.free)
+    callbacks = fmpy.fmi3.fmi3CallbackFunctions()
+    callbacks.logger = fmpy.fmi3.fmi3CallbackLoggerTYPE(logger)
+    callbacks.allocateMemory = fmpy.fmi3.fmi3CallbackAllocateMemoryTYPE(fmpy.calloc)
+    callbacks.freeMemory = fmpy.fmi3.fmi3CallbackFreeMemoryTYPE(fmpy.free)
 
     model_description = fmpy.read_model_description(fmu)
     unzip_dir = fmpy.extract(fmu)
 
-    model = fmpy.fmi2.FMU2Slave(
+    model = fmpy.fmi3.FMI3Slave(
         guid=model_description.guid,
         unzipDirectory=unzip_dir,
         modelIdentifier=model_description.coSimulation.modelIdentifier,
@@ -163,7 +163,7 @@ class {name}(Fmi2Slave):
     expected_calls = []
     for c in filter(lambda c: debug_logging or not c[2], log_calls):
         category = f"logStatus{c[1].name.capitalize()}"
-        if category not in Fmi2Slave.log_categories:
+        if category not in Fmi3Slave.log_categories:
             category = "logAll"
         if len(categories) == 0 or category in categories:
             expected_calls.append(call(
@@ -174,7 +174,7 @@ class {name}(Fmi2Slave):
                 bytes(c[0], encoding="utf-8")
             ))
 
-    n_calls = len(Fmi2Status) if len(categories) == 0 else len(categories)
+    n_calls = len(Fmi3Status) if len(categories) == 0 else len(categories)
 
     assert logger.call_count == n_calls * (1 + int(debug_logging))
     logger.assert_has_calls(expected_calls)

@@ -2,7 +2,7 @@
 from enum import Enum, IntEnum
 
 
-class Fmi2Type(Enum):
+class Fmi3Type(Enum):
     integer = 0
     real = 1
     boolean = 2
@@ -10,7 +10,7 @@ class Fmi2Type(Enum):
     enumeration = 4
 
 
-class Fmi2Causality(Enum):
+class Fmi3Causality(Enum):
     parameter = 0
     calculatedParameter = 1
     input = 2
@@ -19,13 +19,13 @@ class Fmi2Causality(Enum):
     independent = 5
 
 
-class Fmi2Initial(Enum):
+class Fmi3Initial(Enum):
     exact = 0
     approx = 1
     calculated = 2
 
 
-class Fmi2Variability(Enum):
+class Fmi3Variability(Enum):
     constant = 0
     fixed = 1
     tunable = 2
@@ -33,7 +33,7 @@ class Fmi2Variability(Enum):
     continuous = 4
 
 
-class Fmi2Status(IntEnum):
+class Fmi3Status(IntEnum):
     ok = 0
     warning = 1
     discard = 2

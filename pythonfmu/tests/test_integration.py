@@ -38,7 +38,7 @@ def test_integration_reset(tmp_path):
 
     md = fmpy.read_model_description(str(fmu))
     unzipdir = fmpy.extract(str(fmu))
-    model = fmpy.fmi2.FMU2Slave(guid=md.guid,
+    model = fmpy.fmi3.FMI3Slave(guid=md.guid,
                                 unzipDirectory=unzipdir,
                                 modelIdentifier=md.coSimulation.modelIdentifier,
                                 instanceName="instance"
@@ -77,7 +77,7 @@ def test_integration_get_state(tmp_path):
 
     md = fmpy.read_model_description(str(fmu))
     unzipdir = fmpy.extract(str(fmu))
-    model = fmpy.fmi2.FMU2Slave(guid=md.guid,
+    model = fmpy.fmi3.FMI3Slave(guid=md.guid,
                                 unzipDirectory=unzipdir,
                                 modelIdentifier=md.coSimulation.modelIdentifier,
                                 instanceName="instance"
@@ -126,7 +126,7 @@ def test_integration_get_serialize_state(tmp_path):
     md = fmpy.read_model_description(fmu)
     unzip_dir = fmpy.extract(fmu)
 
-    model = fmpy.fmi2.FMU2Slave(
+    model = fmpy.fmi3.FMI3Slave(
         guid=md.guid,
         unzipDirectory=unzip_dir,
         modelIdentifier=md.coSimulation.modelIdentifier,
@@ -178,7 +178,7 @@ def test_integration_get(tmp_path):
     md = fmpy.read_model_description(fmu)
     unzip_dir = fmpy.extract(fmu)
 
-    model = fmpy.fmi2.FMU2Slave(
+    model = fmpy.fmi3.FMI3Slave(
         guid=md.guid,
         unzipDirectory=unzip_dir,
         modelIdentifier=md.coSimulation.modelIdentifier,
@@ -234,7 +234,7 @@ def test_integration_read_from_file(tmp_path):
     md = fmpy.read_model_description(fmu)
     unzip_dir = fmpy.extract(fmu)
 
-    model = fmpy.fmi2.FMU2Slave(
+    model = fmpy.fmi3.FMI3Slave(
         guid=md.guid,
         unzipDirectory=unzip_dir,
         modelIdentifier=md.coSimulation.modelIdentifier,
@@ -267,7 +267,7 @@ def test_integration_set(tmp_path):
     md = fmpy.read_model_description(fmu)
     unzip_dir = fmpy.extract(fmu)
 
-    model = fmpy.fmi2.FMU2Slave(
+    model = fmpy.fmi3.FMI3Slave(
         guid=md.guid,
         unzipDirectory=unzip_dir,
         modelIdentifier=md.coSimulation.modelIdentifier,

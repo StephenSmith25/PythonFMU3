@@ -1,7 +1,7 @@
-from pythonfmu import Fmi2Causality, Fmi2Variability, Fmi2Slave, Real, Fmi2Initial
+from pythonfmu import Fmi3Causality, Fmi3Variability, Fmi3Slave, Real, Fmi3Initial
 
 
-class BouncingBall(Fmi2Slave):
+class BouncingBall(Fmi3Slave):
 
     author = "..."
     description = "Bouncing Ball"
@@ -20,16 +20,16 @@ class BouncingBall(Fmi2Slave):
         self.v_min = 0.1
       
         
-        self.register_variable(Real("time", causality=Fmi2Causality.independent, variability=Fmi2Variability.continuous))
+        self.register_variable(Real("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
 
-        self.register_variable(Real("h", causality=Fmi2Causality.output, start=1, variability=Fmi2Variability.continuous, initial=Fmi2Initial.exact))
-        self.register_variable(Real("derh", causality=Fmi2Causality.local, variability=Fmi2Variability.continuous, derivative=1))
-        self.register_variable(Real("v", causality=Fmi2Causality.output, start=0, variability=Fmi2Variability.continuous, initial=Fmi2Initial.exact))
-        self.register_variable(Real("derv", causality=Fmi2Causality.local, variability=Fmi2Variability.continuous, derivative=3))
+        self.register_variable(Real("h", causality=Fmi3Causality.output, start=1, variability=Fmi3Variability.continuous, initial=Fmi3Initial.exact))
+        self.register_variable(Real("derh", causality=Fmi3Causality.local, variability=Fmi3Variability.continuous, derivative=1))
+        self.register_variable(Real("v", causality=Fmi3Causality.output, start=0, variability=Fmi3Variability.continuous, initial=Fmi3Initial.exact))
+        self.register_variable(Real("derv", causality=Fmi3Causality.local, variability=Fmi3Variability.continuous, derivative=3))
 
-        self.register_variable(Real("g", causality=Fmi2Causality.parameter, variability=Fmi2Variability.fixed))
-        self.register_variable(Real("e", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
-        self.register_variable(Real("v_min", variability=Fmi2Variability.constant, start=0.1))
+        self.register_variable(Real("g", causality=Fmi3Causality.parameter, variability=Fmi3Variability.fixed))
+        self.register_variable(Real("e", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable))
+        self.register_variable(Real("v_min", variability=Fmi3Variability.constant, start=0.1))
 
     def do_step(self, current_time, step_size):
         self.derv = self.g

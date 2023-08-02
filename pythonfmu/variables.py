@@ -5,7 +5,7 @@ from typing import Any, Optional
 from xml.etree.ElementTree import Element, SubElement
 from collections import ChainMap
 
-from .enums import Fmi2Causality, Fmi2Initial, Fmi2Variability
+from .enums import Fmi3Causality, Fmi3Initial, Fmi3Variability
 
 
 class ScalarVariable(ABC):
@@ -13,18 +13,18 @@ class ScalarVariable(ABC):
 
     Args:
         name (str): Variable name
-        causality (:obj:`Fmi2Causality`, optional): Variable causality
+        causality (:obj:`Fmi3Causality`, optional): Variable causality
         description (str, optional): Variable description
-        initial (:obj:`Fmi2Initial`, optional): Variable initial status
-        variability (:obj:`Fmi2Variability`, optional): Variable variability
+        initial (:obj:`Fmi3Initial`, optional): Variable initial status
+        variability (:obj:`Fmi3Variability`, optional): Variable variability
     """
     def __init__(
         self,
         name: str,
-        causality: Optional[Fmi2Causality] = None,
+        causality: Optional[Fmi3Causality] = None,
         description: Optional[str] = None,
-        initial: Optional[Fmi2Initial] = None,
-        variability: Optional[Fmi2Variability] = None,
+        initial: Optional[Fmi3Initial] = None,
+        variability: Optional[Fmi3Variability] = None,
         getter: Any = None,
         setter: Any = None
     ):
@@ -44,8 +44,8 @@ class ScalarVariable(ABC):
         self._extras = {}
 
     @property
-    def causality(self) -> Optional[Fmi2Causality]:
-        """:obj:`Fmi2Causality` or None: Variable causality - None if not set"""
+    def causality(self) -> Optional[Fmi3Causality]:
+        """:obj:`Fmi3Causality` or None: Variable causality - None if not set"""
         return self.__attrs["causality"]
 
     @property
@@ -54,8 +54,8 @@ class ScalarVariable(ABC):
         return self.__attrs["description"]
 
     @property
-    def initial(self) -> Optional[Fmi2Initial]:
-        """:obj:`Fmi2Initial` or None: Variable initial status - None if not set"""
+    def initial(self) -> Optional[Fmi3Initial]:
+        """:obj:`Fmi3Initial` or None: Variable initial status - None if not set"""
         return self.__attrs["initial"]
 
     @property
@@ -75,8 +75,8 @@ class ScalarVariable(ABC):
         self.__attrs["valueReference"] = value
 
     @property
-    def variability(self) -> Optional[Fmi2Variability]:
-        """:obj:`Fmi2Variability` or None: Variable variability - None if not set"""
+    def variability(self) -> Optional[Fmi3Variability]:
+        """:obj:`Fmi3Variability` or None: Variable variability - None if not set"""
         return self.__attrs["variability"]
 
     @staticmethod
@@ -87,11 +87,11 @@ class ScalarVariable(ABC):
             True if successful, False otherwise
         """
         return (
-            v.initial == Fmi2Initial.exact
-            or v.initial == Fmi2Initial.approx
-            or v.causality == Fmi2Causality.input
-            or v.causality == Fmi2Causality.parameter
-            or v.variability == Fmi2Variability.constant
+            v.initial == Fmi3Initial.exact
+            or v.initial == Fmi3Initial.approx
+            or v.causality == Fmi3Causality.input
+            or v.causality == Fmi3Causality.parameter
+            or v.variability == Fmi3Variability.constant
         )
 
     def to_xml(self) -> Element:

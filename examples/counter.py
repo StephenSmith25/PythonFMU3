@@ -1,7 +1,7 @@
-from pythonfmu import Fmi2Causality, Fmi2Variability, Fmi2Slave, Real
+from pythonfmu import Fmi3Causality, Fmi3Variability, Fmi3Slave, Real
 
 
-class Counter(Fmi2Slave):
+class Counter(Fmi3Slave):
 
     author = "John Doe"
     description = "A simple description"
@@ -11,9 +11,9 @@ class Counter(Fmi2Slave):
 
         self.counter = 0
         
-        self.register_variable(Real("time", causality=Fmi2Causality.independent, variability=Fmi2Variability.continuous))
+        self.register_variable(Real("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
 
-        self.register_variable(Real("counter", causality=Fmi2Causality.output))
+        self.register_variable(Real("counter", causality=Fmi3Causality.output))
 
     def do_step(self, current_time, step_size):
         print("do_step\n")

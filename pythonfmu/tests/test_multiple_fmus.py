@@ -22,18 +22,18 @@ def mapped(md):
 @pytest.mark.integration
 def test_integration_multiple_fmus(tmp_path):
     slave1_code = """import math
-from pythonfmu.fmi2slave import Fmi2Slave, Fmi2Causality, Integer, Real, Boolean, String
+from pythonfmu.Fmi3Slave import Fmi3Slave, Fmi3Causality, Integer, Real, Boolean, String
 
 
-class Slave1(Fmi2Slave):
+class Slave1(Fmi3Slave):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         self.realIn = 22.0
         self.realOut = 0.0
-        self.register_variable(Real("realIn", causality=Fmi2Causality.input))
-        self.register_variable(Real("realOut", causality=Fmi2Causality.output))
+        self.register_variable(Real("realIn", causality=Fmi3Causality.input))
+        self.register_variable(Real("realOut", causality=Fmi3Causality.output))
 
     def do_step(self, current_time, step_size):
         self.log("Do step on Slave1.")
@@ -41,18 +41,18 @@ class Slave1(Fmi2Slave):
         return True
 """
 
-    slave2_code = """from pythonfmu.fmi2slave import Fmi2Slave, Fmi2Causality, Integer, Real, Boolean, String
+    slave2_code = """from pythonfmu.Fmi3Slave import Fmi3Slave, Fmi3Causality, Integer, Real, Boolean, String
 
 
-class Slave2(Fmi2Slave):
+class Slave2(Fmi3Slave):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
         self.realIn = 22.0
         self.realOut = 0.0
-        self.register_variable(Real("realIn", causality=Fmi2Causality.input))
-        self.register_variable(Real("realOut", causality=Fmi2Causality.output))
+        self.register_variable(Real("realIn", causality=Fmi3Causality.input))
+        self.register_variable(Real("realOut", causality=Fmi3Causality.output))
 
     def do_step(self, current_time, step_size):
         self.log("Do step on Slave2.")
@@ -84,7 +84,7 @@ class Slave2(Fmi2Slave):
     md1 = fmpy.read_model_description(fmu1)
     unzip_dir = fmpy.extract(fmu1)
 
-    model1 = fmpy.fmi2.FMU2Slave(
+    model1 = fmpy.fmi3.FMI3Slave(
         guid=md1.guid,
         unzipDirectory=unzip_dir,
         modelIdentifier=md1.coSimulation.modelIdentifier,
@@ -98,7 +98,7 @@ class Slave2(Fmi2Slave):
     md2 = fmpy.read_model_description(fmu2)
     unzip_dir = fmpy.extract(fmu2)
 
-    model2 = fmpy.fmi2.FMU2Slave(
+    model2 = fmpy.fmi3.FMI3Slave(
         guid=md2.guid,
         unzipDirectory=unzip_dir,
         modelIdentifier=md2.coSimulation.modelIdentifier,

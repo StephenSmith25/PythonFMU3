@@ -20,7 +20,7 @@ def test_csvslave(tmp_path):
     model_description = fmpy.read_model_description(fmu)
     unzip_dir = fmpy.extract(fmu)
 
-    model = fmpy.fmi2.FMU2Slave(
+    model = fmpy.fmi3.FMI3Slave(
         guid=model_description.guid,
         unzipDirectory=unzip_dir,
         modelIdentifier=model_description.coSimulation.modelIdentifier,

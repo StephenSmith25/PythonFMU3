@@ -1,11 +1,11 @@
-from pythonfmu.fmi2slave import Fmi2Slave, Fmi2Causality, Fmi2Variability, Real
+from pythonfmu.fmi3slave import Fmi3Slave, Fmi3Causality, Fmi3Variability, Real
 try:
     from sympy import symbols, exp
 except ImportError:  # Trick to be able to generate the FMU without sympy installed
     symbols, exp = None, None
 
 
-class SympySlave(Fmi2Slave):
+class SympySlave(Fmi3Slave):
     """This class is an example to demonstrate installing new Python dependencies.
     
     The code is not efficient.
@@ -18,10 +18,10 @@ class SympySlave(Fmi2Slave):
         self.realOut = 0.0
         self.tau = 2.
         self.a = 5.
-        self.register_variable(Real("realIn", causality=Fmi2Causality.input))
-        self.register_variable(Real("a", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
-        self.register_variable(Real("tau", causality=Fmi2Causality.parameter, variability=Fmi2Variability.tunable))
-        self.register_variable(Real("realOut", causality=Fmi2Causality.output))
+        self.register_variable(Real("realIn", causality=Fmi3Causality.input))
+        self.register_variable(Real("a", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable))
+        self.register_variable(Real("tau", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable))
+        self.register_variable(Real("realOut", causality=Fmi3Causality.output))
 
     def do_step(self, current_time, step_size):
         i, a, t, tau = symbols("i, a, t, tau")
