@@ -71,7 +71,7 @@ class Fmi3Slave(ABC):
             fmiVersion="3.0",
             modelName=self.modelName,
             instantiationToken=f"{self.guid!s}",
-            generationTool=f"PythonFMU {VERSION}",
+            generationTool=f"PythonFMU3 {VERSION}",
             generationDateAndTime=date_str,
             variableNamingConvention="structured"
         )
