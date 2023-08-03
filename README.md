@@ -1,4 +1,4 @@
-# PythonFMU
+# PythonFMU3
 
 > A lightweight framework that enables the packaging of Python 3 code or CSV files as co-simulation FMUs (following FMI version 3.0).
 
