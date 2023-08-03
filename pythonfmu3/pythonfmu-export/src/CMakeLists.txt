@@ -3,9 +3,9 @@ set(headers
         cppfmu/cppfmu_cs.hpp
         cppfmu/cppfmu_common.hpp
 
-        fmi/fmi2Functions.h
-        fmi/fmi2FunctionTypes.h
-        fmi/fmi2TypesPlatform.h
+        fmi/fmi3Functions.h
+        fmi/fmi3FunctionTypes.h
+        fmi/fmi3PlatformTypes.h
 
         pythonfmu/PySlaveInstance.hpp
         pythonfmu/PyState.hpp

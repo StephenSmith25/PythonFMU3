@@ -4,8 +4,8 @@ from unittest.mock import patch
 
 import pytest
 
-from pythonfmu.builder import FmuBuilder
-from pythonfmu.deploy import deploy
+from pythonfmu3.builder import FmuBuilder
+from pythonfmu3.deploy import deploy
 
 PYTHON_SLAVE = Path(__file__).parent / "slaves/pythonslave.py"
 

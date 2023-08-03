@@ -1,4 +1,4 @@
-from pythonfmu.fmi3slave import Fmi3Slave, Fmi3Causality, Fmi3Variability, Integer, Real, Boolean, String
+from pythonfmu3.fmi3slave import Fmi3Slave, Fmi3Causality, Fmi3Variability, Integer, Real, Boolean, String
 
 
 class Container:

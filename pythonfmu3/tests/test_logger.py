@@ -3,9 +3,9 @@ import itertools
 import pytest
 from unittest.mock import call, MagicMock
 
-from pythonfmu.builder import FmuBuilder
-from pythonfmu.enums import Fmi3Status
-from pythonfmu.fmi3slave import Fmi3Slave
+from pythonfmu3.builder import FmuBuilder
+from pythonfmu3.enums import Fmi3Status
+from pythonfmu3.fmi3slave import Fmi3Slave
 
 fmpy = pytest.importorskip(
     "fmpy", reason="fmpy is not available for testing the produced FMU"

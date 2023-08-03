@@ -6,8 +6,8 @@ from pathlib import Path
 
 import pytest
 
-import pythonfmu
-from pythonfmu.builder import FmuBuilder, get_platform
+import pythonfmu3
+from pythonfmu3.builder import FmuBuilder, get_platform
 
 PROJECT_TEST_CASES = [
     ("dummy.txt",),
@@ -48,7 +48,7 @@ def test_zip_content(tmp_path):
             nfiles -= 1
 
         # Check sources
-        src_folder = Path(pythonfmu.__path__[0]) / "pythonfmu-export"
+        src_folder = Path(pythonfmu3.__path__[0]) / "pythonfmu-export"
         for f in itertools.chain(
             src_folder.rglob("*.hpp"),
             src_folder.rglob("*.cpp"),
@@ -57,7 +57,7 @@ def test_zip_content(tmp_path):
             assert "/".join(("sources", f.relative_to(src_folder).as_posix())) in names
 
         # Check pythonfmu is embedded
-        pkg_folder = Path(pythonfmu.__path__[0])
+        pkg_folder = Path(pythonfmu3.__path__[0])
         for f in pkg_folder.rglob("*.py"):
             relative_f = f.relative_to(pkg_folder).as_posix()
             if "test" not in relative_f:

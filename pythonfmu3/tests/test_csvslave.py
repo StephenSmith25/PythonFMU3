@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
 
-from pythonfmu.csvbuilder import CsvFmuBuilder
+from pythonfmu3.csvbuilder import CsvFmuBuilder
 
 fmpy = pytest.importorskip(
     "fmpy", reason="fmpy is not available for testing the produced FMU"

@@ -1,4 +1,4 @@
-from pythonfmu.fmi3slave import Fmi3Slave, Fmi3Causality, Fmi3Variability, Real
+from pythonfmu3.fmi3slave import Fmi3Slave, Fmi3Causality, Fmi3Variability, Real
 try:
     from sympy import symbols, exp
 except ImportError:  # Trick to be able to generate the FMU without sympy installed

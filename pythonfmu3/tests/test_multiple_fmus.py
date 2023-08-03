@@ -1,7 +1,7 @@
 import math
 import pytest
 
-from pythonfmu.builder import FmuBuilder
+from pythonfmu3.builder import FmuBuilder
 
 pytestmark = pytest.mark.skipif(
     not FmuBuilder.has_binary(), reason="No binary available for the current platform."

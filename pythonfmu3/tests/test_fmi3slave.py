@@ -1,7 +1,7 @@
 import pytest
 
-from pythonfmu import Fmi3Slave
-from pythonfmu import __version__ as VERSION
+from pythonfmu3 import Fmi3Slave
+from pythonfmu3 import __version__ as VERSION
 
 from .utils import FMI2PY, PY2FMI
 

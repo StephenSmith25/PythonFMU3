@@ -1,6 +1,6 @@
 import argparse
 
-from pythonfmu import builder, csvbuilder, deploy
+from pythonfmu3 import builder, csvbuilder, deploy
 from ._version import __version__
 
 

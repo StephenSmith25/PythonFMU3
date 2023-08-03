@@ -1,7 +1,7 @@
 import pytest
 from pathlib import Path
 
-from pythonfmu.csvbuilder import FmuBuilder
+from pythonfmu3.csvbuilder import FmuBuilder
 
 
 def test_default_experiment(tmp_path):

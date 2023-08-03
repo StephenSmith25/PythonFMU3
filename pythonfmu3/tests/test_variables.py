@@ -3,9 +3,9 @@ from random import randint
 
 import pytest
 
-from pythonfmu import Fmi3Slave
-from pythonfmu.enums import Fmi3Causality, Fmi3Initial, Fmi3Variability
-from pythonfmu.variables import Boolean, Integer, Real, ScalarVariable, String
+from pythonfmu3 import Fmi3Slave
+from pythonfmu3.enums import Fmi3Causality, Fmi3Initial, Fmi3Variability
+from pythonfmu3.variables import Boolean, Integer, Real, ScalarVariable, String
 
 from .utils import PY2FMI
 

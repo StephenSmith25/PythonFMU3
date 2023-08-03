@@ -1,4 +1,4 @@
-from pythonfmu.fmi3slave import Fmi3Slave, Fmi3Causality, Fmi3Variability, String, DefaultExperiment
+from pythonfmu3.fmi3slave import Fmi3Slave, Fmi3Causality, Fmi3Variability, String, DefaultExperiment
 
 
 class PythonSlaveReadFile(Fmi3Slave):

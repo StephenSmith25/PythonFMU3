@@ -1,4 +1,4 @@
-from pythonfmu import Fmi3Causality, Fmi3Variability, Fmi3Slave, Real, Fmi3Initial
+from pythonfmu3 import Fmi3Causality, Fmi3Variability, Fmi3Slave, Real, Fmi3Initial
 
 
 class BouncingBall(Fmi3Slave):

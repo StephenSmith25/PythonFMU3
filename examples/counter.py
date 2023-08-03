@@ -1,4 +1,4 @@
-from pythonfmu import Fmi3Causality, Fmi3Variability, Fmi3Slave, Real
+from pythonfmu3 import Fmi3Causality, Fmi3Variability, Fmi3Slave, Real
 
 
 class Counter(Fmi3Slave):

@@ -1,4 +1,4 @@
-from pythonfmu import Fmi3Causality, Fmi3Slave, Real
+from pythonfmu3 import Fmi3Causality, Fmi3Slave, Real
 
 import pathlib  # pathlib is included in the Python Standard Library
 

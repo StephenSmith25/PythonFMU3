@@ -1,4 +1,4 @@
-from pythonfmu.variables import Boolean, Integer, Real, ScalarVariable, String
+from pythonfmu3.variables import Boolean, Integer, Real, ScalarVariable, String
 
 FMI2PY = dict((
     (Boolean, bool),
