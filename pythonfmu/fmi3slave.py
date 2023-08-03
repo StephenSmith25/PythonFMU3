@@ -19,10 +19,9 @@ ModelOptions = namedtuple("ModelOptions", ["name", "value", "cli"])
 FMI3_MODEL_OPTIONS: List[ModelOptions] = [
     ModelOptions("needsExecutionTool", True, "no-external-tool"),
     ModelOptions("canHandleVariableCommunicationStepSize", True, "no-variable-step"),
-    ModelOptions("canInterpolateInputs", False, "interpolate-inputs"),
     ModelOptions("canBeInstantiatedOnlyOncePerProcess", False, "only-one-per-process"),
-    ModelOptions("canGetAndSetFMUstate", False, "handle-state"),
-    ModelOptions("canSerializeFMUstate", False, "serialize-state")
+    ModelOptions("canGetAndSetFMUState", False, "handle-state"),
+    ModelOptions("canSerializeFMUState", False, "serialize-state")
 ]
 
 
