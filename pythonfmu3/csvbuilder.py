@@ -15,7 +15,7 @@ def create_csv_slave(csv_file: FilePath):
 import re
 import csv
 from math import isclose  # requires >= python 3.5
-from pythonfmu.fmi3slave import Fmi3Type, Fmi3Slave, Fmi3Causality, Fmi3Variability, Integer, Real, Boolean, String
+from pythonfmu3.fmi3slave import Fmi3Type, Fmi3Slave, Fmi3Causality, Fmi3Variability, Integer, Real, Boolean, String
 
 def lerp(v0: float, v1: float, t: float) -> float:
     return (1 - t) * v0 + t * v1

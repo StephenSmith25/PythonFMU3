@@ -54,6 +54,8 @@ def test_zip_content(tmp_path):
             src_folder.rglob("*.cpp"),
             src_folder.rglob("CMakeLists.txt"),
         ):
+            if "build" in f.parts:
+                continue
             assert "/".join(("sources", f.relative_to(src_folder).as_posix())) in names
 
         # Check pythonfmu is embedded
@@ -61,7 +63,7 @@ def test_zip_content(tmp_path):
         for f in pkg_folder.rglob("*.py"):
             relative_f = f.relative_to(pkg_folder).as_posix()
             if "test" not in relative_f:
-                assert "/".join(("resources", "pythonfmu", relative_f)) in names
+                assert "/".join(("resources", "pythonfmu3", relative_f)) in names
 
         assert len(names) >= nfiles  # Library + python script + XML + module name + sources
 

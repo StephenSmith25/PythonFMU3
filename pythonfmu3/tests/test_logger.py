@@ -38,7 +38,7 @@ def test_logger(tmp_path, debug_logging):
         '        self.log("{}", Fmi3Status.{}, "{}", {})'.format(c[0], c[1].name, c[2], c[3]) for c in log_calls
     ])
 
-    slave_code = f"""from pythonfmu.Fmi3Slave import Fmi3Slave, Fmi3Status, Fmi3Causality, Integer, Real, Boolean, String
+    slave_code = f"""from pythonfmu3.Fmi3Slave import Fmi3Slave, Fmi3Status, Fmi3Causality, Integer, Real, Boolean, String
 
 
 class {name}(Fmi3Slave):
@@ -107,7 +107,7 @@ def test_log_categories(tmp_path, debug_logging, categories):
         '        self.log("{}", Fmi3Status.{}, None, {})'.format(c[0], c[1].name, c[2]) for c in log_calls
     ])
 
-    slave_code = f"""from pythonfmu.Fmi3Slave import Fmi3Slave, Fmi3Status, Fmi3Causality, Integer, Real, Boolean, String
+    slave_code = f"""from pythonfmu3.Fmi3Slave import Fmi3Slave, Fmi3Status, Fmi3Causality, Integer, Real, Boolean, String
 
 
 class {name}(Fmi3Slave):

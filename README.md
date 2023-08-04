@@ -12,7 +12,7 @@ This project is a fork of the original PythonFMU repository available at https:/
 pip install pythonfmu3
 ```
 
-2. Create a new class extending the `Fmi3Slave` class declared in the `pythonfmu3.fmi2slave` module (see below for an example).
+2. Create a new class extending the `Fmi3Slave` class declared in the `pythonfmu3.fmi3slave` module (see below for an example).
 3. Run `pythonfmu3 build` to create the fmu.
 
 ```
@@ -49,7 +49,7 @@ _PythonFMU_ does not package a full environment within the FMU.
 However, you can package a `requirements.txt` or `environment.yml` file within your FMU following these steps:
 
 1. Install _pythonfmu_ package: `pip install pythonfmu3`
-2. Create a new class extending the `Fmi3Slave` class declared in the `pythonfmu3.fmi2slave` module (see below for an example).
+2. Create a new class extending the `Fmi3Slave` class declared in the `pythonfmu3.fmi3slave` module (see below for an example).
 3. Create a `requirements.txt` file (to use _pip_ manager) and/or a `environment.yml` file (to use _conda_ manager) that defines your dependencies.
 4. Run `pythonfmu3 build -f myscript.py requirements.txt` to create the fmu including the dependencies file.
 

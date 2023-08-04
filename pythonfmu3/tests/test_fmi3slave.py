@@ -39,7 +39,7 @@ def test_Fmi3Slave_generation_tool():
     slave = Slave(instance_name="instance")
     xml = slave.to_xml()
 
-    assert xml.attrib['generationTool'] == f"PythonFMU {VERSION}"
+    assert xml.attrib['generationTool'] == f"PythonFMU3 {VERSION}"
 
 
 @pytest.mark.parametrize("fmi_type", FMI2PY)
