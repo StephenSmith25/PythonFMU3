@@ -8,8 +8,8 @@ from collections import ChainMap
 from .enums import Fmi3Causality, Fmi3Initial, Fmi3Variability
 
 
-class ScalarVariable(ABC):
-    """Abstract FMI scalar variable definition.
+class ModelVariable(ABC):
+    """Abstract FMI model variable definition.
 
     Args:
         name (str): Variable name
@@ -80,7 +80,7 @@ class ScalarVariable(ABC):
         return self.__attrs["variability"]
 
     @staticmethod
-    def requires_start(v: 'ScalarVariable') -> bool:
+    def requires_start(v: 'ModelVariable') -> bool:
         """Test if a variable requires a start attribute
 
         Returns:
@@ -113,7 +113,7 @@ class ScalarVariable(ABC):
                f"variability={self.variability})"
 
 
-class Real(ScalarVariable):
+class Real(ModelVariable):
     def __init__(self, name: str, start: Optional[Any] = None, derivative: Optional[Any] = None, **kwargs):
         super().__init__(name, **kwargs)
         self.__attrs = {"start": start, "derivative": derivative}
@@ -136,12 +136,11 @@ class Real(ScalarVariable):
                 attrib[key] = f"{value:.16g}"
         self._extras = attrib
         parent = super().to_xml()
-        #SubElement(parent, "Real", attrib)
 
         return parent
 
 
-class Integer(ScalarVariable):
+class Integer(ModelVariable):
     def __init__(self, name: str, start: Optional[Any] = None, **kwargs):
         super().__init__(name, **kwargs)
         self.__attrs = {"start": start}
@@ -160,13 +159,13 @@ class Integer(ScalarVariable):
         for key, value in self.__attrs.items():
             if value is not None:
                 attrib[key] = str(value)
+        self._extras = attrib
         parent = super().to_xml()
-        #SubElement(parent, "Integer", attrib)
 
         return parent
 
 
-class Boolean(ScalarVariable):
+class Boolean(ModelVariable):
     def __init__(self, name: str, start: Optional[Any] = None, **kwargs):
         super().__init__(name, **kwargs)
         self.__attrs = {"start": start}
@@ -187,12 +186,11 @@ class Boolean(ScalarVariable):
                 attrib[key] = str(value).lower()
         self._extras = attrib
         parent = super().to_xml()
-        #SubElement(parent, "Boolean", attrib)
 
         return parent
 
 
-class String(ScalarVariable):
+class String(ModelVariable):
     def __init__(self, name: str, start: Optional[Any] = None, **kwargs):
         super().__init__(name, **kwargs)
         self.__attrs = {"start": start}
@@ -211,7 +209,7 @@ class String(ScalarVariable):
         for key, value in self.__attrs.items():
             if value is not None:
                 attrib[key] = str(value)
+        self._extras = attrib
         parent = super().to_xml()
-        #SubElement(parent, "String", attrib)
 
         return parent

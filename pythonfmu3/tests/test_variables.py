@@ -3,17 +3,19 @@ from random import randint
 
 import pytest
 
+from xml.etree import ElementTree
+
 from pythonfmu3 import Fmi3Slave
 from pythonfmu3.enums import Fmi3Causality, Fmi3Initial, Fmi3Variability
-from pythonfmu3.variables import Boolean, Integer, Real, ScalarVariable, String
+from pythonfmu3.variables import Boolean, Integer, Real, ModelVariable, String
 
 from .utils import PY2FMI
 
-SCALAR_VARIABLE_ATTRIBUTES = ["name", "valueReference", "description", "causality", "variability", "initial"]
+MODEL_VARIABLE_ATTRIBUTES = ["name", "valueReference", "description", "causality", "variability", "initial"]
 
 
-def test_ScalarVariable_reference_set_once_only():
-    v = ScalarVariable('variable')
+def test_ModelVariable_reference_set_once_only():
+    v = ModelVariable('variable')
     v.value_reference = 22
 
     with pytest.raises(RuntimeError):
@@ -27,8 +29,8 @@ def test_ScalarVariable_reference_set_once_only():
     ("var", None),
     ("var", "description of var"),
 ])
-def test_ScalarVariable_constructor(causality, initial, variability, name, description):
-    var = ScalarVariable(name, causality, description, initial, variability)
+def test_ModelVariable_constructor(causality, initial, variability, name, description):
+    var = ModelVariable(name, causality, description, initial, variability)
 
     assert var.name == name
     assert var.value_reference is None
@@ -44,7 +46,7 @@ def test_ScalarVariable_constructor(causality, initial, variability, name, descr
     (Real, 2./3.),
     (String, "hello_world"),
 ])
-def test_ScalarVariable_getter(fmi_type, value):
+def test_ModelVariable_getter(fmi_type, value):
 
     class Slave(Fmi3Slave):
 
@@ -68,7 +70,7 @@ def test_ScalarVariable_getter(fmi_type, value):
     (Real, 2./3.),
     (String, "hello_world"),
 ])
-def test_ScalarVariable_setter(fmi_type, value):
+def test_ModelVariable_setter(fmi_type, value):
 
     class Slave(Fmi3Slave):
 
@@ -101,15 +103,15 @@ def test_ScalarVariable_setter(fmi_type, value):
     ("var", None),
     ("var", "description of var"),
 ])
-def test_ScalarVariable_to_xml(causality, initial, variability, name, description):
-    var = ScalarVariable(name, causality, description, initial, variability)
+def test_ModelVariable_to_xml(causality, initial, variability, name, description):
+    var = ModelVariable(name, causality, description, initial, variability)
     valueReference = randint(0, 25000)
     var.value_reference = valueReference
 
     node = var.to_xml()
-    assert node.tag == 'ScalarVariable'
+    assert node.tag == None
     args = locals()
-    for attr in SCALAR_VARIABLE_ATTRIBUTES:
+    for attr in MODEL_VARIABLE_ATTRIBUTES:
         value = args[attr]
         if value is not None:
             if isinstance(value, Enum):
@@ -126,7 +128,7 @@ def test_ScalarVariable_to_xml(causality, initial, variability, name, descriptio
 @pytest.mark.parametrize("causality", list(Fmi3Causality) + [None])
 @pytest.mark.parametrize("initial", list(Fmi3Initial) + [None])
 @pytest.mark.parametrize("variability", list(Fmi3Variability) + [None])
-def test_ScalarVariable_start(var_type, value, causality, initial, variability):
+def test_ModelVariable_start(var_type, value, causality, initial, variability):
     var_obj = var_type("var", causality=causality, description="a variable", initial=initial, variability=variability)
 
     class PySlave(Fmi3Slave):
@@ -142,10 +144,11 @@ def test_ScalarVariable_start(var_type, value, causality, initial, variability):
     slave = PySlave(instance_name="testInstance")
 
     xml = slave.to_xml()
-    var_node = xml.find(".//ScalarVariable[@name='var']")
+    var_node = xml.find(f".//{var_obj._type}[@name='var']")
+
     assert var_node is not None
 
-    if ScalarVariable.requires_start(var_obj):
+    if ModelVariable.requires_start(var_obj):
         assert var_obj.start == value
     else:
         assert var_obj.start is None
@@ -169,10 +172,8 @@ def test_Boolean_constructor(name, start):
 def test_Boolean_to_xml(name, start):
     r = Boolean(name, start)
     xml = r.to_xml()
-    children = list(xml)
-    assert len(children) == 1
     if start is not None:
-        assert children[0].attrib['start'] == str(start).lower()
+        assert xml.attrib['start'] == str(start).lower()
 
 
 @pytest.mark.parametrize("name,start", [
@@ -192,10 +193,8 @@ def test_Integer_constructor(name, start):
 def test_Integer_to_xml(name, start):
     r = Integer(name, start)
     xml = r.to_xml()
-    children = list(xml)
-    assert len(children) == 1
     if start is not None:
-        assert children[0].attrib['start'] == str(start)
+        assert xml.attrib['start'] == str(start)
 
 
 @pytest.mark.parametrize("name,start", [
@@ -215,10 +214,8 @@ def test_Real_constructor(name, start):
 def test_Real_to_xml(name, start):
     r = Real(name, start)
     xml = r.to_xml()
-    children = list(xml)
-    assert len(children) == 1
     if start is not None:
-        assert children[0].attrib['start'] == f"{start:.16g}"
+        assert xml.attrib['start'] == f"{start:.16g}"
 
 
 @pytest.mark.parametrize("name,start", [
@@ -238,7 +235,5 @@ def test_String_constructor(name, start):
 def test_String_to_xml(name, start):
     r = String(name, start)
     xml = r.to_xml()
-    children = list(xml)
-    assert len(children) == 1
     if start is not None:
-        assert children[0].attrib['start'] == str(start)
+        assert xml.attrib['start'] == str(start)

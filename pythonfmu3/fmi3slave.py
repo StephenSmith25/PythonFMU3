@@ -12,7 +12,7 @@ from .logmsg import LogMsg
 from .default_experiment import DefaultExperiment
 from ._version import __version__ as VERSION
 from .enums import Fmi3Type, Fmi3Status, Fmi3Causality, Fmi3Initial, Fmi3Variability
-from .variables import Boolean, Integer, Real, ScalarVariable, String
+from .variables import Boolean, Integer, Real, ModelVariable, String
 
 ModelOptions = namedtuple("ModelOptions", ["name", "value", "cli"])
 
@@ -120,7 +120,7 @@ class Fmi3Slave(ABC):
 
         variables = SubElement(root, "ModelVariables")
         for v in self.vars.values():
-            if ScalarVariable.requires_start(v):
+            if ModelVariable.requires_start(v):
                 self.__apply_start_value(v)
             variables.append(v.to_xml())
 
@@ -140,7 +140,7 @@ class Fmi3Slave(ABC):
 
         return root
 
-    def __apply_start_value(self, var: ScalarVariable):
+    def __apply_start_value(self, var: ModelVariable):
         vrs = [var.value_reference]
 
         if isinstance(var, Integer):
@@ -156,11 +156,11 @@ class Fmi3Slave(ABC):
 
         var.start = refs[0]
 
-    def register_variable(self, var: ScalarVariable, nested: bool = True):
+    def register_variable(self, var: ModelVariable, nested: bool = True):
         """Register a variable as FMU interface.
         
         Args:
-            var (ScalarVariable): The variable to be registered
+            var (ModelVariable): The variable to be registered
             nested (bool): Optional, does the "." in the variable name reflect an object hierarchy to access it? Default True
         """
         variable_reference = len(self.vars)
