@@ -237,7 +237,6 @@ void PySlaveInstance::SetReal(const cppfmu::FMIValueReference* vr, std::size_t n
     py_safe_run([this, &vr, nvr, &values, nValues](PyGILState_STATE gilState) {
         PyObject* vrs = PyList_New(nvr);
         PyObject* refs = PyList_New(nValues);
-        PyObject * vals = PyDict_New()
         for (int i = 0; i < nvr; i++) {
             PyList_SetItem(vrs, i, Py_BuildValue("i", vr[i]));
         }
@@ -257,6 +256,27 @@ void PySlaveInstance::SetReal(const cppfmu::FMIValueReference* vr, std::size_t n
 }
 
 void PySlaveInstance::SetInteger(const cppfmu::FMIValueReference* vr, std::size_t nvr, const cppfmu::FMIInteger* values)
+{
+    py_safe_run([this, &vr, nvr, &values](PyGILState_STATE gilState) {
+        PyObject* vrs = PyList_New(nvr);
+        PyObject* refs = PyList_New(nvr);
+        for (int i = 0; i < nvr; i++) {
+            PyList_SetItem(vrs, i, Py_BuildValue("i", vr[i]));
+            PyList_SetItem(refs, i, Py_BuildValue("i", values[i]));
+        }
+
+        auto f = PyObject_CallMethod(pInstance_, "set_integer", "(OO)", vrs, refs);
+        Py_DECREF(vrs);
+        Py_DECREF(refs);
+        if (f == nullptr) {
+            handle_py_exception("[setInteger] PyObject_CallMethod", gilState);
+        }
+        Py_DECREF(f);
+        clearLogBuffer();
+    });
+}
+
+void PySlaveInstance::SetUInt64(const cppfmu::FMIValueReference* vr, std::size_t nvr, const cppfmu::FMIUInt64* values)
 {
     py_safe_run([this, &vr, nvr, &values](PyGILState_STATE gilState) {
         PyObject* vrs = PyList_New(nvr);
@@ -343,6 +363,28 @@ void PySlaveInstance::GetReal(const cppfmu::FMIValueReference* vr, std::size_t n
 }
 
 void PySlaveInstance::GetInteger(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIInteger* values) const
+{
+    py_safe_run([this, &vr, nvr, &values](PyGILState_STATE gilState) {
+        PyObject* vrs = PyList_New(nvr);
+        for (int i = 0; i < nvr; i++) {
+            PyList_SetItem(vrs, i, Py_BuildValue("i", vr[i]));
+        }
+        auto refs = PyObject_CallMethod(pInstance_, "get_integer", "O", vrs);
+        Py_DECREF(vrs);
+        if (refs == nullptr) {
+            handle_py_exception("[getInteger] PyObject_CallMethod", gilState);
+        }
+
+        for (int i = 0; i < nvr; i++) {
+            PyObject* value = PyList_GetItem(refs, i);
+            values[i] = static_cast<cppfmu::FMIInteger>(PyLong_AsLong(value));
+        }
+        Py_DECREF(refs);
+        clearLogBuffer();
+    });
+}
+
+void PySlaveInstance::GetUInt64(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIUInt64* values) const
 {
     py_safe_run([this, &vr, nvr, &values](PyGILState_STATE gilState) {
         PyObject* vrs = PyList_New(nvr);

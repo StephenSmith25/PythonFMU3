@@ -77,6 +77,10 @@ public:
         const FMIValueReference vr[],
         std::size_t nvr,
         const FMIInteger value[]);
+    virtual void SetUInt64(
+        const FMIValueReference vr[],
+        std::size_t nvr,
+        const FMIUInt64 value[]);
     virtual void SetBoolean(
         const FMIValueReference vr[],
         std::size_t nvr,
@@ -98,6 +102,10 @@ public:
         const FMIValueReference vr[],
         std::size_t nvr,
         FMIInteger value[]) const;
+    virtual void GetUInt64(
+        const FMIValueReference vr[],
+        std::size_t nvr,
+        FMIUInt64 value[]) const;
     virtual void GetBoolean(
         const FMIValueReference vr[],
         std::size_t nvr,

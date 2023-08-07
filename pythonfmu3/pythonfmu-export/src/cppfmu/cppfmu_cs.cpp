@@ -73,6 +73,16 @@ void SlaveInstance::SetInteger(
     }
 }
 
+void SlaveInstance::SetUInt64(
+    const FMIValueReference /*vr*/[],
+    std::size_t nvr,
+    const FMIUInt64 /*value*/[])
+{
+    if (nvr != 0) {
+        throw std::logic_error("Attempted to set nonexistent variable");
+    }
+}
+
 
 void SlaveInstance::SetBoolean(
     const FMIValueReference /*vr*/[],
@@ -112,6 +122,16 @@ void SlaveInstance::GetInteger(
     const FMIValueReference /*vr*/[],
     std::size_t nvr,
     FMIInteger /*value*/[]) const
+{
+    if (nvr != 0) {
+        throw std::logic_error("Attempted to get nonexistent variable");
+    }
+}
+
+void SlaveInstance::GetUInt64(
+    const FMIValueReference /*vr*/[],
+    std::size_t nvr,
+    FMIUInt64 /*value*/[]) const
 {
     if (nvr != 0) {
         throw std::logic_error("Attempted to get nonexistent variable");

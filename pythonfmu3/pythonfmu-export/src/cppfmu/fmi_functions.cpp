@@ -392,6 +392,26 @@ fmi3Status fmi3SetInt32(
     }
 }
 
+fmi3Status fmi3SetUInt64(
+    fmi3Instance c,
+    const fmi3ValueReference vr[],
+    size_t nvr,
+    const fmi3UInt64 values[],
+    size_t nValues)
+{
+    const auto component = reinterpret_cast<Component*>(c);
+    try {
+        component->slave->SetUInt64(vr, nvr, values);
+        return fmi3OK;
+    } catch (const cppfmu::FatalError& e) {
+        component->logger.Log(fmi3Fatal, "", e.what());
+        return fmi3Fatal;
+    } catch (const std::exception& e) {
+        component->logger.Log(fmi3Error, "", e.what());
+        return fmi3Error;
+    }
+}
+
 fmi3Status fmi3SetBoolean(
     fmi3Instance c,
     const fmi3ValueReference vr[],
@@ -628,8 +648,7 @@ NOT_IMPLEMENTED_GETTER(UInt16, fmi3UInt16);
 NOT_IMPLEMENTED_SETTER(UInt16, fmi3UInt16);
 NOT_IMPLEMENTED_GETTER(UInt32, fmi3UInt32);
 NOT_IMPLEMENTED_SETTER(UInt32, fmi3UInt32);
-NOT_IMPLEMENTED_GETTER(UInt64, fmi3UInt64);
-NOT_IMPLEMENTED_SETTER(UInt64, fmi3UInt64);
+
 
 fmi3Status fmi3GetClock(fmi3Instance instance,
     const fmi3ValueReference valueReferences[],
