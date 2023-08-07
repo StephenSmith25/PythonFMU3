@@ -1,12 +1,19 @@
 """Classes describing interface variables."""
 from abc import ABC
 from enum import Enum
-from typing import Any, Optional
+import importlib
+from typing import Any, Optional, List
 from xml.etree.ElementTree import Element, SubElement
 from collections import ChainMap
+from functools import reduce  
 
 from .enums import Fmi3Causality, Fmi3Initial, Fmi3Variability
 
+def check_numpy():
+    try:
+        importlib.import_module('numpy')
+    except ModuleNotFoundError:
+        raise ModuleNotFoundError("Numpy is not installed, it is required for Array support")
 
 class ModelVariable(ABC):
     """Abstract FMI model variable definition.
@@ -41,6 +48,7 @@ class ModelVariable(ABC):
             "initial": initial,
             # 'canHandleMultipleSetPerTimeInstant': # Only for ME
         }
+        self.size = 1.0
         self._extras = {}
 
     @property
@@ -78,7 +86,7 @@ class ModelVariable(ABC):
     def variability(self) -> Optional[Fmi3Variability]:
         """:obj:`Fmi3Variability` or None: Variable variability - None if not set"""
         return self.__attrs["variability"]
-
+    
     @staticmethod
     def requires_start(v: 'ModelVariable') -> bool:
         """Test if a variable requires a start attribute
@@ -112,12 +120,27 @@ class ModelVariable(ABC):
                f"causality={self.causality}, " \
                f"variability={self.variability})"
 
+class Dimension(object):
+    def __init__(self, start: str = "", valueReference: str = ""):
+        self.start = start
+        self.size = start
+        self.valueReference = valueReference
+
+    def to_xml(self) -> Element:
+        attrib = dict()
+        attrib["start"] = self.start
+        ele = Element("Dimension", attrib)
+        return ele
 
 class Real(ModelVariable):
-    def __init__(self, name: str, start: Optional[Any] = None, derivative: Optional[Any] = None, **kwargs):
+    def __init__(self, name: str, start: Optional[Any] = None, derivative: Optional[Any] = None, dimensions: List[Dimension] = [], **kwargs):
         super().__init__(name, **kwargs)
         self.__attrs = {"start": start, "derivative": derivative}
         self._type = "Float64"
+        self.size = reduce(lambda x, y: x * int(y.size), dimensions, 1)
+        if dimensions:
+            check_numpy()
+        self.__dimensions = dimensions
 
     @property
     def start(self) -> Optional[Any]:
@@ -126,16 +149,28 @@ class Real(ModelVariable):
     @start.setter
     def start(self, value: float):
         self.__attrs["start"] = value
+    
+    @property
+    def dimensions(self) -> List[Dimension]:
+        return self.__dimensions
 
     def to_xml(self) -> Element:
         attrib = dict()
         for key, value in self.__attrs.items():
             if value is not None:
-                # In order to not loose precision, a number of this type should be 
+                # In order to not loose precision, a number of this type should be
                 # stored on an XML file with at least 16 significant digits
-                attrib[key] = f"{value:.16g}"
+                output = ""
+                if len(self.dimensions) > 0:
+                    output = " ".join([f"{val:.16g}" for val in value])
+                else:
+                    output = f"{value:.16g}"
+                attrib[key] = output
         self._extras = attrib
         parent = super().to_xml()
+
+        for dimension in self.__dimensions:
+            parent.append(dimension.to_xml())
 
         return parent
 

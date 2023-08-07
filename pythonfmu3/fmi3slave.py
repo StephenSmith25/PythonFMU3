@@ -133,10 +133,15 @@ class Fmi3Slave(ABC):
             filter(lambda v: v.causality == Fmi3Causality.output, self.vars.values())
         )
 
-        if outputs:
-            for _, v in enumerate(self.vars.values()):
-                if v.causality == Fmi3Causality.output:
-                    SubElement(structure, "Output", attrib=dict(valueReference=str(v.value_reference)))
+        initial_unknown = list(
+            filter(lambda v: v.causality == Fmi3Causality.output or v.causality == Fmi3Causality.calculatedParameter, self.vars.values())
+        )
+
+        for v in outputs:
+            SubElement(structure, "Output", attrib=dict(valueReference=str(v.value_reference)))
+
+        for v in initial_unknown:
+            SubElement(structure, "InitialUnknown", attrib=dict(valueReference=str(v.value_reference)))
 
         return root
 
@@ -154,7 +159,7 @@ class Fmi3Slave(ABC):
         else:
             raise Exception(f"Unsupported type!")
 
-        var.start = refs[0]
+        var.start = refs if len(getattr(var, "dimensions", [])) > 0 else refs[0]
 
     def register_variable(self, var: ModelVariable, nested: bool = True):
         """Register a variable as FMU interface.
@@ -174,9 +179,16 @@ class Fmi3Slave(ABC):
             for s in split:
                 owner = getattr(owner, s)
         if var.getter is None:
-            var.getter = lambda: getattr(owner, var.local_name)
+            if hasattr(var, "dimensions") and len(var.dimensions) > 0:
+                var.getter = lambda: getattr(owner, var.local_name).flatten().tolist()
+            else:
+                var.getter = lambda: getattr(owner, var.local_name)
         if var.setter is None and hasattr(owner, var.local_name) and var.variability != Fmi3Variability.constant:
-            var.setter = lambda v: setattr(owner, var.local_name, v)
+            if hasattr(var, "dimensions") and len(var.dimensions) > 0:
+                import numpy as np
+                var.setter = lambda v: setattr(owner, var.local_name, np.reshape(v, newshape=getattr(owner, var.local_name).shape))
+            else:
+                var.setter = lambda v: setattr(owner, var.local_name, v)
 
     def setup_experiment(self, start_time: float):
         pass
@@ -211,7 +223,10 @@ class Fmi3Slave(ABC):
         for vr in vrs:
             var = self.vars[vr]
             if isinstance(var, Real):
-                refs.append(float(var.getter()))
+                if len(var.dimensions) == 0:
+                    refs.append(float(var.getter()))
+                else:
+                    refs.extend(var.getter())
             else:
                 raise TypeError(
                     f"Variable with valueReference={vr} is not of type Real!"
@@ -253,10 +268,15 @@ class Fmi3Slave(ABC):
                 )
 
     def set_real(self, vrs: List[int], values: List[float]):
-        for vr, value in zip(vrs, values):
+        offset = 0
+        for vr in vrs:
             var = self.vars[vr]
             if isinstance(var, Real):
-                var.setter(value)
+                if var.size > 1:
+                    var.setter(values[offset:offset+var.size])
+                else:
+                    var.setter(values[offset])
+                offset += var.size
             else:
                 raise TypeError(
                     f"Variable with valueReference={vr} is not of type Real!"

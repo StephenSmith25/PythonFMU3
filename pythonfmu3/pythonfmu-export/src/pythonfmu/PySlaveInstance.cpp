@@ -232,13 +232,16 @@ void PySlaveInstance::Terminate()
     });
 }
 
-void PySlaveInstance::SetReal(const cppfmu::FMIValueReference* vr, std::size_t nvr, const cppfmu::FMIReal* values)
+void PySlaveInstance::SetReal(const cppfmu::FMIValueReference* vr, std::size_t nvr, const cppfmu::FMIReal* values, std::size_t nValues)
 {
-    py_safe_run([this, &vr, nvr, &values](PyGILState_STATE gilState) {
+    py_safe_run([this, &vr, nvr, &values, nValues](PyGILState_STATE gilState) {
         PyObject* vrs = PyList_New(nvr);
-        PyObject* refs = PyList_New(nvr);
+        PyObject* refs = PyList_New(nValues);
+        PyObject * vals = PyDict_New()
         for (int i = 0; i < nvr; i++) {
             PyList_SetItem(vrs, i, Py_BuildValue("i", vr[i]));
+        }
+        for (int i = 0; i < nValues; i++) {
             PyList_SetItem(refs, i, Py_BuildValue("d", values[i]));
         }
 
@@ -316,9 +319,9 @@ void PySlaveInstance::SetString(const cppfmu::FMIValueReference* vr, std::size_t
     });
 }
 
-void PySlaveInstance::GetReal(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIReal* values) const
+void PySlaveInstance::GetReal(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIReal* values, std::size_t nValues) const
 {
-    py_safe_run([this, &vr, nvr, &values](PyGILState_STATE gilState) {
+    py_safe_run([this, &vr, nvr, &values, nValues](PyGILState_STATE gilState) {
         PyObject* vrs = PyList_New(nvr);
         for (int i = 0; i < nvr; i++) {
             PyList_SetItem(vrs, i, Py_BuildValue("i", vr[i]));
@@ -330,7 +333,7 @@ void PySlaveInstance::GetReal(const cppfmu::FMIValueReference* vr, std::size_t n
             handle_py_exception("[getReal] PyObject_CallMethod", gilState);
         }
 
-        for (int i = 0; i < nvr; i++) {
+        for (int i = 0; i < nValues; i++) {
             PyObject* value = PyList_GetItem(refs, i);
             values[i] = PyFloat_AsDouble(value);
         }

@@ -71,7 +71,8 @@ public:
     virtual void SetReal(
         const FMIValueReference vr[],
         std::size_t nvr,
-        const FMIReal value[]);
+        const FMIReal value[],
+        std::size_t nValues);
     virtual void SetInteger(
         const FMIValueReference vr[],
         std::size_t nvr,
@@ -91,7 +92,8 @@ public:
     virtual void GetReal(
         const FMIValueReference vr[],
         std::size_t nvr,
-        FMIReal value[]) const;
+        FMIReal value[],
+        std::size_t nValues) const;
     virtual void GetInteger(
         const FMIValueReference vr[],
         std::size_t nvr,

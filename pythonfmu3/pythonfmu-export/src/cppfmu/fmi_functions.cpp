@@ -280,7 +280,7 @@ fmi3Status fmi3GetFloat64(
 {
     const auto component = reinterpret_cast<Component*>(c);
     try {
-        component->slave->GetReal(vr, nvr, values);
+        component->slave->GetReal(vr, nvr, values, nValues);
         return fmi3OK;
     } catch (const cppfmu::FatalError& e) {
         component->logger.Log(fmi3Fatal, "", e.what());
@@ -361,7 +361,7 @@ fmi3Status fmi3SetFloat64(
 {
     const auto component = reinterpret_cast<Component*>(c);
     try {
-        component->slave->SetReal(vr, nvr, value);
+        component->slave->SetReal(vr, nvr, value, nValues);
         return fmi3OK;
     } catch (const cppfmu::FatalError& e) {
         component->logger.Log(fmi3Fatal, "", e.what());

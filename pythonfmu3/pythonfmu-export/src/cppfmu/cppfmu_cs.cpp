@@ -54,7 +54,8 @@ void SlaveInstance::Reset()
 void SlaveInstance::SetReal(
     const FMIValueReference /*vr*/[],
     std::size_t nvr,
-    const FMIReal /*value*/[])
+    const FMIReal /*value*/[],
+    std::size_t nValues)
 {
     if (nvr != 0) {
         throw std::logic_error("Attempted to set nonexistent variable");
@@ -98,7 +99,8 @@ void SlaveInstance::SetString(
 void SlaveInstance::GetReal(
     const FMIValueReference /*vr*/[],
     std::size_t nvr,
-    FMIReal /*value*/[]) const
+    FMIReal /*value*/[],
+    std::size_t nValues) const
 {
     if (nvr != 0) {
         throw std::logic_error("Attempted to get nonexistent variable");
