@@ -311,6 +311,26 @@ fmi3Status fmi3GetInt32(
     }
 }
 
+fmi3Status fmi3GetUInt64(
+    fmi3Instance c,
+    const fmi3ValueReference vr[],
+    size_t nvr,
+    fmi3UInt64 values[],
+    size_t nValues)
+{
+    const auto component = reinterpret_cast<Component*>(c);
+    try {
+        component->slave->GetUInt64(vr, nvr, values);
+        return fmi3OK;
+    } catch (const cppfmu::FatalError& e) {
+        component->logger.Log(fmi3Fatal, "", e.what());
+        return fmi3Fatal;
+    } catch (const std::exception& e) {
+        component->logger.Log(fmi3Error, "", e.what());
+        return fmi3Error;
+    }
+}
+
 fmi3Status fmi3GetBoolean(
     fmi3Instance c,
     const fmi3ValueReference vr[],

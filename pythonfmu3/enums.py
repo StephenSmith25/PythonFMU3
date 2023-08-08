@@ -17,6 +17,7 @@ class Fmi3Causality(Enum):
     output = 3
     local = 4
     independent = 5
+    structuralParameter = 6
 
 
 class Fmi3Initial(Enum):

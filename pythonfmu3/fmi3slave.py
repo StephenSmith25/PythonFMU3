@@ -12,7 +12,7 @@ from .logmsg import LogMsg
 from .default_experiment import DefaultExperiment
 from ._version import __version__ as VERSION
 from .enums import Fmi3Type, Fmi3Status, Fmi3Causality, Fmi3Initial, Fmi3Variability
-from .variables import Boolean, Integer, Real, ModelVariable, String
+from .variables import Boolean, Integer, UInt64, Real, ModelVariable, String
 
 ModelOptions = namedtuple("ModelOptions", ["name", "value", "cli"])
 
@@ -148,7 +148,7 @@ class Fmi3Slave(ABC):
     def __apply_start_value(self, var: ModelVariable):
         vrs = [var.value_reference]
 
-        if isinstance(var, Integer):
+        if isinstance(var, (Integer, UInt64)):
             refs = self.get_integer(vrs)
         elif isinstance(var, Real):
             refs = self.get_real(vrs)
@@ -210,7 +210,7 @@ class Fmi3Slave(ABC):
         refs = list()
         for vr in vrs:
             var = self.vars[vr]
-            if isinstance(var, Integer):
+            if isinstance(var, (Integer, UInt64)):
                 refs.append(int(var.getter()))
             else:
                 raise TypeError(
@@ -260,7 +260,7 @@ class Fmi3Slave(ABC):
     def set_integer(self, vrs: List[int], values: List[int]):
         for vr, value in zip(vrs, values):
             var = self.vars[vr]
-            if isinstance(var, Integer):
+            if isinstance(var, (Integer, UInt64)):
                 var.setter(value)
             else:
                 raise TypeError(
@@ -272,11 +272,12 @@ class Fmi3Slave(ABC):
         for vr in vrs:
             var = self.vars[vr]
             if isinstance(var, Real):
-                if var.size > 1:
-                    var.setter(values[offset:offset+var.size])
+                size = var.size(self.vars)
+                if size > 1:
+                    var.setter(values[offset:offset+size])
                 else:
                     var.setter(values[offset])
-                offset += var.size
+                offset += size
             else:
                 raise TypeError(
                     f"Variable with valueReference={vr} is not of type Real!"

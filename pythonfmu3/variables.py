@@ -48,7 +48,6 @@ class ModelVariable(ABC):
             "initial": initial,
             # 'canHandleMultipleSetPerTimeInstant': # Only for ME
         }
-        self.size = 1.0
         self._extras = {}
 
     @property
@@ -122,13 +121,26 @@ class ModelVariable(ABC):
 
 class Dimension(object):
     def __init__(self, start: str = "", valueReference: str = ""):
+        if start and valueReference and any((start, valueReference)):
+            raise RuntimeError("start and valueReference attributes are mutally exclusive for Dimension element")
+        
         self.start = start
-        self.size = start
-        self.valueReference = valueReference
+        self.value_reference = valueReference
+
+    def size(self, vars : List[ModelVariable]):
+        if self.start:
+            return self.start
+        else:
+            result = next((var for var in vars if var.value_reference == self.value_reference), None)  
+            return result.getter()
 
     def to_xml(self) -> Element:
         attrib = dict()
-        attrib["start"] = self.start
+
+        if self.start:
+            attrib["start"] = self.start
+        else:
+            attrib['valueReference'] = self.value_reference
         ele = Element("Dimension", attrib)
         return ele
 
@@ -137,7 +149,6 @@ class Real(ModelVariable):
         super().__init__(name, **kwargs)
         self.__attrs = {"start": start, "derivative": derivative}
         self._type = "Float64"
-        self.size = reduce(lambda x, y: x * int(y.size), dimensions, 1)
         if dimensions:
             check_numpy()
         self.__dimensions = dimensions
@@ -173,6 +184,9 @@ class Real(ModelVariable):
             parent.append(dimension.to_xml())
 
         return parent
+    
+    def size(self, vars):
+        return reduce(lambda x, dim: x * int(dim.size(vars)), self.__dimensions, 1)
 
 
 class Integer(ModelVariable):
@@ -199,6 +213,29 @@ class Integer(ModelVariable):
 
         return parent
 
+class UInt64(ModelVariable):
+    def __init__(self, name: str, start: Optional[Any] = None, **kwargs):
+        super().__init__(name, **kwargs)
+        self.__attrs = {"start": start}
+        self._type = "UInt64";
+
+    @property
+    def start(self) -> Optional[Any]:
+        return self.__attrs["start"]
+
+    @start.setter
+    def start(self, value: float):
+        self.__attrs["start"] = value
+
+    def to_xml(self) -> Element:
+        attrib = dict()
+        for key, value in self.__attrs.items():
+            if value is not None:
+                attrib[key] = str(value)
+        self._extras = attrib
+        parent = super().to_xml()
+
+        return parent
 
 class Boolean(ModelVariable):
     def __init__(self, name: str, start: Optional[Any] = None, **kwargs):

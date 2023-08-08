@@ -1,4 +1,4 @@
-from pythonfmu3 import Fmi3Causality, Fmi3Variability, Fmi3Slave, Real, Fmi3Initial, Dimension
+from pythonfmu3 import Fmi3Causality, Fmi3Variability, Fmi3Slave, Real, UInt64, Fmi3Initial, Dimension
 import numpy as np
 
 
@@ -32,11 +32,12 @@ class LinearTransform(Fmi3Slave):
 
         
         self.register_variable(Real("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
+        self.register_variable(UInt64("m", causality=Fmi3Causality.structuralParameter, variability=Fmi3Variability.tunable, start=2))
         self.register_variable(Real("scalar", causality=Fmi3Causality.input, start=2.0))
-        self.register_variable(Real("u", causality=Fmi3Causality.input, dimensions=[Dimension(start=f"{self.m}")]))
+        self.register_variable(Real("u", causality=Fmi3Causality.input, dimensions=[Dimension(valueReference="1")]))
         self.register_variable(Real("offset", causality=Fmi3Causality.input, dimensions=[Dimension(start=f"{self.m}")]))
         self.register_variable(Real("A", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable, dimensions=[Dimension(start=f"{self.m}"), Dimension(start=f"{self.n}")]))
-        self.register_variable(Real("y", causality=Fmi3Causality.output, dimensions=[Dimension(start=f"{self.m}")]))
+        self.register_variable(Real("y", causality=Fmi3Causality.output, dimensions=[Dimension(valueReference="1")]))
 
     def do_step(self, current_time, step_size):
         self.y = self.scalar*self.A.dot(self.u) + self.offset
