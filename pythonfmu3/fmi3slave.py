@@ -148,8 +148,10 @@ class Fmi3Slave(ABC):
     def __apply_start_value(self, var: ModelVariable):
         vrs = [var.value_reference]
 
-        if isinstance(var, (Integer, UInt64)):
+        if isinstance(var, Integer):
             refs = self.get_integer(vrs)
+        elif isinstance(var, UInt64):
+            refs = self.get_uint64(vrs)
         elif isinstance(var, Real):
             refs = self.get_real(vrs)
         elif isinstance(var, Boolean):
@@ -210,11 +212,23 @@ class Fmi3Slave(ABC):
         refs = list()
         for vr in vrs:
             var = self.vars[vr]
-            if isinstance(var, (Integer, UInt64)):
+            if isinstance(var, Integer):
                 refs.append(int(var.getter()))
             else:
                 raise TypeError(
                     f"Variable with valueReference={vr} is not of type Integer!"
+                )
+        return refs
+
+    def get_uint64(self, vrs: List[int]) -> List[int]:
+        refs = list()
+        for vr in vrs:
+            var = self.vars[vr]
+            if isinstance(var, UInt64):
+                refs.append(var.getter())
+            else:
+                raise TypeError(
+                    f"Variable with valueReference={vr} is not of type UInt64!"
                 )
         return refs
 
@@ -260,11 +274,21 @@ class Fmi3Slave(ABC):
     def set_integer(self, vrs: List[int], values: List[int]):
         for vr, value in zip(vrs, values):
             var = self.vars[vr]
-            if isinstance(var, (Integer, UInt64)):
+            if isinstance(var, Integer):
                 var.setter(value)
             else:
                 raise TypeError(
                     f"Variable with valueReference={vr} is not of type Integer!"
+                )
+
+    def set_uint64(self, vrs: List[int], values: List[int]):
+        for vr, value in zip(vrs, values):
+            var = self.vars[vr]
+            if isinstance(var, UInt64):
+                var.setter(value)
+            else:
+                raise TypeError(
+                    f"Variable with valueReference={vr} is not of type UInt64!"
                 )
 
     def set_real(self, vrs: List[int], values: List[float]):

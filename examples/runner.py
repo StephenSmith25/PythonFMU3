@@ -2,7 +2,7 @@ from fmpy import *
 from fmpy.util import plot_result  # import the plot function
 import numpy as np
 fmu = '../LinearTransform.fmu'
-input_values = {'A': np.array([1, 2, 3, 9]), 'offset': [9, 8], 'scalar': 10.0} 
+input_values = {'A': np.array([1, 2, 3, 9]), 'offset': [9, 8], 'scalar': 10.0, 'm': 2} 
 # fmu = '../BouncingBall.fmu'
 # input_values = {}
 dump(fmu)  # get information
