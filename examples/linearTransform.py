@@ -24,9 +24,6 @@ class LinearTransform(Fmi3Slave):
         self.A = np.ndarray(shape=(self.m, self.n), dtype=float) 
         self.A = np.reshape([1.0, 1.0, 2.0, 1.0], newshape=self.A.shape)
         
-        self.B = np.ndarray(shape=(self.m, self.n), dtype=float) 
-        self.B = np.reshape([1.0, 1.0, 2.0, 1.0], newshape=self.B.shape)
-
         self.y = np.ndarray(shape=(self.m, 1), dtype=float) 
         self.y = np.reshape([0.0, 0.0], newshape=self.y.shape)
 
