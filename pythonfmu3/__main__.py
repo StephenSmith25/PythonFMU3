@@ -1,6 +1,6 @@
 import argparse
 
-from pythonfmu3 import builder, csvbuilder, deploy
+from pythonfmu3 import builder, deploy
 from ._version import __version__
 
 
@@ -25,13 +25,6 @@ def cli_main():
         help="Build an FMU from a Python script."
     )
     builder.create_command_parser(build_parser)
-
-    csv_parser = subparsers.add_parser(
-        "buildcsv",
-        description="Build an FMU from a CSV file.",
-        help="Build an FMU from a CSV file."
-    )
-    csvbuilder.create_command_parser(csv_parser)
 
     deploy_parser = subparsers.add_parser(
         "deploy",

@@ -1,6 +1,6 @@
 # PythonFMU3
 
-> A lightweight framework that enables the packaging of Python 3 code or CSV files as co-simulation FMUs (following FMI version 3.0).
+> A lightweight framework that enables the packaging of Python 3 code as co-simulation FMUs (following FMI version 3.0).
 
 This project is a fork of the original PythonFMU repository available at https://github.com/NTNU-IHB/PythonFMU, which was used as the basis for adding support for FMI 3.0. While we have made efforts to expand the functionality of this project, it currently has some limitations and does not support all the features of FMI 3.0. We would like to acknowledge and give credit to the original PythonFMU project for their contributions to this work.
 
