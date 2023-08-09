@@ -4,6 +4,26 @@
 
 This project is a fork of the original PythonFMU repository available at https://github.com/NTNU-IHB/PythonFMU, which was used as the basis for adding support for FMI 3.0. While we have made efforts to expand the functionality of this project, it currently has some limitations and does not support all the features of FMI 3.0. We would like to acknowledge and give credit to the original PythonFMU project for their contributions to this work.
 
+### Support:
+
+We currently support a basic FMI3 simulation, composed of:
+
+- Float64, Int32, UInt64, String, Boolean variables
+- Step Mode
+- Array support, which requires numpy
+
+Please take a look at the examples bouncingBall.py and linearTransform.py for a demonstration of these features.
+
+### Future
+
+In no particular order, we plan to add support for:
+
+- Refactor Real, Integer ect .to match FMI3 specification
+- Support more variable types from FMI3
+- Improve array support
+- Add event mode
+- Include FMI3 related testing
+
 ### How do I build an FMU from python code?
 
 1. Install `pythonfmu3` package:
