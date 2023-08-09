@@ -5,7 +5,7 @@
 *.so
 
 # pythonfmu binaries folder
-/**/pythonfmu/resources/binaries
+/**/pythonfmu3/resources/binaries
 
 # CLion
 /**/cmake-build-debug

@@ -1,8 +1,8 @@
 include LICENSE
 include README.md
 
-recursive-include pythonfmu/tests/data *
-recursive-include pythonfmu/tests/slaves *
+recursive-include pythonfmu3/tests/data *
+recursive-include pythonfmu3/tests/slaves *
 
-recursive-include pythonfmu/resources *
-recursive-include pythonfmu/pythonfmu-export *
+recursive-include pythonfmu3/resources *
+recursive-include pythonfmu3/pythonfmu-export *
