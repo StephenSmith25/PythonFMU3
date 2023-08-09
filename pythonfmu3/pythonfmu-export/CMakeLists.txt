@@ -41,7 +41,7 @@ if (WIN32)
 endif ()
 
 if (WIN32)
-  set(TARGET_PLATFORM win)
+  set(TARGET_PLATFORM windows)
 elseif (APPLE)
   set(TARGET_PLATFORM darwin)
 else ()
