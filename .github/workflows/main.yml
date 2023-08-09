@@ -30,7 +30,7 @@ jobs:
         run: |
           mkdir tmp-build
           cd tmp-build
-          cmake $Env:github_workspace/pythonfmu/pythonfmu-export -DCMAKE_BUILD_TYPE=Release -A x64
+          cmake $Env:github_workspace/pythonfmu3/pythonfmu-export -DCMAKE_BUILD_TYPE=Release -A x64
           cmake --build . --config Release
           cd ..
 
@@ -39,7 +39,7 @@ jobs:
         run: |
           mkdir tmp-build
           cd tmp-build
-          cmake $GITHUB_WORKSPACE/pythonfmu/pythonfmu-export -DCMAKE_BUILD_TYPE=Release
+          cmake $GITHUB_WORKSPACE/pythonfmu3/pythonfmu-export -DCMAKE_BUILD_TYPE=Release
           cmake --build . --config Release
           cd ..
 
@@ -47,7 +47,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: lib-wrapper
-          path: pythonfmu/resources
+          path: pythonfmu3/resources
 
   build-python:
     needs: build-wrapper
@@ -65,7 +65,7 @@ jobs:
         uses: actions/download-artifact@v3
         with:
           name: lib-wrapper
-          path: pythonfmu/resources
+          path: pythonfmu3/resources
     
       - name: Build distribution artifacts
         run: |
@@ -106,7 +106,7 @@ jobs:
         run: |
           pip install -r requirements.txt
           cd python-wheel
-          pip install pythonfmu*.whl
-          pytest --pyargs pythonfmu
+          pip install pythonfmu3*.whl
+          pytest --pyargs pythonfmu3
           cd ..
         shell: bash -l {0}
