@@ -13,7 +13,7 @@ from .logmsg import LogMsg
 from .default_experiment import DefaultExperiment
 from ._version import __version__ as VERSION
 from .enums import Fmi3Type, Fmi3Status, Fmi3Causality, Fmi3Initial, Fmi3Variability
-from .variables import Boolean, Integer, UInt64, Float64, ModelVariable, String
+from .variables import Boolean, Int32, UInt64, Float64, ModelVariable, String
 
 ModelOptions = namedtuple("ModelOptions", ["name", "value", "cli"])
 
@@ -158,11 +158,10 @@ class Fmi3Slave(ABC):
     def __apply_start_value(self, var: ModelVariable):
         vrs = [var.value_reference]
 
-        if isinstance(var, Integer):
-            refs = self.get_integer(vrs)
+        if isinstance(var, Int32):
+            refs = self.get_int32(vrs)
         elif isinstance(var, UInt64):
             refs = [val.value for val in self.get_uint64(vrs)]
-            print(refs)
         elif isinstance(var, Float64):
             refs = self.get_float64(vrs)
         elif isinstance(var, Boolean):
@@ -219,11 +218,11 @@ class Fmi3Slave(ABC):
     def terminate(self):
         pass
 
-    def get_integer(self, vrs: List[int]) -> List[int]:
+    def get_int32(self, vrs: List[int]) -> List[int]:
         refs = list()
         for vr in vrs:
             var = self.vars[vr]
-            if isinstance(var, Integer):
+            if isinstance(var, Int32):
                 refs.append(int(var.getter()))
             else:
                 raise TypeError(
@@ -283,10 +282,10 @@ class Fmi3Slave(ABC):
                 )
         return refs
 
-    def set_integer(self, vrs: List[int], values: List[int]):
+    def set_int32(self, vrs: List[int], values: List[int]):
         for vr, value in zip(vrs, values):
             var = self.vars[vr]
-            if isinstance(var, Integer):
+            if isinstance(var, Int32):
                 var.setter(value)
             else:
                 raise TypeError(

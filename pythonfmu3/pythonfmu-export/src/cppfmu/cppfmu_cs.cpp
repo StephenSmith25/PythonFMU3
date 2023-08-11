@@ -63,10 +63,10 @@ void SlaveInstance::SetFloat64(
 }
 
 
-void SlaveInstance::SetInteger(
+void SlaveInstance::SetInt32(
     const FMIValueReference /*vr*/[],
     std::size_t nvr,
-    const FMIInteger /*value*/[])
+    const FMIInt32 /*value*/[])
 {
     if (nvr != 0) {
         throw std::logic_error("Attempted to set nonexistent variable");
@@ -118,10 +118,10 @@ void SlaveInstance::GetFloat64(
 }
 
 
-void SlaveInstance::GetInteger(
+void SlaveInstance::GetInt32(
     const FMIValueReference /*vr*/[],
     std::size_t nvr,
-    FMIInteger /*value*/[]) const
+    FMIInt32 /*value*/[]) const
 {
     if (nvr != 0) {
         throw std::logic_error("Attempted to get nonexistent variable");

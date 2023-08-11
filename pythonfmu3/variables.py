@@ -193,7 +193,7 @@ class Float64(ModelVariable):
         return reduce(lambda x, dim: x * int(dim.size(vars)), self.__dimensions, 1)
 
 
-class Integer(ModelVariable):
+class Int32(ModelVariable):
     def __init__(self, name: str, start: Optional[Any] = None, **kwargs):
         super().__init__(name, **kwargs)
         self.__attrs = {"start": start}

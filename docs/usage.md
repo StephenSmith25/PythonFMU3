@@ -18,7 +18,7 @@ class PythonSlave(Fmi3Slave):
         self.realOut = 3.0
         self.booleanVariable = True
         self.stringVariable = "Hello World!"
-        self.register_variable(Integer("intOut", causality=Fmi3Causality.output))
+        self.register_variable(Int32("intOut", causality=Fmi3Causality.output))
         self.register_variable(Float64("realOut", causality=Fmi3Causality.output))
         self.register_variable(Boolean("booleanVariable", causality=Fmi3Causality.local))
         self.register_variable(String("stringVariable", causality=Fmi3Causality.local))

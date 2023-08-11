@@ -73,10 +73,10 @@ public:
         std::size_t nvr,
         const FMIFloat64 value[],
         std::size_t nValues);
-    virtual void SetInteger(
+    virtual void SetInt32(
         const FMIValueReference vr[],
         std::size_t nvr,
-        const FMIInteger value[]);
+        const FMIInt32 value[]);
     virtual void SetUInt64(
         const FMIValueReference vr[],
         std::size_t nvr,
@@ -98,10 +98,10 @@ public:
         std::size_t nvr,
         FMIFloat64 value[],
         std::size_t nValues) const;
-    virtual void GetInteger(
+    virtual void GetInt32(
         const FMIValueReference vr[],
         std::size_t nvr,
-        FMIInteger value[]) const;
+        FMIInt32 value[]) const;
     virtual void GetUInt64(
         const FMIValueReference vr[],
         std::size_t nvr,

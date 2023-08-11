@@ -255,7 +255,7 @@ void PySlaveInstance::SetFloat64(const cppfmu::FMIValueReference* vr, std::size_
     });
 }
 
-void PySlaveInstance::SetInteger(const cppfmu::FMIValueReference* vr, std::size_t nvr, const cppfmu::FMIInteger* values)
+void PySlaveInstance::SetInt32(const cppfmu::FMIValueReference* vr, std::size_t nvr, const cppfmu::FMIInt32* values)
 {
     py_safe_run([this, &vr, nvr, &values](PyGILState_STATE gilState) {
         PyObject* vrs = PyList_New(nvr);
@@ -265,11 +265,11 @@ void PySlaveInstance::SetInteger(const cppfmu::FMIValueReference* vr, std::size_
             PyList_SetItem(refs, i, Py_BuildValue("i", values[i]));
         }
 
-        auto f = PyObject_CallMethod(pInstance_, "set_integer", "(OO)", vrs, refs);
+        auto f = PyObject_CallMethod(pInstance_, "set_int32", "(OO)", vrs, refs);
         Py_DECREF(vrs);
         Py_DECREF(refs);
         if (f == nullptr) {
-            handle_py_exception("[setInteger] PyObject_CallMethod", gilState);
+            handle_py_exception("[setInt32] PyObject_CallMethod", gilState);
         }
         Py_DECREF(f);
         clearLogBuffer();
@@ -362,22 +362,22 @@ void PySlaveInstance::GetFloat64(const cppfmu::FMIValueReference* vr, std::size_
     });
 }
 
-void PySlaveInstance::GetInteger(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIInteger* values) const
+void PySlaveInstance::GetInt32(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIInt32* values) const
 {
     py_safe_run([this, &vr, nvr, &values](PyGILState_STATE gilState) {
         PyObject* vrs = PyList_New(nvr);
         for (int i = 0; i < nvr; i++) {
             PyList_SetItem(vrs, i, Py_BuildValue("i", vr[i]));
         }
-        auto refs = PyObject_CallMethod(pInstance_, "get_integer", "O", vrs);
+        auto refs = PyObject_CallMethod(pInstance_, "get_int32", "O", vrs);
         Py_DECREF(vrs);
         if (refs == nullptr) {
-            handle_py_exception("[getInteger] PyObject_CallMethod", gilState);
+            handle_py_exception("[getInt32] PyObject_CallMethod", gilState);
         }
 
         for (int i = 0; i < nvr; i++) {
             PyObject* value = PyList_GetItem(refs, i);
-            values[i] = static_cast<cppfmu::FMIInteger>(PyLong_AsLong(value));
+            values[i] = static_cast<cppfmu::FMIInt32>(PyLong_AsLong(value));
         }
         Py_DECREF(refs);
         clearLogBuffer();

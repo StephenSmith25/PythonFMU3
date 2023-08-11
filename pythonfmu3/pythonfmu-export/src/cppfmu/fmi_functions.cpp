@@ -300,7 +300,7 @@ fmi3Status fmi3GetInt32(
 {
     const auto component = reinterpret_cast<Component*>(c);
     try {
-        component->slave->GetInteger(vr, nvr, values);
+        component->slave->GetInt32(vr, nvr, values);
         return fmi3OK;
     } catch (const cppfmu::FatalError& e) {
         component->logger.Log(fmi3Fatal, "", e.what());
@@ -401,7 +401,7 @@ fmi3Status fmi3SetInt32(
 {
     const auto component = reinterpret_cast<Component*>(c);
     try {
-        component->slave->SetInteger(vr, nvr, values);
+        component->slave->SetInt32(vr, nvr, values);
         return fmi3OK;
     } catch (const cppfmu::FatalError& e) {
         component->logger.Log(fmi3Fatal, "", e.what());

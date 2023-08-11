@@ -1,11 +1,11 @@
-from pythonfmu3.variables import Boolean, Integer, UInt64, Float64, ModelVariable, String
+from pythonfmu3.variables import Boolean, Int32, UInt64, Float64, ModelVariable, String
 import ctypes
 class UInt64ValType(int): pass
 
 
 FMI2PY = dict((
     (Boolean, bool),
-    (Integer, int),
+    (Int32, int),
     (Float64, float),
     (String, str),
     (UInt64, UInt64ValType),
