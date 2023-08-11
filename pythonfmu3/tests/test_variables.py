@@ -8,7 +8,7 @@ from xml.etree import ElementTree
 
 from pythonfmu3 import Fmi3Slave
 from pythonfmu3.enums import Fmi3Causality, Fmi3Initial, Fmi3Variability
-from pythonfmu3.variables import Boolean, Integer, UInt64, Real, ModelVariable, String, Dimension
+from pythonfmu3.variables import Boolean, Integer, UInt64, Float64, ModelVariable, String, Dimension
 
 from .utils import PY2FMI, UInt64ValType
 
@@ -45,7 +45,7 @@ def test_ModelVariable_constructor(causality, initial, variability, name, descri
     (Boolean, False),
     (Integer, 22),
     (UInt64, UInt64ValType(23)),
-    (Real, 2./3.),
+    (Float64, 2./3.),
     (String, "hello_world"),
 ])
 def test_ModelVariable_getter(fmi_type, value):
@@ -70,7 +70,7 @@ def test_ModelVariable_getter(fmi_type, value):
     (Boolean, False),
     (Integer, 22),
     (UInt64, UInt64ValType(23)),
-    (Real, 2./3.),
+    (Float64, 2./3.),
     (String, "hello_world")
 ])
 def test_ModelVariable_setter(fmi_type, value):
@@ -100,8 +100,8 @@ def test_ModelVariable_setter(fmi_type, value):
 
 @pytest.mark.requirements("numpy")  
 @pytest.mark.parametrize("fmi_type,value,dims", [
-    (Real, [1.,2.,3.,4.], [4]),
-    (Real, [1.,2.,3.,4.], [2, 2]),
+    (Float64, [1.,2.,3.,4.], [4]),
+    (Float64, [1.,2.,3.,4.], [2, 2]),
 ])
 def test_ModelVariable_getter_array(fmi_type, value, dims):
 
@@ -124,8 +124,8 @@ def test_ModelVariable_getter_array(fmi_type, value, dims):
 
 @pytest.mark.requirements("numpy")  
 @pytest.mark.parametrize("fmi_type,value,dims", [
-    (Real, [1.,2.,3.,4.], [4]),
-    (Real, [1.,2.,3.,4.], [2, 2]),
+    (Float64, [1.,2.,3.,4.], [4]),
+    (Float64, [1.,2.,3.,4.], [2, 2]),
 ])
 def test_ModelVariable_setter_array(fmi_type, value, dims):
 
@@ -182,7 +182,7 @@ def test_ModelVariable_to_xml(causality, initial, variability, name, description
     (Boolean, True),
     (Integer, 23),
     (UInt64, UInt64ValType(23)),
-    (Real, 15.),
+    (Float64, 15.),
     (String, "hello")])
 @pytest.mark.parametrize("causality", list(Fmi3Causality) + [None])
 @pytest.mark.parametrize("initial", list(Fmi3Initial) + [None])
@@ -261,7 +261,7 @@ def test_Integer_to_xml(name, start):
     ("real_another_name", 22.),
 ])
 def test_Real_constructor(name, start):
-    r = Real(name, start)
+    r = Float64(name, start)
 
     assert r.start == start
 
@@ -271,7 +271,7 @@ def test_Real_constructor(name, start):
     ("real_another_name", 22.),
 ])
 def test_Real_to_xml(name, start):
-    r = Real(name, start)
+    r = Float64(name, start)
     xml = r.to_xml()
     if start is not None:
         assert xml.attrib['start'] == f"{start:.16g}"
@@ -304,7 +304,7 @@ def test_String_to_xml(name, start):
     ("array2", [1.,2.,3.,4.], [2, 2]),
 ])
 def test_array_to_xml(name, start, dims):
-    r = Real(name, start, dimensions=[Dimension(start=val) for val in dims])
+    r = Float64(name, start, dimensions=[Dimension(start=val) for val in dims])
     xml = r.to_xml()
     if start is not None:
         assert xml.attrib['start'] == " ".join([f"{val:.16g}" for val in start])

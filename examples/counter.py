@@ -1,4 +1,4 @@
-from pythonfmu3 import Fmi3Causality, Fmi3Variability, Fmi3Slave, Real
+from pythonfmu3 import Fmi3Causality, Fmi3Variability, Fmi3Slave, Float64
 
 
 class Counter(Fmi3Slave):
@@ -11,9 +11,9 @@ class Counter(Fmi3Slave):
 
         self.counter = 0
         
-        self.register_variable(Real("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
+        self.register_variable(Float64("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
 
-        self.register_variable(Real("counter", causality=Fmi3Causality.output))
+        self.register_variable(Float64("counter", causality=Fmi3Causality.output))
 
     def do_step(self, current_time, step_size):
         print("do_step\n")

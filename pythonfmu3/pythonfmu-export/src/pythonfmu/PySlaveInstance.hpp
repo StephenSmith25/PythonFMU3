@@ -19,20 +19,20 @@ public:
 
     void initialize(PyGILState_STATE gilState);
 
-    void SetupExperiment(cppfmu::FMIBoolean toleranceDefined, cppfmu::FMIReal tolerance, cppfmu::FMIReal tStart, cppfmu::FMIBoolean stopTimeDefined, cppfmu::FMIReal tStop) override;
+    void SetupExperiment(cppfmu::FMIBoolean toleranceDefined, cppfmu::FMIFloat64 tolerance, cppfmu::FMIFloat64 tStart, cppfmu::FMIBoolean stopTimeDefined, cppfmu::FMIFloat64 tStop) override;
     void EnterInitializationMode() override;
     void ExitInitializationMode() override;
     void Terminate() override;
     void Reset() override;
-    bool DoStep(cppfmu::FMIReal currentCommunicationPoint, cppfmu::FMIReal communicationStepSize, cppfmu::FMIBoolean newStep, cppfmu::FMIReal& endOfStep) override;
+    bool DoStep(cppfmu::FMIFloat64 currentCommunicationPoint, cppfmu::FMIFloat64 communicationStepSize, cppfmu::FMIBoolean newStep, cppfmu::FMIFloat64& endOfStep) override;
 
-    void SetReal(const cppfmu::FMIValueReference* vr, std::size_t nvr, const cppfmu::FMIReal* value, std::size_t nValues) override;
+    void SetFloat64(const cppfmu::FMIValueReference* vr, std::size_t nvr, const cppfmu::FMIFloat64* value, std::size_t nValues) override;
     void SetInteger(const cppfmu::FMIValueReference* vr, std::size_t nvr, const cppfmu::FMIInteger* value) override;
     void SetUInt64(const cppfmu::FMIValueReference* vr, std::size_t nvr, const cppfmu::FMIUInt64* value) override;
     void SetBoolean(const cppfmu::FMIValueReference* vr, std::size_t nvr, const cppfmu::FMIBoolean* value) override;
     void SetString(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIString const* value) override;
 
-    void GetReal(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIReal* value, std::size_t nValues) const override;
+    void GetFloat64(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIFloat64* value, std::size_t nValues) const override;
     void GetInteger(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIInteger* value) const override;
     void GetUInt64(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIUInt64* value) const override;
     void GetBoolean(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIBoolean* value) const override;

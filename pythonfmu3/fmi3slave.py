@@ -13,7 +13,7 @@ from .logmsg import LogMsg
 from .default_experiment import DefaultExperiment
 from ._version import __version__ as VERSION
 from .enums import Fmi3Type, Fmi3Status, Fmi3Causality, Fmi3Initial, Fmi3Variability
-from .variables import Boolean, Integer, UInt64, Real, ModelVariable, String
+from .variables import Boolean, Integer, UInt64, Float64, ModelVariable, String
 
 ModelOptions = namedtuple("ModelOptions", ["name", "value", "cli"])
 
@@ -131,7 +131,7 @@ class Fmi3Slave(ABC):
         )
 
         continuous_state_derivatives = list(
-            filter(lambda v: v.variability == Fmi3Variability.continuous and (isinstance(v, Real) and v.derivative is not None), self.vars.values())
+            filter(lambda v: v.variability == Fmi3Variability.continuous and (isinstance(v, Float64) and v.derivative is not None), self.vars.values())
         )
 
         allowed_variability = [None, Fmi3Initial.approx, Fmi3Initial.calculated]
@@ -163,8 +163,8 @@ class Fmi3Slave(ABC):
         elif isinstance(var, UInt64):
             refs = [val.value for val in self.get_uint64(vrs)]
             print(refs)
-        elif isinstance(var, Real):
-            refs = self.get_real(vrs)
+        elif isinstance(var, Float64):
+            refs = self.get_float64(vrs)
         elif isinstance(var, Boolean):
             refs = self.get_boolean(vrs)
         elif isinstance(var, String):
@@ -244,11 +244,11 @@ class Fmi3Slave(ABC):
                 )
         return refs
 
-    def get_real(self, vrs: List[int]) -> List[float]:
+    def get_float64(self, vrs: List[int]) -> List[float]:
         refs = list()
         for vr in vrs:
             var = self.vars[vr]
-            if isinstance(var, Real):
+            if isinstance(var, Float64):
                 if len(var.dimensions) == 0:
                     refs.append(float(var.getter()))
                 else:
@@ -303,11 +303,11 @@ class Fmi3Slave(ABC):
                     f"Variable with valueReference={vr} is not of type UInt64!"
                 )
 
-    def set_real(self, vrs: List[int], values: List[float]):
+    def set_float64(self, vrs: List[int], values: List[float]):
         offset = 0
         for vr in vrs:
             var = self.vars[vr]
-            if isinstance(var, Real):
+            if isinstance(var, Float64):
                 size = var.size(self.vars)
                 if size > 1:
                     var.setter(values[offset:offset+size])

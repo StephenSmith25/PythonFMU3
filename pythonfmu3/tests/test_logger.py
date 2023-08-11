@@ -38,7 +38,7 @@ def test_logger(tmp_path, debug_logging):
         '        self.log("{}", Fmi3Status.{}, "{}", {})'.format(c[0], c[1].name, c[2], c[3]) for c in log_calls
     ])
 
-    slave_code = f"""from pythonfmu3.Fmi3Slave import Fmi3Slave, Fmi3Status, Fmi3Causality, Integer, Real, Boolean, String
+    slave_code = f"""from pythonfmu3.Fmi3Slave import Fmi3Slave, Fmi3Status, Fmi3Causality, Integer, Float64, Boolean, String
 
 
 class {name}(Fmi3Slave):
@@ -48,8 +48,8 @@ class {name}(Fmi3Slave):
 
         self.realIn = 22.0
         self.realOut = 0.0
-        self.register_variable(Real("realIn", causality=Fmi3Causality.input))
-        self.register_variable(Real("realOut", causality=Fmi3Causality.output))
+        self.register_variable(Float64("realIn", causality=Fmi3Causality.input))
+        self.register_variable(Float64("realOut", causality=Fmi3Causality.output))
 
 
     def do_step(self, current_time, step_size):
@@ -107,7 +107,7 @@ def test_log_categories(tmp_path, debug_logging, categories):
         '        self.log("{}", Fmi3Status.{}, None, {})'.format(c[0], c[1].name, c[2]) for c in log_calls
     ])
 
-    slave_code = f"""from pythonfmu3.Fmi3Slave import Fmi3Slave, Fmi3Status, Fmi3Causality, Integer, Real, Boolean, String
+    slave_code = f"""from pythonfmu3.Fmi3Slave import Fmi3Slave, Fmi3Status, Fmi3Causality, Integer, Float64, Boolean, String
 
 
 class {name}(Fmi3Slave):
@@ -117,8 +117,8 @@ class {name}(Fmi3Slave):
 
         self.realIn = 22.0
         self.realOut = 0.0
-        self.register_variable(Real("realIn", causality=Fmi3Causality.input))
-        self.register_variable(Real("realOut", causality=Fmi3Causality.output))
+        self.register_variable(Float64("realIn", causality=Fmi3Causality.input))
+        self.register_variable(Float64("realOut", causality=Fmi3Causality.output))
 
 
     def do_step(self, current_time, step_size):

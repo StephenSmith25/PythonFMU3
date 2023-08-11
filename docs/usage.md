@@ -3,7 +3,7 @@
 ## Write the script
 
 ```python
-from pythonfmu3 import Fmi3Causality, Fmi3Slave, Boolean, Integer, Real, String
+from pythonfmu3 import Fmi3Causality, Fmi3Slave, Boolean, Integer, Float64, String
 
 
 class PythonSlave(Fmi3Slave):
@@ -19,13 +19,13 @@ class PythonSlave(Fmi3Slave):
         self.booleanVariable = True
         self.stringVariable = "Hello World!"
         self.register_variable(Integer("intOut", causality=Fmi3Causality.output))
-        self.register_variable(Real("realOut", causality=Fmi3Causality.output))
+        self.register_variable(Float64("realOut", causality=Fmi3Causality.output))
         self.register_variable(Boolean("booleanVariable", causality=Fmi3Causality.local))
         self.register_variable(String("stringVariable", causality=Fmi3Causality.local))
         
         # Note:
         # it is also possible to explicitly define getters and setters as lambdas in case the variable is not backed by a Python field.
-        # self.register_variable(Real("myReal", causality=Fmi3Causality.output, getter=lambda: self.realOut, setter=lambda v: set_real_out(v))
+        # self.register_variable(Float64("myReal", causality=Fmi3Causality.output, getter=lambda: self.realOut, setter=lambda v: set_float64_out(v))
 
     def do_step(self, current_time, step_size):
         return True
@@ -35,7 +35,7 @@ The bouncing ball example from the reference fmus repository may be created with
 
 
 ```python
-from pythonfmu3 import Fmi3Causality, Fmi3Variability, Fmi3Slave, Real, Fmi3Initial
+from pythonfmu3 import Fmi3Causality, Fmi3Variability, Fmi3Slave, Float64, Fmi3Initial
 
 class BouncingBall(Fmi3Slave):
 
@@ -56,16 +56,16 @@ class BouncingBall(Fmi3Slave):
         self.v_min = 0.1
     
         
-        self.register_variable(Real("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
+        self.register_variable(Float64("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
 
-        self.register_variable(Real("h", causality=Fmi3Causality.output, start=1, variability=Fmi3Variability.continuous, initial=Fmi3Initial.exact))
-        self.register_variable(Real("derh", causality=Fmi3Causality.local, variability=Fmi3Variability.continuous, derivative=1))
-        self.register_variable(Real("v", causality=Fmi3Causality.output, start=0, variability=Fmi3Variability.continuous, initial=Fmi3Initial.exact))
-        self.register_variable(Real("derv", causality=Fmi3Causality.local, variability=Fmi3Variability.continuous, derivative=3))
+        self.register_variable(Float64("h", causality=Fmi3Causality.output, start=1, variability=Fmi3Variability.continuous, initial=Fmi3Initial.exact))
+        self.register_variable(Float64("derh", causality=Fmi3Causality.local, variability=Fmi3Variability.continuous, derivative=1))
+        self.register_variable(Float64("v", causality=Fmi3Causality.output, start=0, variability=Fmi3Variability.continuous, initial=Fmi3Initial.exact))
+        self.register_variable(Float64("derv", causality=Fmi3Causality.local, variability=Fmi3Variability.continuous, derivative=3))
 
-        self.register_variable(Real("g", causality=Fmi3Causality.parameter, variability=Fmi3Variability.fixed))
-        self.register_variable(Real("e", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable))
-        self.register_variable(Real("v_min", variability=Fmi3Variability.constant, start=0.1))
+        self.register_variable(Float64("g", causality=Fmi3Causality.parameter, variability=Fmi3Variability.fixed))
+        self.register_variable(Float64("e", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable))
+        self.register_variable(Float64("v_min", variability=Fmi3Variability.constant, start=0.1))
 
     def do_step(self, current_time, step_size):
         self.derv = self.g
@@ -86,7 +86,7 @@ class BouncingBall(Fmi3Slave):
 If numpy is installed, arrays may be used with,
 
 ```python
-from pythonfmu3 import Fmi3Causality, Fmi3Variability, Fmi3Slave, Real, UInt64, Fmi3Initial, Dimension
+from pythonfmu3 import Fmi3Causality, Fmi3Variability, Fmi3Slave, Float64, UInt64, Fmi3Initial, Dimension
 import numpy as np
 
 
@@ -116,13 +116,13 @@ class LinearTransform(Fmi3Slave):
         self.y = np.reshape([0.0, 0.0], newshape=self.y.shape)
 
         
-        self.register_variable(Real("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
+        self.register_variable(Float64("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
         self.register_variable(UInt64("m", causality=Fmi3Causality.structuralParameter, variability=Fmi3Variability.tunable, start=2))
-        self.register_variable(Real("scalar", causality=Fmi3Causality.input, start=2.0))
-        self.register_variable(Real("u", causality=Fmi3Causality.input, dimensions=[Dimension(valueReference="1")]))
-        self.register_variable(Real("offset", causality=Fmi3Causality.input, dimensions=[Dimension(start=f"{self.m}")]))
-        self.register_variable(Real("A", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable, dimensions=[Dimension(start=f"{self.m}"), Dimension(start=f"{self.n}")]))
-        self.register_variable(Real("y", causality=Fmi3Causality.output, dimensions=[Dimension(valueReference="1")]))
+        self.register_variable(Float64("scalar", causality=Fmi3Causality.input, start=2.0))
+        self.register_variable(Float64("u", causality=Fmi3Causality.input, dimensions=[Dimension(valueReference="1")]))
+        self.register_variable(Float64("offset", causality=Fmi3Causality.input, dimensions=[Dimension(start=f"{self.m}")]))
+        self.register_variable(Float64("A", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable, dimensions=[Dimension(start=f"{self.m}"), Dimension(start=f"{self.n}")]))
+        self.register_variable(Float64("y", causality=Fmi3Causality.output, dimensions=[Dimension(valueReference="1")]))
 
     def do_step(self, current_time, step_size):
         self.y = self.scalar*self.A.dot(self.u) + self.offset

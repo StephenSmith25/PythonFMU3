@@ -144,7 +144,7 @@ class Dimension(object):
         ele = Element("Dimension", attrib)
         return ele
 
-class Real(ModelVariable):
+class Float64(ModelVariable):
     def __init__(self, name: str, start: Optional[Any] = None, derivative: Optional[Any] = None, dimensions: List[Dimension] = [], **kwargs):
         super().__init__(name, **kwargs)
         self.__attrs = {"start": start, "derivative": derivative}

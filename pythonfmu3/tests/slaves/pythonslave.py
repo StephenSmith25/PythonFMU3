@@ -1,4 +1,4 @@
-from pythonfmu3.fmi3slave import Fmi3Slave, Fmi3Causality, Fmi3Variability, Integer, Real, Boolean, String
+from pythonfmu3.fmi3slave import Fmi3Slave, Fmi3Causality, Fmi3Variability, Integer, Float64, Boolean, String
 
 
 class Container:
@@ -23,14 +23,14 @@ class PythonSlave(Fmi3Slave):
         self.stringParameter = "dog"
         self.register_variable(
             Integer("intParam", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable))
-        self.register_variable(Real("realIn", causality=Fmi3Causality.input))
+        self.register_variable(Float64("realIn", causality=Fmi3Causality.input))
         self.register_variable(
             Boolean("booleanParameter", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable))
         self.register_variable(
             String("stringParameter", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable))
 
         self.register_variable(Integer("intOut", causality=Fmi3Causality.output))
-        self.register_variable(Real("realOut", causality=Fmi3Causality.output))
+        self.register_variable(Float64("realOut", causality=Fmi3Causality.output))
         self.register_variable(Boolean("booleanVariable", causality=Fmi3Causality.local))
         self.register_variable(String("stringVariable", causality=Fmi3Causality.local))
 
@@ -39,7 +39,7 @@ class PythonSlave(Fmi3Slave):
         self.container.subContainer = sub = Container()
         sub.someInteger = -15
         self.register_variable(
-            Real("container.someReal", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable))
+            Float64("container.someReal", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable))
         self.register_variable(
             Integer("container.subContainer.someInteger", causality=Fmi3Causality.parameter,
                     variability=Fmi3Variability.tunable))

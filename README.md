@@ -25,7 +25,6 @@ Please take a look at the examples bouncingBall.py and linearTransform.py for a 
 
 In no particular order, we plan to add support for:
 
-- Refactor Real, Integer ect .to match FMI3 specification
 - Support more variable types from FMI3
 - Improve array support
 - Add event mode
@@ -107,7 +106,7 @@ optional arguments:
 
 ```python
 
-from pythonfmu3 import Fmi3Causality, Fmi3Slave, Boolean, Integer, Real, String
+from pythonfmu3 import Fmi3Causality, Fmi3Slave, Boolean, Integer, Float64, String
 
 
 class PythonSlave(Fmi3Slave):

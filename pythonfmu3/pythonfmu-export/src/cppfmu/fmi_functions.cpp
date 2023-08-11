@@ -50,7 +50,7 @@ struct Component
     Component(cppfmu::FMIString instanceName,
         cppfmu::FMICallbackLogger logCallback,
         cppfmu::FMIBoolean loggingOn) : loggerSettings{std::make_shared<cppfmu::Logger::Settings>()},
-        logger{this, instanceName, logCallback, loggerSettings}, lastSuccessfulTime{std::numeric_limits<cppfmu::FMIReal>::quiet_NaN()}
+        logger{this, instanceName, logCallback, loggerSettings}, lastSuccessfulTime{std::numeric_limits<cppfmu::FMIFloat64>::quiet_NaN()}
     {
         loggerSettings->debugLoggingEnabled = (loggingOn == cppfmu::FMITrue);
     }
@@ -62,7 +62,7 @@ struct Component
 
     // Co-simulation
     std::unique_ptr<cppfmu::SlaveInstance> slave;
-    cppfmu::FMIReal lastSuccessfulTime;
+    cppfmu::FMIFloat64 lastSuccessfulTime;
 };
 } // namespace
 
@@ -280,7 +280,7 @@ fmi3Status fmi3GetFloat64(
 {
     const auto component = reinterpret_cast<Component*>(c);
     try {
-        component->slave->GetReal(vr, nvr, values, nValues);
+        component->slave->GetFloat64(vr, nvr, values, nValues);
         return fmi3OK;
     } catch (const cppfmu::FatalError& e) {
         component->logger.Log(fmi3Fatal, "", e.what());
@@ -381,7 +381,7 @@ fmi3Status fmi3SetFloat64(
 {
     const auto component = reinterpret_cast<Component*>(c);
     try {
-        component->slave->SetReal(vr, nvr, value, nValues);
+        component->slave->SetFloat64(vr, nvr, value, nValues);
         return fmi3OK;
     } catch (const cppfmu::FatalError& e) {
         component->logger.Log(fmi3Fatal, "", e.what());

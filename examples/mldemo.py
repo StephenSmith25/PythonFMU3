@@ -1,4 +1,4 @@
-from pythonfmu3 import Fmi3Causality, Fmi3Slave, Real
+from pythonfmu3 import Fmi3Causality, Fmi3Slave, Float64
 
 import pathlib  # pathlib is included in the Python Standard Library
 
@@ -37,9 +37,9 @@ class MLDemo(Fmi3Slave):
         self.sin_output_tf = 0.
         self.sin_output_ref = 0.
 
-        self.register_variable(Real("sin_input", causality=Fmi3Causality.input))
-        self.register_variable(Real("sin_output_tf", causality=Fmi3Causality.output))
-        self.register_variable(Real("sin_output_ref", causality=Fmi3Causality.output))
+        self.register_variable(Float64("sin_input", causality=Fmi3Causality.input))
+        self.register_variable(Float64("sin_output_tf", causality=Fmi3Causality.output))
+        self.register_variable(Float64("sin_output_ref", causality=Fmi3Causality.output))
 
     def do_step(self, current_time, step_size):
         # Similar to model.predict() with less performance overhead

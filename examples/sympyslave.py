@@ -1,4 +1,4 @@
-from pythonfmu3.fmi3slave import Fmi3Slave, Fmi3Causality, Fmi3Variability, Real
+from pythonfmu3.fmi3slave import Fmi3Slave, Fmi3Causality, Fmi3Variability, Float64
 try:
     from sympy import symbols, exp
 except ImportError:  # Trick to be able to generate the FMU without sympy installed
@@ -18,10 +18,10 @@ class SympySlave(Fmi3Slave):
         self.realOut = 0.0
         self.tau = 2.
         self.a = 5.
-        self.register_variable(Real("realIn", causality=Fmi3Causality.input))
-        self.register_variable(Real("a", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable))
-        self.register_variable(Real("tau", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable))
-        self.register_variable(Real("realOut", causality=Fmi3Causality.output))
+        self.register_variable(Float64("realIn", causality=Fmi3Causality.input))
+        self.register_variable(Float64("a", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable))
+        self.register_variable(Float64("tau", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable))
+        self.register_variable(Float64("realOut", causality=Fmi3Causality.output))
 
     def do_step(self, current_time, step_size):
         i, a, t, tau = symbols("i, a, t, tau")

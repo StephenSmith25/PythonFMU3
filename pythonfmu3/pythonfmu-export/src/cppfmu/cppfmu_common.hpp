@@ -34,7 +34,7 @@ namespace cppfmu
 {
 
 // Aliases for FMI types and enums
-typedef fmi3Float64 FMIReal;
+typedef fmi3Float64 FMIFloat64;
 typedef fmi3Int32 FMIInteger;
 typedef fmi3UInt64 FMIUInt64;
 typedef fmi3Boolean FMIBoolean;

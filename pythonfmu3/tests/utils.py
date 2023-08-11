@@ -1,4 +1,4 @@
-from pythonfmu3.variables import Boolean, Integer, UInt64, Real, ModelVariable, String
+from pythonfmu3.variables import Boolean, Integer, UInt64, Float64, ModelVariable, String
 import ctypes
 class UInt64ValType(int): pass
 
@@ -6,7 +6,7 @@ class UInt64ValType(int): pass
 FMI2PY = dict((
     (Boolean, bool),
     (Integer, int),
-    (Real, float),
+    (Float64, float),
     (String, str),
     (UInt64, UInt64ValType),
 ))

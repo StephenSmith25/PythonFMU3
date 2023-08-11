@@ -161,7 +161,7 @@ void PySlaveInstance::initialize(PyGILState_STATE gilState)
     pMessages_ = PyObject_CallMethod(pInstance_, "_get_log_queue", nullptr);
 }
 
-void PySlaveInstance::SetupExperiment(cppfmu::FMIBoolean, cppfmu::FMIReal, cppfmu::FMIReal startTime, cppfmu::FMIBoolean, cppfmu::FMIReal)
+void PySlaveInstance::SetupExperiment(cppfmu::FMIBoolean, cppfmu::FMIFloat64, cppfmu::FMIFloat64 startTime, cppfmu::FMIBoolean, cppfmu::FMIFloat64)
 {
     py_safe_run([this, startTime](PyGILState_STATE gilState) {
         auto f = PyObject_CallMethod(pInstance_, "setup_experiment", "(d)", startTime);
@@ -197,7 +197,7 @@ void PySlaveInstance::ExitInitializationMode()
     });
 }
 
-bool PySlaveInstance::DoStep(cppfmu::FMIReal currentTime, cppfmu::FMIReal stepSize, cppfmu::FMIBoolean, cppfmu::FMIReal& endOfStep)
+bool PySlaveInstance::DoStep(cppfmu::FMIFloat64 currentTime, cppfmu::FMIFloat64 stepSize, cppfmu::FMIBoolean, cppfmu::FMIFloat64& endOfStep)
 {
     bool status;
     py_safe_run([this, &status, currentTime, stepSize](PyGILState_STATE gilState) {
@@ -232,7 +232,7 @@ void PySlaveInstance::Terminate()
     });
 }
 
-void PySlaveInstance::SetReal(const cppfmu::FMIValueReference* vr, std::size_t nvr, const cppfmu::FMIReal* values, std::size_t nValues)
+void PySlaveInstance::SetFloat64(const cppfmu::FMIValueReference* vr, std::size_t nvr, const cppfmu::FMIFloat64* values, std::size_t nValues)
 {
     py_safe_run([this, &vr, nvr, &values, nValues](PyGILState_STATE gilState) {
         PyObject* vrs = PyList_New(nvr);
@@ -244,11 +244,11 @@ void PySlaveInstance::SetReal(const cppfmu::FMIValueReference* vr, std::size_t n
             PyList_SetItem(refs, i, Py_BuildValue("d", values[i]));
         }
 
-        auto f = PyObject_CallMethod(pInstance_, "set_real", "(OO)", vrs, refs);
+        auto f = PyObject_CallMethod(pInstance_, "set_float64", "(OO)", vrs, refs);
         Py_DECREF(vrs);
         Py_DECREF(refs);
         if (f == nullptr) {
-            handle_py_exception("[setReal] PyObject_CallMethod", gilState);
+            handle_py_exception("[setFloat64] PyObject_CallMethod", gilState);
         }
         Py_DECREF(f);
         clearLogBuffer();
@@ -339,7 +339,7 @@ void PySlaveInstance::SetString(const cppfmu::FMIValueReference* vr, std::size_t
     });
 }
 
-void PySlaveInstance::GetReal(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIReal* values, std::size_t nValues) const
+void PySlaveInstance::GetFloat64(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIFloat64* values, std::size_t nValues) const
 {
     py_safe_run([this, &vr, nvr, &values, nValues](PyGILState_STATE gilState) {
         PyObject* vrs = PyList_New(nvr);
@@ -347,10 +347,10 @@ void PySlaveInstance::GetReal(const cppfmu::FMIValueReference* vr, std::size_t n
             PyList_SetItem(vrs, i, Py_BuildValue("i", vr[i]));
         }
 
-        auto refs = PyObject_CallMethod(pInstance_, "get_real", "O", vrs);
+        auto refs = PyObject_CallMethod(pInstance_, "get_float64", "O", vrs);
         Py_DECREF(vrs);
         if (refs == nullptr) {
-            handle_py_exception("[getReal] PyObject_CallMethod", gilState);
+            handle_py_exception("[getFloat64] PyObject_CallMethod", gilState);
         }
 
         for (int i = 0; i < nValues; i++) {
@@ -589,7 +589,7 @@ std::unique_ptr<cppfmu::SlaveInstance> CppfmuInstantiateSlave(
     cppfmu::FMIString,
     cppfmu::FMIString fmuResourceLocation,
     cppfmu::FMIString,
-    cppfmu::FMIReal,
+    cppfmu::FMIFloat64,
     cppfmu::FMIBoolean visible,
     cppfmu::FMIBoolean,
     const cppfmu::Logger& logger)

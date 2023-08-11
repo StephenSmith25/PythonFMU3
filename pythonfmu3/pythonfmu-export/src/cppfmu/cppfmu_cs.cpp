@@ -18,10 +18,10 @@ namespace cppfmu
 
 void SlaveInstance::SetupExperiment(
     FMIBoolean /*toleranceDefined*/,
-    FMIReal /*tolerance*/,
-    FMIReal /*tStart*/,
+    FMIFloat64 /*tolerance*/,
+    FMIFloat64 /*tStart*/,
     FMIBoolean /*stopTimeDefined*/,
-    FMIReal /*tStop*/)
+    FMIFloat64 /*tStop*/)
 {
     // Do nothing
 }
@@ -51,10 +51,10 @@ void SlaveInstance::Reset()
 }
 
 
-void SlaveInstance::SetReal(
+void SlaveInstance::SetFloat64(
     const FMIValueReference /*vr*/[],
     std::size_t nvr,
-    const FMIReal /*value*/[],
+    const FMIFloat64 /*value*/[],
     std::size_t nValues)
 {
     if (nvr != 0) {
@@ -106,10 +106,10 @@ void SlaveInstance::SetString(
 }
 
 
-void SlaveInstance::GetReal(
+void SlaveInstance::GetFloat64(
     const FMIValueReference /*vr*/[],
     std::size_t nvr,
-    FMIReal /*value*/[],
+    FMIFloat64 /*value*/[],
     std::size_t nValues) const
 {
     if (nvr != 0) {

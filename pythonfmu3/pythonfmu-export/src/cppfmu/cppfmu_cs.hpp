@@ -38,10 +38,10 @@ public:
      */
     virtual void SetupExperiment(
         FMIBoolean toleranceDefined,
-        FMIReal tolerance,
-        FMIReal tStart,
+        FMIFloat64 tolerance,
+        FMIFloat64 tStart,
         FMIBoolean stopTimeDefined,
-        FMIReal tStop);
+        FMIFloat64 tStop);
 
     /* Called from fmi3EnterInitializationMode() (FMI 2.0) or
      * fmiInitializeSlave() (FMI 1.0).
@@ -68,10 +68,10 @@ public:
     /* Called from fmi3SetXxx()/fmiSetXxx().
      * Throws std::logic_error by default.
      */
-    virtual void SetReal(
+    virtual void SetFloat64(
         const FMIValueReference vr[],
         std::size_t nvr,
-        const FMIReal value[],
+        const FMIFloat64 value[],
         std::size_t nValues);
     virtual void SetInteger(
         const FMIValueReference vr[],
@@ -93,10 +93,10 @@ public:
     /* Called from fmi3GetXxx()/fmiGetXxx().
      * Throws std::logic_error by default.
      */
-    virtual void GetReal(
+    virtual void GetFloat64(
         const FMIValueReference vr[],
         std::size_t nvr,
-        FMIReal value[],
+        FMIFloat64 value[],
         std::size_t nValues) const;
     virtual void GetInteger(
         const FMIValueReference vr[],
@@ -117,10 +117,10 @@ public:
 
     // Called from fmi3DoStep()/fmiDoStep(). Must be implemented in model code.
     virtual bool DoStep(
-        FMIReal currentCommunicationPoint,
-        FMIReal communicationStepSize,
+        FMIFloat64 currentCommunicationPoint,
+        FMIFloat64 communicationStepSize,
         FMIBoolean newStep,
-        FMIReal& endOfStep) = 0;
+        FMIFloat64& endOfStep) = 0;
 
     virtual void GetFMUstate(fmi3FMUState& state) = 0;
     virtual void SetFMUstate(const fmi3FMUState& state) = 0;
@@ -165,7 +165,7 @@ std::unique_ptr<cppfmu::SlaveInstance> CppfmuInstantiateSlave(
     cppfmu::FMIString fmuGUID,
     cppfmu::FMIString fmuResourceLocation,
     cppfmu::FMIString mimeType,
-    cppfmu::FMIReal timeout,
+    cppfmu::FMIFloat64 timeout,
     cppfmu::FMIBoolean visible,
     cppfmu::FMIBoolean interactive,
     const cppfmu::Logger& logger);

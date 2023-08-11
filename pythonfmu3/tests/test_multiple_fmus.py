@@ -22,7 +22,7 @@ def mapped(md):
 @pytest.mark.integration
 def test_integration_multiple_fmus(tmp_path):
     slave1_code = """import math
-from pythonfmu3.Fmi3Slave import Fmi3Slave, Fmi3Causality, Integer, Real, Boolean, String
+from pythonfmu3.Fmi3Slave import Fmi3Slave, Fmi3Causality, Integer, Float64, Boolean, String
 
 
 class Slave1(Fmi3Slave):
@@ -32,8 +32,8 @@ class Slave1(Fmi3Slave):
 
         self.realIn = 22.0
         self.realOut = 0.0
-        self.register_variable(Real("realIn", causality=Fmi3Causality.input))
-        self.register_variable(Real("realOut", causality=Fmi3Causality.output))
+        self.register_variable(Float64("realIn", causality=Fmi3Causality.input))
+        self.register_variable(Float64("realOut", causality=Fmi3Causality.output))
 
     def do_step(self, current_time, step_size):
         self.log("Do step on Slave1.")
@@ -41,7 +41,7 @@ class Slave1(Fmi3Slave):
         return True
 """
 
-    slave2_code = """from pythonfmu3.Fmi3Slave import Fmi3Slave, Fmi3Causality, Integer, Real, Boolean, String
+    slave2_code = """from pythonfmu3.Fmi3Slave import Fmi3Slave, Fmi3Causality, Integer, Float64, Boolean, String
 
 
 class Slave2(Fmi3Slave):
@@ -51,8 +51,8 @@ class Slave2(Fmi3Slave):
 
         self.realIn = 22.0
         self.realOut = 0.0
-        self.register_variable(Real("realIn", causality=Fmi3Causality.input))
-        self.register_variable(Real("realOut", causality=Fmi3Causality.output))
+        self.register_variable(Float64("realIn", causality=Fmi3Causality.input))
+        self.register_variable(Float64("realOut", causality=Fmi3Causality.output))
 
     def do_step(self, current_time, step_size):
         self.log("Do step on Slave2.")

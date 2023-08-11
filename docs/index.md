@@ -25,7 +25,7 @@ Please take a look at the examples bouncingBall.py and linearTransform.py for a 
 
 In no particular order, we plan to add support for:
 
-- Refactor Real, Integer ect .to match FMI3 specification
+- Refactor Float64, Integer ect .to match FMI3 specification
 - Support more variable types from FMI3
 - Improve array support
 - Add event mode
