@@ -128,7 +128,7 @@ class PythonSlave(Fmi3Slave):
         
         # Note:
         # it is also possible to explicitly define getters and setters as lambdas in case the variable is not backed by a Python field.
-        # self.register_variable(Real("myReal", causality=Fmi3Causality.output, getter=lambda: self.realOut, setter=lambda v: set_real_out(v))
+        # self.register_variable(Float64("myReal", causality=Fmi3Causality.output, getter=lambda: self.realOut, setter=lambda v: set_real_out(v))
 
     def do_step(self, current_time, step_size):
         return True
