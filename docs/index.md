@@ -1,18 +1,13 @@
 # PythonFMU3
 
-A lightweight framework that enables the packaging of Python 3 code as co-simulation FMUs (following FMI version 3.0).
+> A lightweight framework that enables the packaging of Python 3 code as co-simulation FMUs (following FMI version 3.0).
 
-.. image:: https://img.shields.io/badge/License-MIT-yellow.svg  
-    :target: https://opensource.org/licenses/MIT  
-  
-.. image:: https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat  
-    :target: https://github.com/StephenSmith25/PythonFMU3/issues  
-  
-.. image:: https://github.com/StephenSmith25/PythonFMU3/workflows/CI/badge.svg  
-    :target: https://github.com/StephenSmith25/PythonFMU3/actions?query=workflow%3ACI  
-  
-.. image:: https://img.shields.io/pypi/v/pythonfmu3  
-    :target: https://pypi.org/project/pythonfmu3/  
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/StephenSmith25/PythonFMU3/issues)
+
+[![CI](https://github.com/StephenSmith25/PythonFMU3/workflows/CI/badge.svg)](https://github.com/StephenSmith25/PythonFMU3/actions?query=workflow%3ACI)
+[![PyPI](https://img.shields.io/pypi/v/pythonfmu3)](https://pypi.org/project/pythonfmu3/)
+
 
 This project is a fork of the original PythonFMU repository available at https://github.com/NTNU-IHB/PythonFMU, which was used as the basis for adding support for FMI 3.0. While we have made efforts to expand the functionality of this project, it currently has some limitations and does not support all the features of FMI 3.0. We would like to acknowledge and give credit to the original PythonFMU project for their contributions to this work.
 
