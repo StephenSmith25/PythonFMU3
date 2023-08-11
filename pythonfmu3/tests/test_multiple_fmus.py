@@ -22,7 +22,7 @@ def mapped(md):
 @pytest.mark.integration
 def test_integration_multiple_fmus(tmp_path):
     slave1_code = """import math
-from pythonfmu3.Fmi3Slave import Fmi3Slave, Fmi3Causality, Integer, Float64, Boolean, String
+from pythonfmu3.Fmi3Slave import Fmi3Slave, Fmi3Causality, Int32, Float64, Boolean, String
 
 
 class Slave1(Fmi3Slave):
@@ -41,7 +41,7 @@ class Slave1(Fmi3Slave):
         return True
 """
 
-    slave2_code = """from pythonfmu3.Fmi3Slave import Fmi3Slave, Fmi3Causality, Integer, Float64, Boolean, String
+    slave2_code = """from pythonfmu3.Fmi3Slave import Fmi3Slave, Fmi3Causality, Int32, Float64, Boolean, String
 
 
 class Slave2(Fmi3Slave):

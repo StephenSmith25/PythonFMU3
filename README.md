@@ -106,7 +106,7 @@ optional arguments:
 
 ```python
 
-from pythonfmu3 import Fmi3Causality, Fmi3Slave, Boolean, Integer, Float64, String
+from pythonfmu3 import Fmi3Causality, Fmi3Slave, Boolean, Int32, Float64, String
 
 
 class PythonSlave(Fmi3Slave):
