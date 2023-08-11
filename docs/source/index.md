@@ -1,5 +1,4 @@
 # PythonFMU3
-=============
 
 A lightweight framework that enables the packaging of Python 3 code as co-simulation FMUs (following FMI version 3.0).
 
@@ -17,8 +16,7 @@ A lightweight framework that enables the packaging of Python 3 code as co-simula
 
 This project is a fork of the original PythonFMU repository available at https://github.com/NTNU-IHB/PythonFMU, which was used as the basis for adding support for FMI 3.0. While we have made efforts to expand the functionality of this project, it currently has some limitations and does not support all the features of FMI 3.0. We would like to acknowledge and give credit to the original PythonFMU project for their contributions to this work.
 
-Support:
---------
+## Support:
 
 We currently support a basic FMU which follows the FMI3 standard. This includes support for:
 
@@ -28,8 +26,7 @@ We currently support a basic FMU which follows the FMI3 standard. This includes 
 
 Please take a look at the examples bouncingBall.py and linearTransform.py for a demonstration of these features.
 
-Future:
--------
+## Future:
 
 In no particular order, we plan to add support for:
 
@@ -39,11 +36,3 @@ In no particular order, we plan to add support for:
 - Add event mode
 - Include FMI3 related testing
 
-
-Contents
---------
-
-.. toctree::
-   install
-   usage
-   dependencies
