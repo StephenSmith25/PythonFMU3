@@ -1,5 +1,5 @@
 site_name: pythonfmu3
-pages:
+nav:
     - Home: index.md
     - Installation: install.md
     - Tutorial: usage.md
