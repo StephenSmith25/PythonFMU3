@@ -1,5 +1,6 @@
 """Define the abstract facade class."""
 import json
+import ctypes
 import datetime
 from abc import ABC, abstractmethod
 from collections import OrderedDict, namedtuple
@@ -130,18 +131,27 @@ class Fmi3Slave(ABC):
         )
 
         continuous_state_derivatives = list(
-            filter(lambda v: v.causality == Fmi3Causality.output, self.vars.values())
+            filter(lambda v: v.variability == Fmi3Variability.continuous and (isinstance(v, Real) and v.derivative is not None), self.vars.values())
         )
 
+        allowed_variability = [None, Fmi3Initial.approx, Fmi3Initial.calculated]
         initial_unknown = list(
-            filter(lambda v: v.causality == Fmi3Causality.output or v.causality == Fmi3Causality.calculatedParameter, self.vars.values())
+            filter(lambda v: (v.causality == Fmi3Causality.output and (v.initial in allowed_variability))
+                              or v.causality == Fmi3Causality.calculatedParameter
+                              or v in continuous_state_derivatives and v.initial in allowed_variability
+                              or v.variability == Fmi3Variability.continuous and v.initial in allowed_variability and v.causality != Fmi3Causality.independent, self.vars.values())
         )
 
         for v in outputs:
             SubElement(structure, "Output", attrib=dict(valueReference=str(v.value_reference)))
 
+        for v in continuous_state_derivatives:
+            SubElement(structure, "ContinuousStateDerivative", attrib=dict(valueReference=str(v.value_reference)))
+
         for v in initial_unknown:
             SubElement(structure, "InitialUnknown", attrib=dict(valueReference=str(v.value_reference)))
+        
+
 
         return root
 
@@ -151,7 +161,8 @@ class Fmi3Slave(ABC):
         if isinstance(var, Integer):
             refs = self.get_integer(vrs)
         elif isinstance(var, UInt64):
-            refs = self.get_uint64(vrs)
+            refs = [val.value for val in self.get_uint64(vrs)]
+            print(refs)
         elif isinstance(var, Real):
             refs = self.get_real(vrs)
         elif isinstance(var, Boolean):
@@ -220,12 +231,13 @@ class Fmi3Slave(ABC):
                 )
         return refs
 
-    def get_uint64(self, vrs: List[int]) -> List[int]:
+    def get_uint64(self, vrs: List[int]) -> List[ctypes.c_uint64]:
         refs = list()
         for vr in vrs:
             var = self.vars[vr]
             if isinstance(var, UInt64):
-                refs.append(var.getter())
+                val = var.getter()
+                refs.append(val if isinstance(val, ctypes.c_uint64) else ctypes.c_uint64(val))
             else:
                 raise TypeError(
                     f"Variable with valueReference={vr} is not of type UInt64!"

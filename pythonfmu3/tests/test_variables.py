@@ -2,14 +2,15 @@ from enum import Enum
 from random import randint
 
 import pytest
+import ctypes
 
 from xml.etree import ElementTree
 
 from pythonfmu3 import Fmi3Slave
 from pythonfmu3.enums import Fmi3Causality, Fmi3Initial, Fmi3Variability
-from pythonfmu3.variables import Boolean, Integer, Real, ModelVariable, String
+from pythonfmu3.variables import Boolean, Integer, UInt64, Real, ModelVariable, String, Dimension
 
-from .utils import PY2FMI
+from .utils import PY2FMI, UInt64ValType
 
 MODEL_VARIABLE_ATTRIBUTES = ["name", "valueReference", "description", "causality", "variability", "initial"]
 
@@ -43,6 +44,7 @@ def test_ModelVariable_constructor(causality, initial, variability, name, descri
 @pytest.mark.parametrize("fmi_type,value", [
     (Boolean, False),
     (Integer, 22),
+    (UInt64, UInt64ValType(23)),
     (Real, 2./3.),
     (String, "hello_world"),
 ])
@@ -61,14 +63,15 @@ def test_ModelVariable_getter(fmi_type, value):
     fmi_type_name = fmi_type.__qualname__.lower()
 
     slave = Slave(instance_name="slaveInstance")
-    assert getattr(slave, f"get_{fmi_type_name}")([0]) == [value]
+    assert [getattr(val, "value", val) for val in getattr(slave, f"get_{fmi_type_name}")([0])] == [value]
 
 
 @pytest.mark.parametrize("fmi_type,value", [
     (Boolean, False),
     (Integer, 22),
+    (UInt64, UInt64ValType(23)),
     (Real, 2./3.),
-    (String, "hello_world"),
+    (String, "hello_world")
 ])
 def test_ModelVariable_setter(fmi_type, value):
 
@@ -93,8 +96,63 @@ def test_ModelVariable_setter(fmi_type, value):
 
     set_method = getattr(slave, f"set_{fmi_type_name}")
     set_method([0, ], [value, ])
-    assert getattr(slave, f"get_{fmi_type_name}")([0]) == [value]
+    assert [getattr(val, "value", val) for val in getattr(slave, f"get_{fmi_type_name}")([0])] == [value]
 
+@pytest.mark.requirements("numpy")  
+@pytest.mark.parametrize("fmi_type,value,dims", [
+    (Real, [1.,2.,3.,4.], [4]),
+    (Real, [1.,2.,3.,4.], [2, 2]),
+])
+def test_ModelVariable_getter_array(fmi_type, value, dims):
+
+    class Slave(Fmi3Slave):
+
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            self.var = value
+            dimensions = [Dimension(start=val) for val in dims]
+            self.register_variable(PY2FMI[type(value[0])]("var", getter=lambda: self.var, dimensions=dimensions))
+
+        def do_step(self, t, dt):
+            return True
+
+    fmi_type_name = fmi_type.__qualname__.lower()
+
+    slave = Slave(instance_name="slaveInstance")
+    assert [getattr(val, "value", val) for val in getattr(slave, f"get_{fmi_type_name}")([0])] == value
+
+
+@pytest.mark.requirements("numpy")  
+@pytest.mark.parametrize("fmi_type,value,dims", [
+    (Real, [1.,2.,3.,4.], [4]),
+    (Real, [1.,2.,3.,4.], [2, 2]),
+])
+def test_ModelVariable_setter_array(fmi_type, value, dims):
+
+    class Slave(Fmi3Slave):
+
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            self.var = [None]*len(value)
+            dimensions = [Dimension(start=val) for val in dims]
+            self.register_variable(
+                PY2FMI[type(value[0])](
+                    "var",
+                    getter=lambda: self.var,
+                    setter=lambda v: setattr(self, 'var', v),
+                    dimensions=dimensions
+                )
+            )
+
+        def do_step(self, t, dt):
+            return True
+
+    slave = Slave(instance_name="slaveInstance")
+    fmi_type_name = fmi_type.__qualname__.lower()
+
+    set_method = getattr(slave, f"set_{fmi_type_name}")
+    set_method([0, ], value)
+    assert [getattr(val, "value", val) for val in getattr(slave, f"get_{fmi_type_name}")([0])] == value
 
 @pytest.mark.parametrize("causality", list(Fmi3Causality) + [None])
 @pytest.mark.parametrize("initial", list(Fmi3Initial) + [None])
@@ -123,6 +181,7 @@ def test_ModelVariable_to_xml(causality, initial, variability, name, description
 @pytest.mark.parametrize("var_type, value", [
     (Boolean, True),
     (Integer, 23),
+    (UInt64, UInt64ValType(23)),
     (Real, 15.),
     (String, "hello")])
 @pytest.mark.parametrize("causality", list(Fmi3Causality) + [None])
@@ -237,3 +296,19 @@ def test_String_to_xml(name, start):
     xml = r.to_xml()
     if start is not None:
         assert xml.attrib['start'] == str(start)
+
+
+@pytest.mark.requirements("numpy")  
+@pytest.mark.parametrize("name,start,dims", [
+    ("array1", [1.,2.,3.,4.], [4]),
+    ("array2", [1.,2.,3.,4.], [2, 2]),
+])
+def test_array_to_xml(name, start, dims):
+    r = Real(name, start, dimensions=[Dimension(start=val) for val in dims])
+    xml = r.to_xml()
+    if start is not None:
+        assert xml.attrib['start'] == " ".join([f"{val:.16g}" for val in start])
+    if dims is not None:
+        xml_dims = xml.findall('.//Dimension')
+        assert len(xml_dims) == len(dims)
+        assert [xml_dim.attrib['start'] for xml_dim in xml_dims] == dims

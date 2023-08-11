@@ -160,6 +160,10 @@ class Real(ModelVariable):
     @start.setter
     def start(self, value: float):
         self.__attrs["start"] = value
+
+    @property
+    def derivative(self):
+        return self.__attrs["derivative"]
     
     @property
     def dimensions(self) -> List[Dimension]:
