@@ -22,10 +22,10 @@ class BouncingBall(Fmi3Slave):
         
         self.register_variable(Float64("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
 
-        self.register_variable(Float64("h", causality=Fmi3Causality.output, start=1, variability=Fmi3Variability.continuous, initial=Fmi3Initial.exact))
-        self.register_variable(Float64("derh", causality=Fmi3Causality.local, variability=Fmi3Variability.continuous, derivative=1))
-        self.register_variable(Float64("v", causality=Fmi3Causality.output, start=0, variability=Fmi3Variability.continuous, initial=Fmi3Initial.exact))
-        self.register_variable(Float64("derv", causality=Fmi3Causality.local, variability=Fmi3Variability.continuous, derivative=3))
+        self.register_variable(Float64("ball.h", causality=Fmi3Causality.output, start=1, variability=Fmi3Variability.continuous, initial=Fmi3Initial.exact), nested=False)
+        self.register_variable(Float64("ball.derh", causality=Fmi3Causality.local, variability=Fmi3Variability.continuous, derivative=1), nested=False)
+        self.register_variable(Float64("ball.v", causality=Fmi3Causality.output, start=0, variability=Fmi3Variability.continuous, initial=Fmi3Initial.exact), nested=False)
+        self.register_variable(Float64("ball.derv", causality=Fmi3Causality.local, variability=Fmi3Variability.continuous, derivative=3), nested=False)
 
         self.register_variable(Float64("g", causality=Fmi3Causality.parameter, variability=Fmi3Variability.fixed))
         self.register_variable(Float64("e", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable))
