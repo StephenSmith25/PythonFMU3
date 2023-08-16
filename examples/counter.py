@@ -9,6 +9,7 @@ class Counter(Fmi3Slave):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+        self.time = 0.0
         self.counter = 0
         
         self.register_variable(Float64("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))

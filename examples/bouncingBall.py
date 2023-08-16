@@ -8,7 +8,8 @@ class BouncingBall(Fmi3Slave):
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
-
+        
+        self.time = 0.0
         self.counter = 0
         self.h = 1.0
         self.derh = 0.0

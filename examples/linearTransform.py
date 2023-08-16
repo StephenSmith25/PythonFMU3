@@ -10,6 +10,8 @@ class LinearTransform(Fmi3Slave):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+        self.time = 0.0
+
         self.m = 2
         self.n = 2
 
