@@ -276,6 +276,27 @@ void PySlaveInstance::SetInt32(const cppfmu::FMIValueReference* vr, std::size_t 
     });
 }
 
+void PySlaveInstance::SetInt64(const cppfmu::FMIValueReference* vr, std::size_t nvr, const cppfmu::FMIInt64* values)
+{
+    py_safe_run([this, &vr, nvr, &values](PyGILState_STATE gilState) {
+        PyObject* vrs = PyList_New(nvr);
+        PyObject* refs = PyList_New(nvr);
+        for (int i = 0; i < nvr; i++) {
+            PyList_SetItem(vrs, i, Py_BuildValue("i", vr[i]));
+            PyList_SetItem(refs, i, Py_BuildValue("L", values[i]));
+        }
+
+        auto f = PyObject_CallMethod(pInstance_, "set_int64", "(OO)", vrs, refs);
+        Py_DECREF(vrs);
+        Py_DECREF(refs);
+        if (f == nullptr) {
+            handle_py_exception("[setInt64] PyObject_CallMethod", gilState);
+        }
+        Py_DECREF(f);
+        clearLogBuffer();
+    });
+}
+
 void PySlaveInstance::SetUInt64(const cppfmu::FMIValueReference* vr, std::size_t nvr, const cppfmu::FMIUInt64* values)
 {
     py_safe_run([this, &vr, nvr, &values](PyGILState_STATE gilState) {
@@ -378,6 +399,28 @@ void PySlaveInstance::GetInt32(const cppfmu::FMIValueReference* vr, std::size_t 
         for (int i = 0; i < nvr; i++) {
             PyObject* value = PyList_GetItem(refs, i);
             values[i] = static_cast<cppfmu::FMIInt32>(PyLong_AsLong(value));
+        }
+        Py_DECREF(refs);
+        clearLogBuffer();
+    });
+}
+
+void PySlaveInstance::GetInt64(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIInt64* values) const
+{
+    py_safe_run([this, &vr, nvr, &values](PyGILState_STATE gilState) {
+        PyObject* vrs = PyList_New(nvr);
+        for (int i = 0; i < nvr; i++) {
+            PyList_SetItem(vrs, i, Py_BuildValue("i", vr[i]));
+        }
+        auto refs = PyObject_CallMethod(pInstance_, "get_int64", "O", vrs);
+        Py_DECREF(vrs);
+        if (refs == nullptr) {
+            handle_py_exception("[getInt64] PyObject_CallMethod", gilState);
+        }
+
+        for (int i = 0; i < nvr; i++) {
+            PyObject* value = PyList_GetItem(refs, i);
+            values[i] = static_cast<cppfmu::FMIInt64>(PyLong_AsLongLong(value));
         }
         Py_DECREF(refs);
         clearLogBuffer();

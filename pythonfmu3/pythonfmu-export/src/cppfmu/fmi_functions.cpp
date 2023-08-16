@@ -311,6 +311,26 @@ fmi3Status fmi3GetInt32(
     }
 }
 
+fmi3Status fmi3GetInt64(
+    fmi3Instance c,
+    const fmi3ValueReference vr[],
+    size_t nvr,
+    fmi3Int64 values[],
+    size_t nValues)
+{
+    const auto component = reinterpret_cast<Component*>(c);
+    try {
+        component->slave->GetInt64(vr, nvr, values);
+        return fmi3OK;
+    } catch (const cppfmu::FatalError& e) {
+        component->logger.Log(fmi3Fatal, "", e.what());
+        return fmi3Fatal;
+    } catch (const std::exception& e) {
+        component->logger.Log(fmi3Error, "", e.what());
+        return fmi3Error;
+    }
+}
+
 fmi3Status fmi3GetUInt64(
     fmi3Instance c,
     const fmi3ValueReference vr[],
@@ -402,6 +422,26 @@ fmi3Status fmi3SetInt32(
     const auto component = reinterpret_cast<Component*>(c);
     try {
         component->slave->SetInt32(vr, nvr, values);
+        return fmi3OK;
+    } catch (const cppfmu::FatalError& e) {
+        component->logger.Log(fmi3Fatal, "", e.what());
+        return fmi3Fatal;
+    } catch (const std::exception& e) {
+        component->logger.Log(fmi3Error, "", e.what());
+        return fmi3Error;
+    }
+}
+
+fmi3Status fmi3SetInt64(
+    fmi3Instance c,
+    const fmi3ValueReference vr[],
+    size_t nvr,
+    const fmi3Int64 values[],
+    size_t nValues)
+{
+    const auto component = reinterpret_cast<Component*>(c);
+    try {
+        component->slave->SetInt64(vr, nvr, values);
         return fmi3OK;
     } catch (const cppfmu::FatalError& e) {
         component->logger.Log(fmi3Fatal, "", e.what());
@@ -659,8 +699,6 @@ NOT_IMPLEMENTED_GETTER(Int8, fmi3Int8);
 NOT_IMPLEMENTED_SETTER(Int8, fmi3Int8);
 NOT_IMPLEMENTED_GETTER(Int16, fmi3Int16);
 NOT_IMPLEMENTED_SETTER(Int16, fmi3Int16);
-NOT_IMPLEMENTED_GETTER(Int64, fmi3Int64);
-NOT_IMPLEMENTED_SETTER(Int64, fmi3Int64);
 
 NOT_IMPLEMENTED_GETTER(UInt8, fmi3UInt8);
 NOT_IMPLEMENTED_SETTER(UInt8, fmi3UInt8);

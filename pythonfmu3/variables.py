@@ -216,6 +216,30 @@ class Int32(ModelVariable):
         parent = super().to_xml()
 
         return parent
+        
+class Int64(ModelVariable):
+    def __init__(self, name: str, start: Optional[Any] = None, **kwargs):
+        super().__init__(name, **kwargs)
+        self.__attrs = {"start": start}
+        self._type = "Int64";
+
+    @property
+    def start(self) -> Optional[Any]:
+        return self.__attrs["start"]
+
+    @start.setter
+    def start(self, value: float):
+        self.__attrs["start"] = value
+
+    def to_xml(self) -> Element:
+        attrib = dict()
+        for key, value in self.__attrs.items():
+            if value is not None:
+                attrib[key] = str(value)
+        self._extras = attrib
+        parent = super().to_xml()
+
+        return parent
 
 class UInt64(ModelVariable):
     def __init__(self, name: str, start: Optional[Any] = None, **kwargs):
@@ -279,6 +303,38 @@ class String(ModelVariable):
     @start.setter
     def start(self, value: float):
         self.__attrs["start"] = value
+
+    def to_xml(self) -> Element:
+        attrib = dict()
+        for key, value in self.__attrs.items():
+            if value is not None:
+                attrib[key] = str(value)
+        self._extras = attrib
+        parent = super().to_xml()
+
+        return parent
+    
+class Enumeration(ModelVariable):
+    def __init__(self, name: str, start: Optional[Any] = None, declared_type: Optional[Any] = None, **kwargs):
+        super().__init__(name, **kwargs)
+        self.__attrs = {"start": start, "declaredType": declared_type}
+        self._type = "Enumeration"
+
+    @property
+    def start(self) -> Optional[Any]:
+        return self.__attrs["start"]
+
+    @start.setter
+    def start(self, value: float):
+        self.__attrs["start"] = value
+
+    @property
+    def declared_type(self) -> Optional[Any]:
+        return self.__attrs["declaredType"]
+
+    @declared_type.setter
+    def declared_type(self, value: float):
+        self.__attrs["declaredType"] = value
 
     def to_xml(self) -> Element:
         attrib = dict()

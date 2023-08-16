@@ -13,7 +13,7 @@ from .logmsg import LogMsg
 from .default_experiment import DefaultExperiment
 from ._version import __version__ as VERSION
 from .enums import Fmi3Type, Fmi3Status, Fmi3Causality, Fmi3Initial, Fmi3Variability
-from .variables import Boolean, Int32, UInt64, Float64, ModelVariable, String
+from .variables import Boolean, Int32, Int64, UInt64, Float64, ModelVariable, String
 
 ModelOptions = namedtuple("ModelOptions", ["name", "value", "cli"])
 
@@ -160,6 +160,8 @@ class Fmi3Slave(ABC):
 
         if isinstance(var, Int32):
             refs = self.get_int32(vrs)
+        if isinstance(var, Int64):
+            refs = self.get_int64(vrs)
         elif isinstance(var, UInt64):
             refs = [val.value for val in self.get_uint64(vrs)]
         elif isinstance(var, Float64):
@@ -229,6 +231,18 @@ class Fmi3Slave(ABC):
                     f"Variable with valueReference={vr} is not of type Integer!"
                 )
         return refs
+    
+    def get_int64(self, vrs: List[int]) -> List[int]:
+        refs = list()
+        for vr in vrs:
+            var = self.vars[vr]
+            if isinstance(var, Int64):
+                refs.append(int(var.getter()))
+            else:
+                raise TypeError(
+                    f"Variable with valueReference={vr} is not of type Int64!"
+                )
+        return refs
 
     def get_uint64(self, vrs: List[int]) -> List[ctypes.c_uint64]:
         refs = list()
@@ -286,6 +300,16 @@ class Fmi3Slave(ABC):
         for vr, value in zip(vrs, values):
             var = self.vars[vr]
             if isinstance(var, Int32):
+                var.setter(value)
+            else:
+                raise TypeError(
+                    f"Variable with valueReference={vr} is not of type Integer!"
+                )
+                
+    def set_int64(self, vrs: List[int], values: List[int]):
+        for vr, value in zip(vrs, values):
+            var = self.vars[vr]
+            if isinstance(var, Int64):
                 var.setter(value)
             else:
                 raise TypeError(
