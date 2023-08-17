@@ -204,7 +204,7 @@ class Int32(ModelVariable):
         return self.__attrs["start"]
 
     @start.setter
-    def start(self, value: float):
+    def start(self, value: int):
         self.__attrs["start"] = value
 
     def to_xml(self) -> Element:
@@ -228,7 +228,7 @@ class Int64(ModelVariable):
         return self.__attrs["start"]
 
     @start.setter
-    def start(self, value: float):
+    def start(self, value: int):
         self.__attrs["start"] = value
 
     def to_xml(self) -> Element:
@@ -252,7 +252,7 @@ class UInt64(ModelVariable):
         return self.__attrs["start"]
 
     @start.setter
-    def start(self, value: float):
+    def start(self, value: int):
         self.__attrs["start"] = value
 
     def to_xml(self) -> Element:

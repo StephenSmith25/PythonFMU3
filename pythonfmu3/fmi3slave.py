@@ -11,9 +11,10 @@ from xml.etree.ElementTree import Element, SubElement
 
 from .logmsg import LogMsg
 from .default_experiment import DefaultExperiment
+from .type_definitions import TypeDefinitions
 from ._version import __version__ as VERSION
 from .enums import Fmi3Type, Fmi3Status, Fmi3Causality, Fmi3Initial, Fmi3Variability
-from .variables import Boolean, Int32, Int64, UInt64, Float64, ModelVariable, String
+from .variables import Boolean, Enumeration, Int32, Int64, UInt64, Float64, ModelVariable, String
 
 ModelOptions = namedtuple("ModelOptions", ["name", "value", "cli"])
 
@@ -53,6 +54,7 @@ class Fmi3Slave(ABC):
         self.modelName: Optional[str] = self.__class__.__name__
         self.description: Optional[str] = None
         self.default_experiment: Optional[DefaultExperiment] = None
+        self.type_definitions: Optional[TypeDefinitions] = None
 
     def to_xml(self, model_options: Dict[str, str] = dict()) -> Element:
         """Build the XML representation of the model.
@@ -97,6 +99,9 @@ class Fmi3Slave(ABC):
 
         SubElement(root, "CoSimulation", attrib=options)
 
+        if self.type_definitions is not None:
+            root.append(self.type_definitions.to_xml())
+
         if len(self.log_categories) > 0:
             categories = SubElement(root, "LogCategories")
             for category, description in self.log_categories.items():
@@ -118,7 +123,7 @@ class Fmi3Slave(ABC):
             if self.default_experiment.tolerance is not None:
                 attrib["tolerance"] = str(self.default_experiment.tolerance)
             SubElement(root, "DefaultExperiment", attrib)
-
+            
         variables = SubElement(root, "ModelVariables")
         for v in self.vars.values():
             if ModelVariable.requires_start(v):
@@ -157,10 +162,9 @@ class Fmi3Slave(ABC):
 
     def __apply_start_value(self, var: ModelVariable):
         vrs = [var.value_reference]
-
         if isinstance(var, Int32):
             refs = self.get_int32(vrs)
-        if isinstance(var, Int64):
+        elif isinstance(var, (Enumeration, Int64)):
             refs = self.get_int64(vrs)
         elif isinstance(var, UInt64):
             refs = [val.value for val in self.get_uint64(vrs)]
@@ -171,8 +175,7 @@ class Fmi3Slave(ABC):
         elif isinstance(var, String):
             refs = self.get_string(vrs)
         else:
-            raise Exception(f"Unsupported type!")
-
+            raise Exception(f"Unsupported type {type(var)}!")
         var.start = refs if len(getattr(var, "dimensions", [])) > 0 else refs[0]
 
     def register_variable(self, var: ModelVariable, nested: bool = True):
@@ -236,7 +239,7 @@ class Fmi3Slave(ABC):
         refs = list()
         for vr in vrs:
             var = self.vars[vr]
-            if isinstance(var, Int64):
+            if isinstance(var, (Enumeration, Int64)):
                 refs.append(int(var.getter()))
             else:
                 raise TypeError(
@@ -309,7 +312,7 @@ class Fmi3Slave(ABC):
     def set_int64(self, vrs: List[int], values: List[int]):
         for vr, value in zip(vrs, values):
             var = self.vars[vr]
-            if isinstance(var, Int64):
+            if isinstance(var, (Enumeration, Int64)):
                 var.setter(value)
             else:
                 raise TypeError(

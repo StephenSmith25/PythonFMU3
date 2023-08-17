@@ -1,5 +1,5 @@
 from pythonfmu3.variables import Boolean, Int32, UInt64, Float64, ModelVariable, String
-import ctypes
+
 class UInt64ValType(int): pass
 
 
