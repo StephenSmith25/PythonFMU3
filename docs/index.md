@@ -14,19 +14,12 @@ This project is a fork of the original PythonFMU repository available at https:/
 
 ## Support:
 
-We currently support a basic FMU which follows the FMI3 standard. This includes support for:
-
-- Float64, Int32, UInt64, String, Boolean variables
-- Step Mode
-- Arrays, which requires the numpy package
-
-Please take a look at the examples bouncingBall.py and linearTransform.py for a demonstration of these features.
+Please take a look at the examples to see the supported features.
 
 ## Future:
 
 In no particular order, we plan to add support for:
 
-- Refactor Float64, Integer ect .to match FMI3 specification
 - Support more variable types from FMI3
 - Improve array support
 - Add event mode
