@@ -32,6 +32,7 @@ class ModelVariable(ABC):
         description: Optional[str] = None,
         initial: Optional[Fmi3Initial] = None,
         variability: Optional[Fmi3Variability] = None,
+        declared_type: Optional[str] = None,
         getter: Any = None,
         setter: Any = None
     ):
@@ -46,6 +47,7 @@ class ModelVariable(ABC):
             "causality": causality,
             "variability": variability,
             "initial": initial,
+            "declaredType": declared_type,
             # 'canHandleMultipleSetPerTimeInstant': # Only for ME
         }
         self._extras = {}
@@ -81,6 +83,17 @@ class ModelVariable(ABC):
             raise RuntimeError("Value reference already set.")
         self.__attrs["valueReference"] = value
 
+    @property
+    def declared_type(self) -> str:
+        """str: declared type"""
+        return self.__attrs["declaredType"]
+
+    @declared_type.setter
+    def declared_type(self, value: str):
+        if self.__attrs["declaredType"] is not None:
+            raise RuntimeError("Declared type already set.")
+        self.__attrs["declaredType"] = value
+    
     @property
     def variability(self) -> Optional[Fmi3Variability]:
         """:obj:`Fmi3Variability` or None: Variable variability - None if not set"""

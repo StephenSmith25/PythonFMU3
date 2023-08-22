@@ -11,10 +11,11 @@ from xml.etree.ElementTree import Element, SubElement
 
 from .logmsg import LogMsg
 from .default_experiment import DefaultExperiment
-from .type_definitions import TypeDefinitions
 from ._version import __version__ as VERSION
 from .enums import Fmi3Type, Fmi3Status, Fmi3Causality, Fmi3Initial, Fmi3Variability
 from .variables import Boolean, Enumeration, Int32, Int64, UInt64, Float64, ModelVariable, String
+from .variable_types import VariableType
+from .unit import Unit
 
 ModelOptions = namedtuple("ModelOptions", ["name", "value", "cli"])
 
@@ -54,7 +55,8 @@ class Fmi3Slave(ABC):
         self.modelName: Optional[str] = self.__class__.__name__
         self.description: Optional[str] = None
         self.default_experiment: Optional[DefaultExperiment] = None
-        self.type_definitions: Optional[TypeDefinitions] = None
+        self.type_definitions: Dict[str, VariableType] = {}
+        self.units: Dict[str, Unit] = {}
 
     def to_xml(self, model_options: Dict[str, str] = dict()) -> Element:
         """Build the XML representation of the model.
@@ -99,8 +101,15 @@ class Fmi3Slave(ABC):
 
         SubElement(root, "CoSimulation", attrib=options)
 
-        if self.type_definitions is not None:
-            root.append(self.type_definitions.to_xml())
+        if self.units:
+            unit_defs = SubElement(root, "UnitDefinitions")
+            for _, unit in self.units.items():
+                unit_defs.append(unit.to_xml())
+
+        if self.type_definitions:
+            type_defs = SubElement(root, "TypeDefinitions")
+            for _, val in self.type_definitions.items():
+                type_defs.append(val.to_xml())
 
         if len(self.log_categories) > 0:
             categories = SubElement(root, "LogCategories")
@@ -178,7 +187,7 @@ class Fmi3Slave(ABC):
             raise Exception(f"Unsupported type {type(var)}!")
         var.start = refs if len(getattr(var, "dimensions", [])) > 0 else refs[0]
 
-    def register_variable(self, var: ModelVariable, nested: bool = True):
+    def register_variable(self, var: ModelVariable, nested: bool = True, var_type: Any = None):
         """Register a variable as FMU interface.
         
         Args:
@@ -206,9 +215,17 @@ class Fmi3Slave(ABC):
                 var.setter = lambda v: setattr(owner, var.local_name, np.reshape(v, newshape=getattr(owner, var.local_name).shape))
             else:
                 var.setter = lambda v: setattr(owner, var.local_name, v)
+        
+        if var_type:
+            self.type_definitions[var_type.name] = var_type
+            var.declared_type = var_type.name
 
     def setup_experiment(self, start_time: float):
         pass
+
+    def add_units(self, units: List[Unit]):
+        for unit in units:
+            self.units[unit.name] = unit
 
     def enter_initialization_mode(self):
         pass
