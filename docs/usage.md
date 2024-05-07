@@ -8,11 +8,11 @@ from pythonfmu3 import Fmi3Causality, Fmi3Slave, Boolean, Int32, Float64, String
 
 class PythonSlave(Fmi3Slave):
 
-    author = "John Doe"
-    description = "A simple description"
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        
+        self.author = "John Doe"
+        self.description = "A simple description"
 
         self.intOut = 1
         self.realOut = 3.0
@@ -39,11 +39,11 @@ from pythonfmu3 import Fmi3Causality, Fmi3Variability, Fmi3Slave, Float64, Fmi3I
 
 class BouncingBall(Fmi3Slave):
 
-    author = "..."
-    description = "Bouncing Ball"
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+        
+        self.author = ".."
+        self.description="Bouncing Ball" 
 
         self.time = 0.0
         self.counter = 0
@@ -112,11 +112,11 @@ import numpy as np
 
 class LinearTransform(Fmi3Slave):
 
-    author = "..."
-    description = "LinearTransform"
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+        self.author = "..."
+        self.description = "LinearTransform"
 
         self.time = 0.0
 

@@ -3,11 +3,12 @@ from pythonfmu3 import Fmi3Causality, Fmi3Variability, Fmi3Slave, Float64
 
 class Resistor(Fmi3Slave):
 
-    author = "John Doe"
-    description = "A simple description"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+        self.author = "John Doe"
+        self.description = "A simple description"
 
         self.time = 0.0
 
@@ -18,7 +19,7 @@ class Resistor(Fmi3Slave):
         self.delta_v = 10.
         self.i = 0.001
         self.R = 10000.
-        
+
         self.register_variable(Float64("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
         self.register_variable(Float64("R", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable))
 

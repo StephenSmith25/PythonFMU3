@@ -10,11 +10,12 @@ except ImportError: # Trick to be able to generate the FMU without TensorFlow an
 
 
 class MLDemo(Fmi3Slave):
-    author = "Magnus Steinstø"
-    description = "Limited range TensorFlow sin approximation"
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+        self.author = "Magnus Steinstø"
+        self.description = "Limited range TensorFlow sin approximation"
         # Import Tensorflow model directory created by model.save(["stored-model"])
         parent_path = pathlib.Path(__file__).parent
         # Check if building or initializing

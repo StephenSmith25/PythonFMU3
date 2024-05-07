@@ -55,6 +55,7 @@ class Fmi3Slave(ABC):
         self.modelName: Optional[str] = self.__class__.__name__
         self.description: Optional[str] = None
         self.default_experiment: Optional[DefaultExperiment] = None
+
         self.type_definitions: Dict[str, VariableType] = {}
         self.units: Dict[str, Unit] = {}
 

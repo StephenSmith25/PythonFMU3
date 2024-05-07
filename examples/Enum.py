@@ -5,11 +5,11 @@ import enum
 
 class Enum(Fmi3Slave):
 
-    author = "..."
-    description = "Enum"
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+        self.author = "..."
+        self.description = "Enum"
 
         self.time = 0.0
         self.x = 0.0
