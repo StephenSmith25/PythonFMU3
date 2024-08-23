@@ -98,9 +98,9 @@ var_type = Float64Type(name="Velocity", unit=velocity_unit.name quantity = "Velo
 which can now be utilized in the register variables call,
 ```
 velocity_unit =  Unit(name="m/s", m=1, s=-1)
-self.add_units([velocity_unit])
+self.register_units([velocity_unit])
 var_type = Float64Type(name="Velocity", unit=velocity_unit.name quantity = "Velocity")
-self.register_variable(Float64(".v", causality=Fmi3Causality.output, start=0, variability=Fmi3Variability.continuous, initial=Fmi3Initial.exact), var_type=var_type)
+self.register_variable(Float64(".v", causality=Fmi3Causality.output, start=0, variability=Fmi3Variability.continuous, initial=Fmi3Initial.exact), unit=velocity_unit.name)
 ```
 
 If numpy is installed, arrays may be used with,

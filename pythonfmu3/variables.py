@@ -158,10 +158,11 @@ class Dimension(object):
         return ele
 
 class Float64(ModelVariable):
-    def __init__(self, name: str, start: Optional[Any] = None, derivative: Optional[Any] = None, dimensions: List[Dimension] = [], **kwargs):
+    def __init__(self, name: str, start: Optional[Any] = None, derivative: Optional[Any] = None, dimensions: List[Dimension] = [], unit: Optional[str] = None, **kwargs):
         super().__init__(name, **kwargs)
         self.__attrs = {"start": start, "derivative": derivative}
         self._type = "Float64"
+        self._unit = unit
         if dimensions:
             check_numpy()
         self.__dimensions = dimensions
@@ -173,6 +174,14 @@ class Float64(ModelVariable):
     @start.setter
     def start(self, value: float):
         self.__attrs["start"] = value
+    
+    @property
+    def unit(self) -> Optional[Any]:
+        return self._unit
+
+    @unit.setter
+    def unit(self, value: str):
+        self._unit = value
 
     @property
     def derivative(self):
@@ -181,6 +190,7 @@ class Float64(ModelVariable):
     @property
     def dimensions(self) -> List[Dimension]:
         return self.__dimensions
+
 
     def to_xml(self) -> Element:
         attrib = dict()
@@ -194,6 +204,10 @@ class Float64(ModelVariable):
                 else:
                     output = f"{value:.16g}"
                 attrib[key] = output
+
+        if self.unit:
+            attrib["unit"] = self.unit
+
         self._extras = attrib
         parent = super().to_xml()
 

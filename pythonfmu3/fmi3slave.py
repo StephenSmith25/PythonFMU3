@@ -188,7 +188,7 @@ class Fmi3Slave(ABC):
             raise Exception(f"Unsupported type {type(var)}!")
         var.start = refs if len(getattr(var, "dimensions", [])) > 0 else refs[0]
 
-    def register_variable(self, var: ModelVariable, nested: bool = True, var_type: Any = None):
+    def register_variable(self, var: ModelVariable, nested: bool = True, units: str = "", var_type: Any = None):
         """Register a variable as FMU interface.
         
         Args:
@@ -224,7 +224,7 @@ class Fmi3Slave(ABC):
     def setup_experiment(self, start_time: float):
         pass
 
-    def add_units(self, units: List[Unit]):
+    def register_units(self, units: List[Unit]):
         for unit in units:
             self.units[unit.name] = unit
 
