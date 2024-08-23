@@ -16,19 +16,21 @@ def create_ball(num_points):
 
 class BouncingBallGeom(Fmi3Slave):
 
-    author = "..."
-    description = "Bouncing Ball Geom"
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+        self.author = "..."
+        self.description = "Bouncing Ball with Geometry"
+
         num_points = 30
         self.time = 0.0
-        self.counter = 0
+
         self.h = 1.0
-        self.derh = 0.0
         self.v = 0.1
+
         self.derh = 0.0
         self.derv = 0.0
+
         self.g = -9.81
         self.e = 0.7
         self.v_min = 0.1
