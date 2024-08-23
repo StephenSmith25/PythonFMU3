@@ -17,17 +17,10 @@ class LinearTransform(Fmi3Slave):
 
         self.scalar = 2.00
 
-        self.u = np.ndarray(shape=(self.m, 1), dtype=float)
-        self.u = np.reshape([1.0, 2.0], newshape=self.u.shape)
-
-        self.offset = np.ndarray(shape=(self.m, 1), dtype=float)
-        self.offset = np.reshape([1.0, 2.0], newshape=self.offset.shape)
-
-        self.A = np.ndarray(shape=(self.m, self.n), dtype=float)
-        self.A = np.reshape([1.0, 1.0, 2.0, 1.0], newshape=self.A.shape)
-
-        self.y = np.ndarray(shape=(self.m, 1), dtype=float)
-        self.y = np.reshape([0.0, 0.0], newshape=self.y.shape)
+        self.u = np.array([1.0, 2.0]).reshape((self.m, 1))
+        self.offset = np.array([1.0, 2.0]).reshape((self.m, 1))
+        self.A = np.array([1.0, 1.0, 2.0, 1.0]).reshape((self.m, self.n))
+        self.y = np.array([0.0, 0.0]).reshape((self.m, 1))
 
 
         self.register_variable(Float64("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
