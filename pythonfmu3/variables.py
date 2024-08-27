@@ -144,7 +144,7 @@ class Dimension(object):
         if self.start:
             return self.start
         else:
-            result = next((var for var in vars if var.value_reference == self.value_reference), None)  
+            result = next((value for vr, value in vars.items() if vr == int(self.value_reference)), None)  
             return result.getter()
 
     def to_xml(self) -> Element:
