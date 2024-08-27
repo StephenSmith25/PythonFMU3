@@ -128,7 +128,7 @@ class LinearTransform(Fmi3Slave):
         self.register_variable(Float64("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
         self.register_variable(UInt64("m", causality=Fmi3Causality.structuralParameter, variability=Fmi3Variability.tunable, start=2))
         self.register_variable(Float64("scalar", causality=Fmi3Causality.input, start=2.0))
-        self.register_variable(Float64("u", causality=Fmi3Causality.input, dimensions=[Dimension(valueReference="1")]))
+        self.register_variable(Float64("u", causality=Fmi3Causality.input, dimensions=[Dimension(start=f"{self.n}")]))
         self.register_variable(Float64("offset", causality=Fmi3Causality.input, dimensions=[Dimension(start=f"{self.m}")]))
         self.register_variable(Float64("A", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable, dimensions=[Dimension(start=f"{self.m}"), Dimension(start=f"{self.n}")]))
         self.register_variable(Float64("y", causality=Fmi3Causality.output, dimensions=[Dimension(valueReference="1")]))
