@@ -88,19 +88,13 @@ Units can be added to this example through the `Unit` class,
 
 ```python
 from pythonfmu3 import Unit
-velocity_unit =  Unit(name="m/s", m=1, s=-1)
-```
-In order to use this definition, a variable type will be required,
-```python
-from pythonfmu3 import Float64Type
-var_type = Float64Type(name="Velocity", unit=velocity_unit.name quantity = "Velocity")
+velocity_unit = Unit(name="m/s", m=1, s=-1)
 ```
 which can now be utilized in the register variables call,
 ```
 velocity_unit =  Unit(name="m/s", m=1, s=-1)
 self.register_units([velocity_unit])
-var_type = Float64Type(name="Velocity", unit=velocity_unit.name quantity = "Velocity")
-self.register_variable(Float64(".v", causality=Fmi3Causality.output, start=0, variability=Fmi3Variability.continuous, initial=Fmi3Initial.exact), unit=velocity_unit.name)
+self.register_variable(Float64("v", causality=Fmi3Causality.output, start=0, variability=Fmi3Variability.continuous, initial=Fmi3Initial.exact, unit=velocity_unit.name))
 ```
 
 If numpy is installed, arrays may be used with,
@@ -125,23 +119,16 @@ class LinearTransform(Fmi3Slave):
 
         self.scalar = 2.00
 
-        self.u = np.ndarray(shape=(self.m, 1), dtype=float) 
-        self.u = np.reshape([1.0, 2.0], newshape=self.u.shape)
-        
-        self.offset = np.ndarray(shape=(self.m, 1), dtype=float) 
-        self.offset = np.reshape([1.0, 2.0], newshape=self.offset.shape)
+        self.u = np.array([1.0, 2.0]).reshape((self.m, 1))
+        self.offset = np.array([1.0, 2.0]).reshape((self.m, 1))
+        self.A = np.array([1.0, 1.0, 2.0, 1.0]).reshape((self.m, self.n))
+        self.y = np.array([0.0, 0.0]).reshape((self.m, 1))
 
-        self.A = np.ndarray(shape=(self.m, self.n), dtype=float) 
-        self.A = np.reshape([1.0, 1.0, 2.0, 1.0], newshape=self.A.shape)
-        
-        self.y = np.ndarray(shape=(self.m, 1), dtype=float) 
-        self.y = np.reshape([0.0, 0.0], newshape=self.y.shape)
 
-        
         self.register_variable(Float64("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
         self.register_variable(UInt64("m", causality=Fmi3Causality.structuralParameter, variability=Fmi3Variability.tunable, start=2))
         self.register_variable(Float64("scalar", causality=Fmi3Causality.input, start=2.0))
-        self.register_variable(Float64("u", causality=Fmi3Causality.input, dimensions=[Dimension(valueReference="1")]))
+        self.register_variable(Float64("u", causality=Fmi3Causality.input, dimensions=[Dimension(start=f"{self.n}")]))
         self.register_variable(Float64("offset", causality=Fmi3Causality.input, dimensions=[Dimension(start=f"{self.m}")]))
         self.register_variable(Float64("A", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable, dimensions=[Dimension(start=f"{self.m}"), Dimension(start=f"{self.n}")]))
         self.register_variable(Float64("y", causality=Fmi3Causality.output, dimensions=[Dimension(valueReference="1")]))
