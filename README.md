@@ -105,11 +105,11 @@ from pythonfmu3 import Fmi3Causality, Fmi3Slave, Boolean, Int32, Float64, String
 
 class PythonSlave(Fmi3Slave):
 
-    author = "John Doe"
-    description = "A simple description"
-
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
+
+        self.author = "John Doe"
+        self.description = "A simple description"
 
         self.time = 0.0
         self.intOut = 1
