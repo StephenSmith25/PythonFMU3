@@ -111,10 +111,12 @@ class PythonSlave(Fmi3Slave):
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+        self.time = 0.0
         self.intOut = 1
         self.realOut = 3.0
         self.booleanVariable = True
         self.stringVariable = "Hello World!"
+        self.register_variable(Float64("time", causality=Fmi3Causality.independent))
         self.register_variable(Int32("intOut", causality=Fmi3Causality.output))
         self.register_variable(Float64("realOut", causality=Fmi3Causality.output))
         self.register_variable(Boolean("booleanVariable", causality=Fmi3Causality.local))
