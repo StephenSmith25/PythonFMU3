@@ -444,9 +444,14 @@ void PySlaveInstance::GetUInt64(const cppfmu::FMIValueReference* vr, std::size_t
         }
 
         for (int i = 0; i < nvr; i++) {
-            PyObject* value = PyList_GetItem(refs, i);
-            values[i] = static_cast<cppfmu::FMIUInt64>(PyLong_AsUnsignedLongLong(value));
+            PyObject* item = PyList_GetItem(refs, i);
+            PyObject* value = PyObject_GetAttrString(item, "value");
+            if (value && PyLong_Check(value))
+            {
+                values[i] = static_cast<cppfmu::FMIUInt64>(PyLong_AsUnsignedLongLong(value));
+            }
         }
+
         Py_DECREF(refs);
         clearLogBuffer();
     });
