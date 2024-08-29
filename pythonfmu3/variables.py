@@ -350,7 +350,7 @@ class String(ModelVariable):
         self._extras = attrib
         parent = super().to_xml()
         
-        if self.start:
+        if self.start is not None:
             parent.append(self._start.to_xml())
 
         return parent
