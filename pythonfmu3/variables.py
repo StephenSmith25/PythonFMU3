@@ -132,6 +132,16 @@ class ModelVariable(ABC):
                f"causality={self.causality}, " \
                f"variability={self.variability})"
 
+class Start(object):
+    def __init__(self, startValue):
+        self.value = startValue
+    
+    def to_xml(self) -> Element:
+        attrib = dict()
+        attrib["value"] = self.value
+        return Element("Start", attrib)
+
+
 class Dimension(object):
     def __init__(self, start: str = "", valueReference: str = ""):
         if start and valueReference and any((start, valueReference)):
@@ -320,16 +330,17 @@ class Boolean(ModelVariable):
 class String(ModelVariable):
     def __init__(self, name: str, start: Optional[Any] = None, **kwargs):
         super().__init__(name, **kwargs)
-        self.__attrs = {"start": start}
+        self.__attrs = dict()
         self._type = "String"
+        self._start = Start(start)
 
     @property
     def start(self) -> Optional[Any]:
-        return self.__attrs["start"]
+        return self._start.value
 
     @start.setter
     def start(self, value: float):
-        self.__attrs["start"] = value
+        self._start.value = value
 
     def to_xml(self) -> Element:
         attrib = dict()
@@ -338,6 +349,9 @@ class String(ModelVariable):
                 attrib[key] = str(value)
         self._extras = attrib
         parent = super().to_xml()
+        
+        if self.start:
+            parent.append(self._start.to_xml())
 
         return parent
     

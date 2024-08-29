@@ -1,4 +1,4 @@
-from pythonfmu3 import Fmi3Causality, Fmi3Variability, Fmi3Slave, Float64
+from pythonfmu3 import Fmi3Causality, Fmi3Variability, Fmi3Slave, Float64, String
 
 
 class Resistor(Fmi3Slave):
@@ -19,6 +19,7 @@ class Resistor(Fmi3Slave):
         self.delta_v = 10.
         self.i = 0.001
         self.R = 10000.
+        self.stringVariable = "mine"
 
         self.register_variable(Float64("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
         self.register_variable(Float64("R", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable))
@@ -30,6 +31,8 @@ class Resistor(Fmi3Slave):
 
         self.register_variable(Float64("delta_v", causality=Fmi3Causality.local))
         self.register_variable(Float64("i", causality=Fmi3Causality.local))
+
+        self.register_variable(String("stringVariable", causality=Fmi3Causality.parameter))
 
     def do_step(self, current_time, step_size):
         self.delta_v = self.positive_pin_v - self.negative_pin_v
