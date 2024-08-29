@@ -295,7 +295,9 @@ def test_String_to_xml(name, start):
     r = String(name, start)
     xml = r.to_xml()
     if start is not None:
-        assert xml.attrib['start'] == str(start)
+        start_elements = xml.findall('.//Start')
+        assert len(start_elements) == 1
+        assert start_elements[0].attrib['value'] == str(start)
 
 
 @pytest.mark.requirements("numpy")  
