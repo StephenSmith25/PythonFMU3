@@ -1,5 +1,4 @@
 import sys
-import platform
 
 import platform
 
@@ -8,7 +7,8 @@ def get_fmu_arch():
     system = platform.system()
     is_x86 = platform.machine() in ["i386", "AMD64", "x86_64"]
     platforms = {"Windows": "windows", "Linux": "linux", "Darwin": "darwin"}
-    return "x86_64" if is_x86 else "x86" + "-" + platforms.get(system, "unknown")
+    arch = "x86_64" if is_x86 else "x86"
+    return arch + "-" + platforms.get(system, "unknown")
 
 def get_platform() -> str:
     """Get FMU binary platform folder name."""

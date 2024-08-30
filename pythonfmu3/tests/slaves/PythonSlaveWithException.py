@@ -1,4 +1,4 @@
-from pythonfmu3.fmi3slave import Fmi3Slave, Fmi3Causality, Float64
+from pythonfmu3.fmi3slave import Fmi3Slave, Fmi3Causality, Float64, Fmi3Variability
 
 
 class PythonSlaveWithException(Fmi3Slave):
@@ -8,6 +8,9 @@ class PythonSlaveWithException(Fmi3Slave):
 
         self.realIn = 22.0
         self.realOut = 0.0
+        self.time = 0
+
+        self.register_variable(Float64("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
         self.register_variable(Float64("realIn", causality=Fmi3Causality.input))
         self.register_variable(Float64("realOut", causality=Fmi3Causality.output))
 

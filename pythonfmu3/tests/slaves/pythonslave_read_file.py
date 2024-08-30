@@ -1,4 +1,4 @@
-from pythonfmu3.fmi3slave import Fmi3Slave, Fmi3Causality, Fmi3Variability, String, DefaultExperiment
+from pythonfmu3.fmi3slave import Fmi3Slave, Fmi3Causality, Fmi3Variability, String, DefaultExperiment, Float64
 
 
 class PythonSlaveReadFile(Fmi3Slave):
@@ -11,6 +11,9 @@ class PythonSlaveReadFile(Fmi3Slave):
         with (open(f'{self.resources}/hello.txt', 'r')) as file:
             data = file.read()
 
+        self.time = 0
+
+        self.register_variable(Float64("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
         self.register_variable(
             String("file_content", getter=lambda: data,
                    causality=Fmi3Causality.output,
