@@ -192,6 +192,7 @@ class FmuBuilder:
         binary_folder = get_platform()
         lib_ext = get_lib_extension() or "*"  # if library extension is unknown, it will look for '*.*' in src_binaries
         src_binaries = HERE / "resources" / "binaries" / binary_folder
+        print(lib_ext, src_binaries)
         return src_binaries.exists() and len(list(src_binaries.glob(f"*.{lib_ext}"))) >= 1
 
 

@@ -107,7 +107,6 @@ jobs:
           pip install -r requirements.txt
           cd python-wheel
           pip install pythonfmu3*.whl
-          pip install fmpy
-          pytest --pyargs pythonfmu3
+          pytest --pyargs pythonfmu3 -rsx
           cd ..
         shell: bash -l {0}
