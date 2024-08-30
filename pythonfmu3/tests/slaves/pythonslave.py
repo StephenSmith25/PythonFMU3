@@ -21,6 +21,9 @@ class PythonSlave(Fmi3Slave):
         self.realIn = 2. / 3.
         self.booleanParameter = False
         self.stringParameter = "dog"
+        self.time = 0
+
+        self.register_variable(Float64("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
         self.register_variable(
             Int32("intParam", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable))
         self.register_variable(Float64("realIn", causality=Fmi3Causality.input))

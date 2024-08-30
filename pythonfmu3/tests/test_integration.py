@@ -38,13 +38,12 @@ def test_integration_reset(tmp_path):
 
     md = fmpy.read_model_description(str(fmu))
     unzipdir = fmpy.extract(str(fmu))
-    model = fmpy.fmi3.FMI3Slave(guid=md.guid,
+    model = fmpy.fmi3.FMU3Slave(guid=md.guid,
                                 unzipDirectory=unzipdir,
                                 modelIdentifier=md.coSimulation.modelIdentifier,
                                 instanceName="instance"
                                 )
     model.instantiate()
-    model.setupExperiment()
     model.enterInitializationMode()
     model.exitInitializationMode()
 
@@ -52,13 +51,13 @@ def test_integration_reset(tmp_path):
     vr = vars["realOut"].valueReference
     dt = 0.1
 
-    initial_value = model.getReal([vr])[0]
+    initial_value = model.getFloat64([vr])[0]
     assert initial_value == pytest.approx(3.0, rel=1e-7)
     model.doStep(0.0, dt, True)
-    read = model.getReal([vr])[0]
+    read = model.getFloat64([vr])[0]
     assert read == pytest.approx(dt, rel=1e-7)
     model.reset()
-    read = model.getReal([vr])[0]
+    read = model.getFloat64([vr])[0]
     assert read == pytest.approx(initial_value, rel=1e-7)
 
     model.terminate()
@@ -77,13 +76,12 @@ def test_integration_get_state(tmp_path):
 
     md = fmpy.read_model_description(str(fmu))
     unzipdir = fmpy.extract(str(fmu))
-    model = fmpy.fmi3.FMI3Slave(guid=md.guid,
+    model = fmpy.fmi3.FMU3Slave(guid=md.guid,
                                 unzipDirectory=unzipdir,
                                 modelIdentifier=md.coSimulation.modelIdentifier,
                                 instanceName="instance"
                                 )
     model.instantiate()
-    model.setupExperiment()
     model.enterInitializationMode()
     model.exitInitializationMode()
 
@@ -98,15 +96,15 @@ def test_integration_get_state(tmp_path):
         t += dt
 
     step_model()
-    state = model.getFMUstate()
-    assert model.getReal([vr])[0] == pytest.approx(dt, rel=1e-7)
+    state = model.getFMUState()
+    assert model.getFloat64([vr])[0] == pytest.approx(dt, rel=1e-7)
     step_model()
-    assert model.getReal([vr])[0] == pytest.approx(dt * 2, rel=1e-7)
-    model.setFMUstate(state)
-    assert model.getReal([vr])[0] == pytest.approx(dt, rel=1e-7)
+    assert model.getFloat64([vr])[0] == pytest.approx(dt * 2, rel=1e-7)
+    model.setFMUState(state)
+    assert model.getFloat64([vr])[0] == pytest.approx(dt, rel=1e-7)
     step_model()
-    assert model.getReal([vr])[0] == pytest.approx(dt * 3, rel=1e-7)
-    model.freeFMUstate(state)
+    assert model.getFloat64([vr])[0] == pytest.approx(dt * 3, rel=1e-7)
+    model.freeFMUState(state)
 
     model.terminate()
     model.freeInstance()
@@ -126,14 +124,13 @@ def test_integration_get_serialize_state(tmp_path):
     md = fmpy.read_model_description(fmu)
     unzip_dir = fmpy.extract(fmu)
 
-    model = fmpy.fmi3.FMI3Slave(
+    model = fmpy.fmi3.FMU3Slave(
         guid=md.guid,
         unzipDirectory=unzip_dir,
         modelIdentifier=md.coSimulation.modelIdentifier,
         instanceName='instance1')
 
     model.instantiate()
-    model.setupExperiment()
     model.enterInitializationMode()
     model.exitInitializationMode()
 
@@ -148,22 +145,22 @@ def test_integration_get_serialize_state(tmp_path):
         t += dt
 
     step_model()
-    state = model.getFMUstate()
-    assert model.getReal(vrs)[0] == pytest.approx(dt, rel=1e-7)
+    state = model.getFMUState()
+    assert model.getFloat64(vrs)[0] == pytest.approx(dt, rel=1e-7)
     step_model()
-    assert model.getReal(vrs)[0] == pytest.approx(dt * 2, rel=1e-7)
-    model.setFMUstate(state)
-    assert model.getReal(vrs)[0] == pytest.approx(dt, rel=1e-7)
+    assert model.getFloat64(vrs)[0] == pytest.approx(dt * 2, rel=1e-7)
+    model.setFMUState(state)
+    assert model.getFloat64(vrs)[0] == pytest.approx(dt, rel=1e-7)
     step_model()
-    assert model.getReal(vrs)[0] == pytest.approx(dt * 3, rel=1e-7)
+    assert model.getFloat64(vrs)[0] == pytest.approx(dt * 3, rel=1e-7)
 
-    serialize_fmu_state = model.serializeFMUstate(state)
-    model.freeFMUstate(state)
-    de_serialize_fmu_state = model.deSerializeFMUstate(serialize_fmu_state)
-    model.setFMUstate(de_serialize_fmu_state)
-    assert model.getReal(vrs)[0] == pytest.approx(dt, rel=1e-7)
+    serialize_fmu_state = model.serializeFMUState(state)
+    model.freeFMUState(state)
+    de_serialize_fmu_state = model.deserializeFMUState(serialize_fmu_state)
+    model.setFMUState(de_serialize_fmu_state)
+    assert model.getFloat64(vrs)[0] == pytest.approx(dt, rel=1e-7)
 
-    model.freeFMUstate(de_serialize_fmu_state)
+    model.freeFMUState(de_serialize_fmu_state)
 
     model.terminate()
     model.freeInstance()
@@ -178,14 +175,13 @@ def test_integration_get(tmp_path):
     md = fmpy.read_model_description(fmu)
     unzip_dir = fmpy.extract(fmu)
 
-    model = fmpy.fmi3.FMI3Slave(
+    model = fmpy.fmi3.FMU3Slave(
         guid=md.guid,
         unzipDirectory=unzip_dir,
         modelIdentifier=md.coSimulation.modelIdentifier,
         instanceName='instance1')
 
     model.instantiate()
-    model.setupExperiment()
     model.enterInitializationMode()
     model.exitInitializationMode()
 
@@ -207,14 +203,14 @@ def test_integration_get(tmp_path):
     for key, value in to_test.items():
         var = variables[key]
         vrs = [var.valueReference]
-        if var.type == "Integer":
-            model_value = model.getInteger(vrs)[0]
-        elif var.type == "Real":
-            model_value = model.getReal(vrs)[0]
+        if var.type == "Int32":
+            model_value = model.getInt32(vrs)[0]
+        elif var.type == "Float64":
+            model_value = model.getFloat64(vrs)[0]
         elif var.type == "Boolean":
             model_value = model.getBoolean(vrs)[0]
         elif var.type == "String":
-            model_value = model.getString(vrs)[0].decode("UTF-8")
+            model_value = model.getString(vrs)[0]
         else:
             pytest.xfail("Unsupported type")
 
@@ -234,20 +230,19 @@ def test_integration_read_from_file(tmp_path):
     md = fmpy.read_model_description(fmu)
     unzip_dir = fmpy.extract(fmu)
 
-    model = fmpy.fmi3.FMI3Slave(
+    model = fmpy.fmi3.FMU3Slave(
         guid=md.guid,
         unzipDirectory=unzip_dir,
         modelIdentifier=md.coSimulation.modelIdentifier,
         instanceName='instance1')
 
     model.instantiate()
-    model.setupExperiment()
     model.enterInitializationMode()
     model.exitInitializationMode()
 
     variables = mapped(md)
     var = variables["file_content"]
-    model_value = model.getString([var.valueReference])[0].decode("UTF-8")
+    model_value = model.getString([var.valueReference])[0]
 
     with (open(project_file, 'r')) as file:
         data = file.read()
@@ -267,14 +262,13 @@ def test_integration_set(tmp_path):
     md = fmpy.read_model_description(fmu)
     unzip_dir = fmpy.extract(fmu)
 
-    model = fmpy.fmi3.FMI3Slave(
+    model = fmpy.fmi3.FMU3Slave(
         guid=md.guid,
         unzipDirectory=unzip_dir,
         modelIdentifier=md.coSimulation.modelIdentifier,
         instanceName='instance1')
 
     model.instantiate()
-    model.setupExperiment()
     model.enterInitializationMode()
     model.exitInitializationMode()
 
@@ -292,18 +286,18 @@ def test_integration_set(tmp_path):
     for key, value in to_test.items():
         var = variables[key]
         vrs = [var.valueReference]
-        if var.type == "Integer":
-            model.setInteger(vrs, [value])
-            model_value = model.getInteger(vrs)[0]
-        elif var.type == "Real":
-            model.setReal(vrs, [value])
-            model_value = model.getReal(vrs)[0]
+        if var.type == "Int32":
+            model.setInt32(vrs, [value])
+            model_value = model.getInt32(vrs)[0]
+        elif var.type == "Float64":
+            model.setFloat64(vrs, [value])
+            model_value = model.getFloat64(vrs)[0]
         elif var.type == "Boolean":
             model.setBoolean(vrs, [value])
             model_value = model.getBoolean(vrs)[0]
         elif var.type == "String":
             model.setString(vrs, [value])
-            model_value = model.getString(vrs)[0].decode("UTF-8")
+            model_value = model.getString(vrs)[0]
         else:
             pytest.xfail("Unsupported type")
 

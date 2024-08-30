@@ -22,7 +22,7 @@ def mapped(md):
 @pytest.mark.integration
 def test_integration_multiple_fmus(tmp_path):
     slave1_code = """import math
-from pythonfmu3.Fmi3Slave import Fmi3Slave, Fmi3Causality, Int32, Float64, Boolean, String
+from pythonfmu3 import Fmi3Slave, Fmi3Causality, Fmi3Variability, Int32, Float64, Boolean, String
 
 
 class Slave1(Fmi3Slave):
@@ -32,6 +32,8 @@ class Slave1(Fmi3Slave):
 
         self.realIn = 22.0
         self.realOut = 0.0
+        self.time = 0
+        self.register_variable(Float64("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
         self.register_variable(Float64("realIn", causality=Fmi3Causality.input))
         self.register_variable(Float64("realOut", causality=Fmi3Causality.output))
 
@@ -41,7 +43,7 @@ class Slave1(Fmi3Slave):
         return True
 """
 
-    slave2_code = """from pythonfmu3.Fmi3Slave import Fmi3Slave, Fmi3Causality, Int32, Float64, Boolean, String
+    slave2_code = """from pythonfmu3 import Fmi3Slave, Fmi3Causality, Fmi3Variability, Int32, Float64, Boolean, String
 
 
 class Slave2(Fmi3Slave):
@@ -51,6 +53,8 @@ class Slave2(Fmi3Slave):
 
         self.realIn = 22.0
         self.realOut = 0.0
+        self.time = 0
+        self.register_variable(Float64("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
         self.register_variable(Float64("realIn", causality=Fmi3Causality.input))
         self.register_variable(Float64("realOut", causality=Fmi3Causality.output))
 
@@ -84,21 +88,20 @@ class Slave2(Fmi3Slave):
     md1 = fmpy.read_model_description(fmu1)
     unzip_dir = fmpy.extract(fmu1)
 
-    model1 = fmpy.fmi3.FMI3Slave(
+    model1 = fmpy.fmi3.FMU3Slave(
         guid=md1.guid,
         unzipDirectory=unzip_dir,
         modelIdentifier=md1.coSimulation.modelIdentifier,
         instanceName='instance1')
 
     model1.instantiate()
-    model1.setupExperiment()
     model1.enterInitializationMode()
     model1.exitInitializationMode()
 
     md2 = fmpy.read_model_description(fmu2)
     unzip_dir = fmpy.extract(fmu2)
 
-    model2 = fmpy.fmi3.FMI3Slave(
+    model2 = fmpy.fmi3.FMU3Slave(
         guid=md2.guid,
         unzipDirectory=unzip_dir,
         modelIdentifier=md2.coSimulation.modelIdentifier,
@@ -111,11 +114,10 @@ class Slave2(Fmi3Slave):
     realIn = variables2["realIn"]
 
     model2.instantiate()
-    model2.setupExperiment()
     model2.enterInitializationMode()
 
-    value = model1.getReal([realOut.valueReference])[0]
-    model2.setReal([realIn.valueReference], [value])
+    value = model1.getFloat64([realOut.valueReference])[0]
+    model2.setFloat64([realIn.valueReference], [value])
 
     model2.exitInitializationMode()
 
@@ -125,12 +127,12 @@ class Slave2(Fmi3Slave):
 
     while time < stop_time:
 
-        model2.setReal([realIn.valueReference], [value])
+        model2.setFloat64([realIn.valueReference], [value])
 
         model1.doStep(time, step_size)
         model2.doStep(time, step_size)
 
-        value = model1.getReal([realOut.valueReference])[0]
+        value = model1.getFloat64([realOut.valueReference])[0]
 
         time += step_size
 
