@@ -46,7 +46,7 @@ jobs:
       - name: Archive wrapper library
         uses: actions/upload-artifact@v4
         with:
-          name: lib-wrapper-${{ matrix.config.arch }}
+          name: lib-wrapper-${{ matrix.os }}
           path: pythonfmu3/resources
 
   build-python:
