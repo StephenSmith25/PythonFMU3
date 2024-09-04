@@ -44,7 +44,7 @@ jobs:
           cd ..
 
       - name: Archive wrapper library
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: lib-wrapper
           path: pythonfmu3/resources
