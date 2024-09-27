@@ -55,6 +55,7 @@ jobs:
       with:
         pattern: lib-wrapper-*
         path: pythonfmu3/resources        
+        merge-multiple: true
     - name: Install dependencies
       run: |
         python -m pip install --upgrade pip

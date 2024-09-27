@@ -66,6 +66,7 @@ jobs:
         with:
           pattern: lib-wrapper-*
           path: pythonfmu3/resources
+          merge-multiple: true
     
       - name: Build distribution artifacts
         run: |
