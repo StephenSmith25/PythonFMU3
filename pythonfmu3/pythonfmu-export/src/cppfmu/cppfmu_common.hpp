@@ -105,11 +105,9 @@ public:
 
     Logger(
         FMIComponentEnvironment component,
-        String instanceName,
         fmi3LogMessageCallback logCallback,
         std::shared_ptr<Settings> settings)
         : m_component{component}
-        , m_instanceName(std::move(instanceName))
         , m_fmiLogger{logCallback}
         , m_settings{settings}
     {
@@ -154,7 +152,6 @@ public:
 
 private:
     const FMIComponentEnvironment m_component;
-    const String m_instanceName;
     const FMICallbackLogger m_fmiLogger;
     std::shared_ptr<Settings> m_settings;
 };

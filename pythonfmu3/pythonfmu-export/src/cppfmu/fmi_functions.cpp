@@ -47,10 +47,10 @@ struct Component
         modelError = 1 << 12,
         modelFatal = 1 << 13,
     };
-    Component(cppfmu::FMIString instanceName,
+    Component(cppfmu::FMIComponentEnvironment instanceEnvironment,
         cppfmu::FMICallbackLogger logCallback,
         cppfmu::FMIBoolean loggingOn) : loggerSettings{std::make_shared<cppfmu::Logger::Settings>()},
-        logger{this, instanceName, logCallback, loggerSettings}, lastSuccessfulTime{std::numeric_limits<cppfmu::FMIFloat64>::quiet_NaN()}
+        logger{instanceEnvironment, logCallback, loggerSettings}, lastSuccessfulTime{std::numeric_limits<cppfmu::FMIFloat64>::quiet_NaN()}
     {
         loggerSettings->debugLoggingEnabled = (loggingOn == cppfmu::FMITrue);
     }
@@ -96,7 +96,8 @@ fmi3Instance fmi3InstantiateCoSimulation(
     fmi3IntermediateUpdateCallback intermediateUpdate )
 {
     try {
-        auto component = new Component(instanceName,
+        auto component = new Component(
+            environment,
             logMessage,
             loggingOn);
         component->slave = CppfmuInstantiateSlave(
