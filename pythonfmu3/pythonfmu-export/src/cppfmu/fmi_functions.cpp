@@ -50,7 +50,7 @@ struct Component
     Component(cppfmu::FMIComponentEnvironment instanceEnvironment,
         cppfmu::FMICallbackLogger logCallback,
         cppfmu::FMIBoolean loggingOn) : loggerSettings{std::make_shared<cppfmu::Logger::Settings>()},
-        logger{instanceEnvironment, logCallback, loggerSettings}, lastSuccessfulTime{std::numeric_limits<cppfmu::FMIFloat64>::quiet_NaN()}
+        logger{instanceEnvironment, logCallback, loggerSettings}
     {
         loggerSettings->debugLoggingEnabled = (loggingOn == cppfmu::FMITrue);
     }
@@ -62,7 +62,6 @@ struct Component
 
     // Co-simulation
     std::unique_ptr<cppfmu::SlaveInstance> slave;
-    cppfmu::FMIFloat64 lastSuccessfulTime;
 };
 } // namespace
 
@@ -659,27 +658,30 @@ fmi3Status fmi3DoStep(
     fmi3Instance c,
     fmi3Float64 currentCommunicationPoint,
     fmi3Float64 communicationStepSize,
-    fmi3Boolean /*noSetFMUStatePriorToCurrentPoint*/,
-    fmi3Boolean*,
-    fmi3Boolean*,
-    fmi3Boolean*,
-    fmi3Float64*)
+    fmi3Boolean noSetFmuStatePriorToCurrentPoint,
+    fmi3Boolean* eventHandlingNeeded ,
+    fmi3Boolean* terminateSimulation,
+    fmi3Boolean* earlyReturn,
+    fmi3Float64* lastSuccessfulTime)
 {
     const auto component = reinterpret_cast<Component*>(c);
     try {
         double endTime = currentCommunicationPoint;
-        const auto ok = component->slave->DoStep(
+        const auto status = component->slave->DoStep(
             currentCommunicationPoint,
             communicationStepSize,
-            fmi3True,
+            noSetFmuStatePriorToCurrentPoint,
+            eventHandlingNeeded,
+            terminateSimulation,
+            earlyReturn,
             endTime);
-        if (ok) {
-            component->lastSuccessfulTime =
+        if (status == fmi3Status::fmi3OK) {
+            *lastSuccessfulTime =
                 currentCommunicationPoint + communicationStepSize;
             return fmi3OK;
         } else {
-            component->lastSuccessfulTime = endTime;
-            return fmi3Discard;
+            *lastSuccessfulTime = endTime;
+            return status;
         }
     } catch (const cppfmu::FatalError& e) {
         component->logger.Log(fmi3Fatal, "", e.what());

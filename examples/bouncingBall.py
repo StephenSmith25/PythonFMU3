@@ -1,5 +1,4 @@
-from pythonfmu3 import Fmi3Causality, Fmi3Variability, Fmi3Slave, Float64, Fmi3Initial, Unit, Float64Type
-
+from pythonfmu3 import Fmi3Causality, Fmi3Variability, Fmi3Slave, Fmi3Status, Float64, Fmi3Initial, Unit, Float64Type, Fmi3StepResult
 
 class BouncingBall(Fmi3Slave):
 
@@ -52,4 +51,10 @@ class BouncingBall(Fmi3Slave):
             if self.v < self.v_min:
                 self.v = 0
                 self.g = 0
-        return True
+                
+        # early termination
+        terminate = False
+        if self.h < 0.5:
+            terminate = True
+            
+        return Fmi3StepResult(status=Fmi3Status.ok, terminateSimulation=terminate)

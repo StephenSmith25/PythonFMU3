@@ -124,10 +124,13 @@ public:
         FMIString value[]) const;
 
     // Called from fmi3DoStep()/fmiDoStep(). Must be implemented in model code.
-    virtual bool DoStep(
+    virtual FMIStatus DoStep(
         FMIFloat64 currentCommunicationPoint,
         FMIFloat64 communicationStepSize,
         FMIBoolean newStep,
+        FMIBoolean* eventHandlingNeeded,
+        FMIBoolean* terminateSimulation,
+        FMIBoolean* earlyReturn,
         FMIFloat64& endOfStep) = 0;
 
     virtual void GetFMUstate(fmi3FMUState& state) = 0;

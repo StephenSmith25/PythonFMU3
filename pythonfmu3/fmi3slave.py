@@ -5,7 +5,7 @@ import datetime
 from abc import ABC, abstractmethod
 from collections import OrderedDict, namedtuple
 from pathlib import Path
-from typing import Any, ClassVar, Dict, List, Optional
+from typing import Any, ClassVar, Dict, List, NamedTuple, Optional
 from uuid import uuid1
 from xml.etree.ElementTree import Element, SubElement
 
@@ -27,6 +27,11 @@ FMI3_MODEL_OPTIONS: List[ModelOptions] = [
     ModelOptions("canSerializeFMUState", False, "serialize-state")
 ]
 
+class Fmi3StepResult(NamedTuple):
+    status: Fmi3Status = Fmi3Status.ok
+    eventHandlingNeeded: bool = False
+    terminateSimulation: bool = False
+    earlyReturn: bool = False
 
 class Fmi3Slave(ABC):
     """Abstract facade class to execute Python through FMI standard."""
@@ -235,7 +240,7 @@ class Fmi3Slave(ABC):
         pass
 
     @abstractmethod
-    def do_step(self, current_time: float, step_size: float) -> bool:
+    def do_step(self, current_time: float, step_size: float) -> Fmi3StepResult:
         pass
 
     def terminate(self):
