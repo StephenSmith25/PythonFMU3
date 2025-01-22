@@ -52,9 +52,4 @@ class BouncingBall(Fmi3Slave):
                 self.v = 0
                 self.g = 0
                 
-        # early termination
-        terminate = False
-        if self.h < 0.5:
-            terminate = True
-            
-        return Fmi3StepResult(status=Fmi3Status.ok, terminateSimulation=terminate)
+        return Fmi3StepResult(status=Fmi3Status.ok)
