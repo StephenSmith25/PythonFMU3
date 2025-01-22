@@ -138,6 +138,18 @@ class LinearTransform(Fmi3Slave):
         return True
 ```
 
+The `do_step` function can also return a tuple of flags, corresponding to those expected by the FMI standard. This can be achieved through use of the `FmiStepResult` tuple,
+
+```python
+    from pythonfmu3 import Fmi3Status, Fmi3StepResult
+    ...
+    def do_step(self, current_time, step_size):
+        self.y = 1 + 2 + 3 + 4 + ...
+        terminate = False
+        status = Fmi3Status.ok
+        return Fmi3StepResult(status=Fmi3Status.ok, terminateSimulation=terminate)
+```
+
 ### Create the FMU
 
 ```bash 

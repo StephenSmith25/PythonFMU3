@@ -25,7 +25,13 @@ public:
     void ExitInitializationMode() override;
     void Terminate() override;
     void Reset() override;
-    bool DoStep(cppfmu::FMIFloat64 currentCommunicationPoint, cppfmu::FMIFloat64 communicationStepSize, cppfmu::FMIBoolean newStep, cppfmu::FMIFloat64& endOfStep) override;
+    cppfmu::FMIStatus DoStep(cppfmu::FMIFloat64 currentCommunicationPoint,
+        cppfmu::FMIFloat64 communicationStepSize,
+        cppfmu::FMIBoolean newStep,
+        cppfmu::FMIBoolean* eventHandlingNeeded,
+        cppfmu::FMIBoolean* terminateSimulation,
+        cppfmu::FMIBoolean* earlyReturn,
+        cppfmu::FMIFloat64& endOfStep) override;
 
     void SetFloat64(const cppfmu::FMIValueReference* vr, std::size_t nvr, const cppfmu::FMIFloat64* value, std::size_t nValues) override;
     void SetInt32(const cppfmu::FMIValueReference* vr, std::size_t nvr, const cppfmu::FMIInt32* value) override;

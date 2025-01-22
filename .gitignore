@@ -31,3 +31,7 @@ build/
 
 # Generated TensorFlow model
 /examples/tensorflow-model-export/stored-model/
+
+# c++
+compile_commands.json
+*.idx

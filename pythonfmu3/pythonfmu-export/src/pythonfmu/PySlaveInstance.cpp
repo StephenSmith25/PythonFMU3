@@ -200,20 +200,46 @@ void PySlaveInstance::ExitInitializationMode()
     });
 }
 
-bool PySlaveInstance::DoStep(cppfmu::FMIFloat64 currentTime, cppfmu::FMIFloat64 stepSize, cppfmu::FMIBoolean, cppfmu::FMIFloat64& endOfStep)
+cppfmu::FMIStatus PySlaveInstance::DoStep(cppfmu::FMIFloat64 currentTime,
+    cppfmu::FMIFloat64 stepSize,
+    cppfmu::FMIBoolean noSetFmuStatePriorToCurrentPoint,
+    cppfmu::FMIBoolean* eventHandlingNeeded,
+    cppfmu::FMIBoolean* terminateSimulation,
+    cppfmu::FMIBoolean* earlyReturn,
+    cppfmu::FMIFloat64& endOfStep)
 {
-    bool status;
-    py_safe_run([this, &status, currentTime, stepSize](PyGILState_STATE gilState) {
+    cppfmu::FMIStatus fmuStatus = cppfmu::FMIOK;
+    py_safe_run([this, &fmuStatus, currentTime, stepSize, terminateSimulation](PyGILState_STATE gilState) {
         auto f = PyObject_CallMethod(pInstance_, "do_step", "(dd)", currentTime, stepSize);
         if (f == nullptr) {
             handle_py_exception("[doStep] PyObject_CallMethod", gilState);
         }
-        status = static_cast<bool>(PyObject_IsTrue(f));
+
+        if (PyObject_HasAttrString(f, "status")) {
+            PyObject* pyStatus = PyObject_GetAttrString(f, "status");
+            if (pyStatus) {
+                fmuStatus = static_cast<cppfmu::FMIStatus>(PyLong_AsLong(pyStatus));
+                Py_DECREF(pyStatus);
+            }
+        } else {
+            bool status = static_cast<bool>(PyObject_IsTrue(f));
+            if (!status) {
+                fmuStatus = cppfmu::FMIDiscard;
+            }
+        }
+
+        if (PyObject_HasAttrString(f, "terminateSimulation")) {
+            PyObject* pyTerminateSimulation = PyObject_GetAttrString(f, "terminateSimulation");
+            if (pyTerminateSimulation) {
+                *terminateSimulation = static_cast<bool>(PyObject_IsTrue(pyTerminateSimulation));
+                Py_DECREF(pyTerminateSimulation);
+            }
+        }
         Py_DECREF(f);
         clearLogBuffer();
     });
 
-    return status;
+    return fmuStatus;
 }
 
 void PySlaveInstance::Reset()
