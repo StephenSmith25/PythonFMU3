@@ -66,6 +66,7 @@ class FmuBuilder:
         dest: FilePath = ".",
         project_files: Iterable[FilePath] = set(),
         documentation_folder: Optional[FilePath] = None,
+        terminals_folder: Optional[FilePath] = None,
         **options,
     ) -> Path:
         script_file = Path(script_file)
@@ -84,6 +85,13 @@ class FmuBuilder:
             if not documentation_folder.exists():
                 raise ValueError(
                     f"The documentation folder does not exists {documentation_folder!s}"
+                )
+        
+        if terminals_folder is not None:
+            terminals_folder = Path(terminals_folder)
+            if not terminals_folder.exists():
+                raise ValueError(
+                    f"The terminals folder does not exists {terminals_folder!s}"
                 )
 
         module_name = script_file.stem
@@ -178,6 +186,14 @@ class FmuBuilder:
                             relative_f = f.relative_to(documentation_folder)
                             zip_fmu.write(f, arcname=(documentation / relative_f))
 
+                if terminals_folder is not None:
+                    terminals = Path("terminalsAndIcons")
+                    for f in terminals_folder.rglob("*.xml"):
+                        if f.is_file():
+                            relative_f = f.relative_to(terminals_folder)
+                            zip_fmu.write(f, arcname=(terminals / relative_f))
+                    
+
                 # Add the model description
                 xml_str = parseString(tostring(xml, "UTF-8"))
                 zip_fmu.writestr(
@@ -212,6 +228,13 @@ def create_command_parser(parser: argparse.ArgumentParser):
         "--doc",
         dest="documentation_folder",
         help="Documentation folder to include in the FMU.",
+        default=None
+    )
+
+    parser.add_argument(
+        "--terminals",
+        dest="terminals_folder",
+        help="Folder containing terminals to include in the FMU.",
         default=None
     )
 

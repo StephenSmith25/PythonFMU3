@@ -176,3 +176,23 @@ def test_documentation(tmp_path):
 
         assert "documentation/index.html" in names
         assert "documentation/licenses/license.txt" in names
+
+
+def test_terminals(tmp_path):
+    script_file = Path(__file__).parent / "slaves/pythonslave.py"
+    def build():
+        with tempfile.TemporaryDirectory() as terminals_dir:
+            terminals_dir = Path(terminals_dir)
+            terminal1 = terminals_dir / "terminal1.xml"
+            terminal1.write_text("Dummy Terminal 1")
+
+            terminal2 = terminals_dir / "terminal2.xml"
+            terminal2.write_text("Dummy Terminal 2")
+            return FmuBuilder.build_FMU(script_file, dest=tmp_path, terminals_folder=terminals_dir)
+
+    fmu = build()
+    with zipfile.ZipFile(fmu) as files:
+        names = files.namelist()
+
+        assert "terminalsAndIcons/terminal1.xml" in names
+        assert "terminalsAndIcons/terminal2.xml" in names
