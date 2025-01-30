@@ -183,16 +183,13 @@ def test_terminals(tmp_path):
     def build():
         with tempfile.TemporaryDirectory() as terminals_dir:
             terminals_dir = Path(terminals_dir)
-            terminal1 = terminals_dir / "terminal1.xml"
-            terminal1.write_text("Dummy Terminal 1")
+            terminals = terminals_dir / "terminalsAndIcons.xml"
+            terminals.write_text("Dummy Terminal 1")
 
-            terminal2 = terminals_dir / "terminal2.xml"
-            terminal2.write_text("Dummy Terminal 2")
-            return FmuBuilder.build_FMU(script_file, dest=tmp_path, terminals_folder=terminals_dir)
+            return FmuBuilder.build_FMU(script_file, dest=tmp_path, terminals=terminals)
 
     fmu = build()
     with zipfile.ZipFile(fmu) as files:
         names = files.namelist()
 
-        assert "terminalsAndIcons/terminal1.xml" in names
-        assert "terminalsAndIcons/terminal2.xml" in names
+        assert "terminalsAndIcons/terminalsAndIcons.xml" in names

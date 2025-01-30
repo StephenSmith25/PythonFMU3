@@ -36,7 +36,7 @@ pip install pythonfmu3
 3. Run `pythonfmu3 build` to create the fmu.
 
 ```
-usage: pythonfmu3 build [-h] -f SCRIPT_FILE [-d DEST] [--doc DOCUMENTATION_FOLDER] [--terminals TERMINALS_FOLDER] [--no-external-tool]
+usage: pythonfmu3 build [-h] -f SCRIPT_FILE [-d DEST] [--doc DOCUMENTATION_FOLDER] [--terminals TERMINALS_FILE] [--no-external-tool]
                        [--no-variable-step] [--interpolate-inputs] [--only-one-per-process] [--handle-state]
                        [--serialize-state] [--use-memory-management]
                        [Project files [Project files ...]]
@@ -53,8 +53,8 @@ optional arguments:
   -d DEST, --dest DEST  Where to save the FMU.
   --doc DOCUMENTATION_FOLDER
                         Documentation folder to include in the FMU.
-  --terminals TERMINALS_FOLDER
-                        Folder of terminals to include in the FMU.
+  --terminals TERMINALS_FILE
+                        Terminals file (terminalsAndIcons.xml) to include in the FMU.
   --no-external-tool    If given, needsExecutionTool=false
   --no-variable-step    If given, canHandleVariableCommunicationStepSize=false
   --interpolate-inputs  If given, canInterpolateInputs=true
