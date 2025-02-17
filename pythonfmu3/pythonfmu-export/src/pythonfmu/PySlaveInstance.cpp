@@ -73,6 +73,7 @@ PySlaveInstance::PySlaveInstance(std::string instanceName, std::string resources
         std::string moduleName = getline(resources_ + "/slavemodule.txt");
         PyObject* pModule = PyImport_ImportModule(moduleName.c_str());
         if (pModule == nullptr) {
+            PyErr_Print();
             handle_py_exception("[ctor] PyImport_ImportModule", gilState);
         }
 
@@ -212,6 +213,7 @@ cppfmu::FMIStatus PySlaveInstance::DoStep(cppfmu::FMIFloat64 currentTime,
     py_safe_run([this, &fmuStatus, currentTime, stepSize, terminateSimulation](PyGILState_STATE gilState) {
         auto f = PyObject_CallMethod(pInstance_, "do_step", "(dd)", currentTime, stepSize);
         if (f == nullptr) {
+            PyErr_Print();
             handle_py_exception("[doStep] PyObject_CallMethod", gilState);
         }
 
@@ -732,7 +734,7 @@ namespace
         }
         return TRUE;
 }
-#elif defined(__linux__)
+#elif defined(__linux__) || defined(__APPLE__)
     __attribute__((destructor)) void onLibraryUnload()
     {
         finalizePythonInterpreter();
