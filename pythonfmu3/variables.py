@@ -4,10 +4,18 @@ from enum import Enum
 import importlib
 from typing import Any, Optional, List
 from xml.etree.ElementTree import Element, SubElement
+from collections.abc import Iterable
 from collections import ChainMap
 from functools import reduce  
 
 from .enums import Fmi3Causality, Fmi3Initial, Fmi3Variability
+
+def flatten(lst):
+    for item in lst:
+        if isinstance(item, Iterable) and not isinstance(item, (str, bytes)):
+            yield from flatten(item)
+        else:
+            yield item
 
 def check_numpy():
     try:
@@ -210,7 +218,7 @@ class Float64(ModelVariable):
                 # stored on an XML file with at least 16 significant digits
                 output = ""
                 if len(self.dimensions) > 0:
-                    output = " ".join([f"{val:.16g}" for val in value])
+                    output = " ".join([f"{val:.16g}" for val in flatten(value)])
                 else:
                     output = f"{value:.16g}"
                 attrib[key] = output

@@ -213,7 +213,6 @@ cppfmu::FMIStatus PySlaveInstance::DoStep(cppfmu::FMIFloat64 currentTime,
     py_safe_run([this, &fmuStatus, currentTime, stepSize, terminateSimulation](PyGILState_STATE gilState) {
         auto f = PyObject_CallMethod(pInstance_, "do_step", "(dd)", currentTime, stepSize);
         if (f == nullptr) {
-            PyErr_Print();
             handle_py_exception("[doStep] PyObject_CallMethod", gilState);
         }
 

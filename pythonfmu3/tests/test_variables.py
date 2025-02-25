@@ -8,7 +8,7 @@ from xml.etree import ElementTree
 
 from pythonfmu3 import Fmi3Slave
 from pythonfmu3.enums import Fmi3Causality, Fmi3Initial, Fmi3Variability
-from pythonfmu3.variables import Boolean, Int32, UInt64, Float64, ModelVariable, String, Dimension
+from pythonfmu3.variables import flatten, Boolean, Int32, UInt64, Float64, ModelVariable, String, Dimension
 
 from .utils import PY2FMI, UInt64ValType
 
@@ -303,13 +303,32 @@ def test_String_to_xml(name, start):
 @pytest.mark.requirements("numpy")  
 @pytest.mark.parametrize("name,start,dims", [
     ("array1", [1.,2.,3.,4.], [4]),
-    ("array2", [1.,2.,3.,4.], [2, 2]),
+    ("array2", [1.,2.,3.,4.], [2, 2])
 ])
 def test_array_to_xml(name, start, dims):
     r = Float64(name, start, dimensions=[Dimension(start=val) for val in dims])
     xml = r.to_xml()
     if start is not None:
-        assert xml.attrib['start'] == " ".join([f"{val:.16g}" for val in start])
+        assert xml.attrib['start'] == " ".join([f"{val:.16g}" for val in flatten(start)])
+    if dims is not None:
+        xml_dims = xml.findall('.//Dimension')
+        assert len(xml_dims) == len(dims)
+        assert [xml_dim.attrib['start'] for xml_dim in xml_dims] == dims
+
+
+@pytest.mark.requirements("numpy")  
+@pytest.mark.parametrize("name,start,dims", [
+    ("array1", [1.,2.,3.,4.], [4]),
+    ("array2", [1.,2.,3.,4.], [2, 2])
+])
+def test_array_output_to_xml(name, start, dims):
+    import numpy as np
+    start = np.reshape(start, newshape=dims) 
+    r = Float64(name, start, dimensions=[Dimension(start=val) for val in dims], causality=Fmi3Causality.output)
+    xml = r.to_xml()
+    print(xml, start)
+    if start is not None:
+        assert xml.attrib['start'] == " ".join([f"{val:.16g}" for val in flatten(start)])
     if dims is not None:
         xml_dims = xml.findall('.//Dimension')
         assert len(xml_dims) == len(dims)
