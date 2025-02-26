@@ -319,14 +319,14 @@ def test_array_to_xml(name, start, dims):
 @pytest.mark.requirements("numpy")  
 @pytest.mark.parametrize("name,start,dims", [
     ("array1", [1.,2.,3.,4.], [4]),
-    ("array2", [1.,2.,3.,4.], [2, 2])
+    ("array2", [1.,2.,3.,4.], [2, 2]),
+    ("array3", [1.,2.,3.,4.,5.,6.,7.,8.], [2, 2, 2])
 ])
 def test_array_output_to_xml(name, start, dims):
     import numpy as np
     start = np.reshape(start, newshape=dims) 
     r = Float64(name, start, dimensions=[Dimension(start=val) for val in dims], causality=Fmi3Causality.output)
     xml = r.to_xml()
-    print(xml, start)
     if start is not None:
         assert xml.attrib['start'] == " ".join([f"{val:.16g}" for val in flatten(start)])
     if dims is not None:
