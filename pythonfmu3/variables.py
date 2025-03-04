@@ -10,6 +10,8 @@ from functools import reduce
 
 from .enums import Fmi3Causality, Fmi3Initial, Fmi3Variability
 
+MAX_LENGTH = 1000
+
 def flatten(lst):
     for item in lst:
         if isinstance(item, Iterable) and not isinstance(item, (str, bytes)):
@@ -219,6 +221,8 @@ class Float64(ModelVariable):
                 output = ""
                 if len(self.dimensions) > 0:
                     output = " ".join([f"{val:.16g}" for val in flatten(value)])
+                    if len(output) > MAX_LENGTH:
+                        output = output[0]
                 else:
                     output = f"{value:.16g}"
                 attrib[key] = output
