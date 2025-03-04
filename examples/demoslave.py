@@ -33,9 +33,6 @@ class Resistor(Fmi3Slave):
         self.register_variable(Float64("i", causality=Fmi3Causality.local))
 
         self.register_variable(String("stringVariable", causality=Fmi3Causality.parameter))
-    
-    def enter_initialization_mode(self):
-        raise RuntimeError("This is an error message")
 
     def do_step(self, current_time, step_size):
         self.delta_v = self.positive_pin_v - self.negative_pin_v
