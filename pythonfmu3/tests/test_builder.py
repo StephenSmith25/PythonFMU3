@@ -22,16 +22,18 @@ lib_extension = ({"Darwin": "dylib", "Linux": "so", "Windows": "dll"}).get(
 )
 
 
-def test_zip_content(tmp_path):
-
+@pytest.mark.parametrize("compile", [False, True])
+def test_zip_content(tmp_path, compile):
+    extension = ".pyc" if compile else ".py" 
     script_name = "pythonslave.py"
     script_file = Path(__file__).parent / "slaves" / script_name
-    fmu = FmuBuilder.build_FMU(script_file, dest=tmp_path)
+    fmu = FmuBuilder.build_FMU(script_file, dest=tmp_path, compile=compile)
     assert fmu.exists()
     assert zipfile.is_zipfile(fmu)
 
     with zipfile.ZipFile(fmu) as files:
         names = files.namelist()
+        script_name = script_name.replace(".py", extension)
 
         assert "modelDescription.xml" in names
         assert "/".join(("resources", script_name)) in names
@@ -60,8 +62,11 @@ def test_zip_content(tmp_path):
 
         # Check pythonfmu is embedded
         pkg_folder = Path(pythonfmu3.__path__[0])
-        for f in pkg_folder.rglob("*.py"):
+        for f in pkg_folder.rglob(f"*.py"):
             relative_f = f.relative_to(pkg_folder).as_posix()
+            # change relative f suffix
+            if relative_f.endswith(".py"):
+                relative_f = relative_f.replace(".py", extension)
             if "test" not in relative_f:
                 assert "/".join(("resources", "pythonfmu3", relative_f)) in names
 
@@ -101,7 +106,6 @@ def test_project_files(tmp_path, pfiles):
                     project_files.add(full_name.parent)
 
             return FmuBuilder.build_FMU(script_file, dest=tmp_path, project_files=project_files)
-
     fmu = build()
     with zipfile.ZipFile(fmu) as files:
         names = files.namelist()
@@ -119,7 +123,8 @@ def test_project_files(tmp_path, pfiles):
 
 
 @pytest.mark.parametrize("pfiles", PROJECT_TEST_CASES)
-def test_project_files_containing_script(tmp_path, pfiles):
+@pytest.mark.parametrize("compile", [False, True])
+def test_project_files_containing_script(tmp_path, pfiles, compile):
     orig_script_file = Path(__file__).parent / "slaves/pythonslave.py"
     pfiles = map(Path, pfiles)
 
@@ -139,7 +144,7 @@ def test_project_files_containing_script(tmp_path, pfiles):
                     full_name.mkdir(parents=True, exist_ok=True)
 
             return FmuBuilder.build_FMU(
-                script_file, dest=tmp_path, project_files=[script_file.parent]
+                script_file, dest=tmp_path, project_files=[script_file.parent], compile=compile
             )
 
     fmu = build()
