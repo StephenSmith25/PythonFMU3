@@ -133,6 +133,23 @@ public:
         FMIBoolean* earlyReturn,
         FMIFloat64& endOfStep) = 0;
 
+    // Model Exchange methods
+    virtual void GetContinuousStates(cppfmu::FMIFloat64* continuousStates, std::size_t nStates) const = 0;
+    virtual void GetContinuousStateDerivatives(cppfmu::FMIFloat64* derivatives, std::size_t nStates) const = 0;
+    virtual void GetNominalsOfContinuousStates(cppfmu::FMIFloat64* nominalContinuousStates, std::size_t nStates) const = 0;
+    virtual void SetContinuousStates(const cppfmu::FMIFloat64* continuousStates, std::size_t nStates) = 0;
+    virtual void SetTime(cppfmu::FMIFloat64 time) = 0;
+    virtual void GetNumberOfContinuousStates(std::size_t& nStates) const = 0;
+    virtual void GetNumberOfEventIndicators(std::size_t& nEventIndicators) const = 0;
+    virtual void UpdateDiscreteStates(
+        cppfmu::FMIBoolean* discreteStatesNeedUpdate,
+        cppfmu::FMIBoolean* terminateSimulation,
+        cppfmu::FMIBoolean* nominalContinuousStatesChanged,
+        cppfmu::FMIBoolean* valuesOfContinuousStatesChanged,
+        cppfmu::FMIBoolean* nextEventTimeDefined,
+        cppfmu::FMIFloat64* nextEventTime) = 0;
+    
+
     virtual void GetFMUstate(fmi3FMUState& state) = 0;
     virtual void SetFMUstate(const fmi3FMUState& state) = 0;
     virtual void FreeFMUstate(fmi3FMUState& state) = 0;

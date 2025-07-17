@@ -13,7 +13,7 @@ from typing import Iterable, Optional, Tuple, Union
 from xml.dom.minidom import parseString
 from xml.etree.ElementTree import Element, SubElement, tostring
 from .osutil import get_lib_extension, get_platform
-from .fmi3slave import FMI3_MODEL_OPTIONS, Fmi3Slave
+from .fmi3slave import FMI3_MODEL_OPTIONS, Fmi3Slave, Fmi3SlaveBase
 
 FilePath = Union[str, Path]
 HERE = Path(__file__).parent
@@ -50,7 +50,7 @@ def get_model_description(filepath: Path, module_name: str) -> Tuple[str, Elemen
     finally:
         sys.path.remove(str(filepath.parent))  # remove inserted temporary path
 
-    if not isinstance(instance, Fmi3Slave):
+    if not isinstance(instance, Fmi3SlaveBase):
         raise TypeError(
             f"The provided class '{class_name}' does not inherit from {Fmi3Slave.__qualname__}"
         )
@@ -138,9 +138,16 @@ class FmuBuilder:
 
             type_node = xml.find("CoSimulation")
             option_names = [opt.name for opt in FMI3_MODEL_OPTIONS]
-            for option, value in options.items():
-                if option in option_names:
-                    type_node.set(option, str(value).lower())
+            if type_node:
+                for option, value in options.items():
+                    if option in option_names:
+                        type_node.set(option, str(value).lower())
+
+            type_node = xml.find("ModelExchange")
+            if type_node:
+                for option, value in options.items():
+                    if option in option_names:
+                        type_node.set(option, str(value).lower())
 
             with zipfile.ZipFile(dest_file, "w") as zip_fmu:
 

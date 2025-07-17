@@ -11,8 +11,10 @@ from xml.etree.ElementTree import Element, SubElement
 
 from .logmsg import LogMsg
 from .default_experiment import DefaultExperiment
+from .cosimulation import CoSimulation
+from .modelexchange import ModelExchange
 from ._version import __version__ as VERSION
-from .enums import Fmi3Type, Fmi3Status, Fmi3Causality, Fmi3Initial, Fmi3Variability
+from .enums import Fmi3Type, Fmi3Status, Fmi3Causality, Fmi3Initial, Fmi3Interface, Fmi3Variability
 from .variables import Boolean, Enumeration, Int32, Int64, UInt64, Float64, ModelVariable, String
 from .variable_types import VariableType
 from .unit import Unit
@@ -33,7 +35,8 @@ class Fmi3StepResult(NamedTuple):
     terminateSimulation: bool = False
     earlyReturn: bool = False
 
-class Fmi3Slave(ABC):
+
+class Fmi3SlaveBase(object):
     """Abstract facade class to execute Python through FMI standard."""
 
     # Dictionary of (category, description) entries
@@ -104,8 +107,17 @@ class Fmi3Slave(ABC):
             options[option.name] = str(value).lower()
         options["modelIdentifier"] = self.modelName
         options["canNotUseMemoryManagementFunctions"] = "true"
+        
+        options_me = dict()
+        options_me["canGetAndSetFMUState"] = "true"
+        options_me["modelIdentifier"] = self.modelName
+        options_me["needsCompletedIntegratorStep"] = "false"
 
-        SubElement(root, "CoSimulation", attrib=options)
+        # check if we have cosim mixin or model exchange mixin
+        if isinstance(self, CoSimulation):
+            SubElement(root, "CoSimulation", attrib=options)
+        if isinstance(self, ModelExchange):
+            SubElement(root, "ModelExchange", attrib=options_me)
 
         if self.units:
             unit_defs = SubElement(root, "UnitDefinitions")
@@ -239,7 +251,6 @@ class Fmi3Slave(ABC):
     def exit_initialization_mode(self):
         pass
 
-    @abstractmethod
     def do_step(self, current_time: float, step_size: float) -> Fmi3StepResult:
         pass
 
@@ -436,3 +447,6 @@ class Fmi3Slave(ABC):
                 category = "logAll"
         log_msg = LogMsg(status, category, msg, debug)
         self.log_queue.append(log_msg)
+
+class Fmi3Slave(Fmi3SlaveBase, CoSimulation):
+    pass

@@ -124,10 +124,32 @@ fmi3Instance fmi3InstantiateModelExchange(
     fmi3String                 resourcePath,
     fmi3Boolean                visible,
     fmi3Boolean                loggingOn,
-    fmi3InstanceEnvironment    instanceEnvironment,
+    fmi3InstanceEnvironment    environment,
     fmi3LogMessageCallback     logMessage)
 {
-    throw std::logic_error("Unsupported FMU instance type requested (only co-simulation is supported)");
+    try {
+        auto component = new Component(
+            environment,
+            logMessage,
+            loggingOn);
+        component->slave = CppfmuInstantiateSlave(
+            instanceName,
+            instantiationToken,
+            resourcePath,
+            "application/x-fmu-sharedlibrary",
+            0.0,
+            visible,
+            cppfmu::FMIFalse,
+            component->logger);
+        return component;
+    } catch (const cppfmu::FatalError& e) {
+        // functions->logger(nullptr, instanceName, fmi3Fatal, "", e.what());
+        return nullptr;
+    } catch (const std::exception& e) {
+        // functions->logger(nullptr, instanceName, fmi3Error, "", e.what());
+        return nullptr;
+    }
+
 }
 
 fmi3Instance fmi3InstantiateScheduledExecution(
@@ -512,6 +534,183 @@ fmi3Status fmi3SetString(
     }
 }
 
+fmi3Status fmi3GetContinuousStates(
+    fmi3Instance c,
+    fmi3Float64 continuousStates[],
+    size_t nStates)
+{
+    auto component = reinterpret_cast<Component*>(c);
+    try {
+        component->slave->GetContinuousStates(continuousStates, nStates);
+        return fmi3OK;  
+    } catch (const cppfmu::FatalError& e) {
+        component->logger.Log(fmi3Fatal, "", e.what());
+        return fmi3Fatal;
+    } catch (const std::exception& e) {
+        component->logger.Log(fmi3Error, "", e.what());
+        return fmi3Error;
+    }
+}
+
+fmi3Status fmi3GetContinuousStateDerivatives(
+    fmi3Instance c,
+    fmi3Float64 derivatives[],
+    size_t nStates)
+{
+    auto component = reinterpret_cast<Component*>(c);
+    try {
+        component->slave->GetContinuousStateDerivatives(derivatives, nStates);
+        return fmi3OK;
+    } catch (const cppfmu::FatalError& e) {
+        component->logger.Log(fmi3Fatal, "", e.what());
+        return fmi3Fatal;
+    } catch (const std::exception& e) {
+        component->logger.Log(fmi3Error, "", e.what());
+        return fmi3Error;
+    }
+}
+
+fmi3Status fmi3SetTime(
+    fmi3Instance c,
+    fmi3Float64 time)
+{
+    auto component = reinterpret_cast<Component*>(c);
+    try {
+        component->slave->SetTime(time);
+        return fmi3OK;
+    } catch (const cppfmu::FatalError& e) {
+        component->logger.Log(fmi3Fatal, "", e.what());
+        return fmi3Fatal;
+    } catch (const std::exception& e) {
+        component->logger.Log(fmi3Error, "", e.what());
+        return fmi3Error;
+    }
+}
+
+fmi3Status fmi3SetContinuousStates(
+    fmi3Instance c,
+    const fmi3Float64 continuousStates[],
+    size_t nStates)
+{
+    auto component = reinterpret_cast<Component*>(c);
+    try {
+        component->slave->SetContinuousStates(continuousStates, nStates);
+        return fmi3OK;
+    } catch (const cppfmu::FatalError& e) {
+        component->logger.Log(fmi3Fatal, "", e.what());
+        return fmi3Fatal;
+    } catch (const std::exception& e) {
+        component->logger.Log(fmi3Error, "", e.what());
+        return fmi3Error;
+    }
+}
+
+fmi3Status fmi3GetEventIndicators(
+    fmi3Instance c,
+    fmi3Float64 eventIndicators[],
+    size_t nEventIndicators)
+{
+    return fmi3OK;
+}
+
+fmi3Status fmi3GetNominalsOfContinuousStates(
+    fmi3Instance c,
+    fmi3Float64 nominalContinuousStates[],
+    size_t nStates)
+{
+    const auto component = reinterpret_cast<Component*>(c);
+    try {
+        component->slave->GetNominalsOfContinuousStates(nominalContinuousStates, nStates);
+        return fmi3OK;  
+    } catch (const cppfmu::FatalError& e) {
+        component->logger.Log(fmi3Fatal, "", e.what());
+        return fmi3Fatal;
+    } catch (const std::exception& e) {
+        component->logger.Log(fmi3Error, "", e.what());
+        return fmi3Error;
+    }
+}
+
+fmi3Status fmi3GetNumberOfContinuousStates(
+    fmi3Instance c, 
+    std::size_t * nContinuousStates)
+{
+    const auto component = reinterpret_cast<Component*>(c);
+    try {
+        component->slave->GetNumberOfContinuousStates(*nContinuousStates);
+        return fmi3OK;
+    } catch (const cppfmu::FatalError& e) {
+        component->logger.Log(fmi3Fatal, "", e.what());
+        return fmi3Fatal;
+    } catch (const std::exception& e) {
+        component->logger.Log(fmi3Error, "", e.what());
+        return fmi3Error;
+    }
+}
+
+fmi3Status fmi3GetNumberOfEventIndicators(
+    fmi3Instance c, 
+    std::size_t * nEventIndicators)
+{
+    const auto component = reinterpret_cast<Component*>(c);
+    try {
+        component->slave->GetNumberOfEventIndicators(*nEventIndicators);
+        return fmi3OK;
+    } catch (const cppfmu::FatalError& e) {
+        component->logger.Log(fmi3Fatal, "", e.what());
+        return fmi3Fatal;
+    } catch (const std::exception& e) {
+        component->logger.Log(fmi3Error, "", e.what());
+        return fmi3Error;
+    }
+}
+
+
+fmi3Status fmi3UpdateDiscreteStates(fmi3Instance c,
+    fmi3Boolean* discreteStatesNeedUpdate,
+    fmi3Boolean* terminateSimulation,
+    fmi3Boolean* nominalContinuousStatesChanged,
+    fmi3Boolean* valuesOfContinuousStatesChanged,
+    fmi3Boolean* nextEventTimeDefined,
+    fmi3Float64* nextEventTime)
+{
+    const auto component = reinterpret_cast<Component*>(c);
+    try {
+        component->slave->UpdateDiscreteStates(
+            discreteStatesNeedUpdate,
+            terminateSimulation,
+            nominalContinuousStatesChanged,
+            valuesOfContinuousStatesChanged,
+            nextEventTimeDefined,
+            nextEventTime);
+        return fmi3OK;
+    } catch (const cppfmu::FatalError& e) {
+        component->logger.Log(fmi3Fatal, "", e.what());
+        return fmi3Fatal;
+    } catch (const std::exception& e) {
+        component->logger.Log(fmi3Error, "", e.what());
+        return fmi3Error;
+    }
+}
+
+fmi3Status fmi3EnterContinuousTimeMode(fmi3Instance c)
+{
+    return fmi3OK;
+}
+
+fmi3Status fmi3CompletedIntegratorStep(
+    fmi3Instance c,
+    fmi3Boolean noSetFMUStatePriorToCurrentPoint,
+    fmi3Boolean* enterEventMode,
+    fmi3Boolean* terminateSimulation)
+{
+    *enterEventMode = false;
+    *terminateSimulation = false;
+    
+    return fmi3OK;
+}
+
+
 
 fmi3Status fmi3GetFMUState(
     fmi3Instance c,
@@ -850,15 +1049,6 @@ fmi3EvaluateDiscreteStates(fmi3Instance instance)
   NOT_IMPLEMENTED;
 }
 
-fmi3Status
-fmi3UpdateDiscreteStates(fmi3Instance instance, fmi3Boolean* discreteStatesNeedUpdate,
-    fmi3Boolean* terminateSimulation,
-    fmi3Boolean* nominalsOfContinuousStatesChanged,
-    fmi3Boolean* valuesOfContinuousStatesChanged,
-    fmi3Boolean* nextEventTimeDefined, fmi3Float64* nextEventTime)
-{
-  NOT_IMPLEMENTED;
-}
 
 fmi3Status fmi3ActivateModelPartition(fmi3Instance instance, fmi3ValueReference clockReference,
     fmi3Float64 activationTime)
@@ -866,72 +1056,3 @@ fmi3Status fmi3ActivateModelPartition(fmi3Instance instance, fmi3ValueReference 
   NOT_IMPLEMENTED;
 }
 
-
-// model exchange functions
-fmi3Status
-fmi3EnterContinuousTimeMode(fmi3Instance instance)
-{
-    NOT_IMPLEMENTED;
-}
-
-fmi3Status
-fmi3CompletedIntegratorStep(fmi3Instance instance, fmi3Boolean noSetFMUStatePriorToCurrentPoint,
-                            fmi3Boolean* enterEventMode, fmi3Boolean* terminateSimulation)
-{
-    NOT_IMPLEMENTED;
-}
-
-/* Providing independent variables and re-initialization of caching */
-fmi3Status
-fmi3SetTime(fmi3Instance instance, fmi3Float64 time)
-{
-    NOT_IMPLEMENTED;
-}
-
-fmi3Status
-fmi3SetContinuousStates(fmi3Instance instance, const fmi3Float64 continuousStates[],
-    size_t nContinuousStates)
-{
-    NOT_IMPLEMENTED;
-}
-
-/* Evaluation of the model equations */
-fmi3Status
-fmi3GetContinuousStateDerivatives(fmi3Instance instance, fmi3Float64 derivatives[],
-    size_t nContinuousStates)
-{
-    NOT_IMPLEMENTED;
-}
-
-fmi3Status
-fmi3GetEventIndicators(fmi3Instance instance, fmi3Float64 eventIndicators[],
-    size_t nEventIndicators)
-{
-    NOT_IMPLEMENTED;
-}
-
-fmi3Status
-fmi3GetContinuousStates(fmi3Instance instance, fmi3Float64 continuousStates[],
-    size_t nContinuousStates)
-{
-    NOT_IMPLEMENTED;
-}
-
-fmi3Status
-fmi3GetNominalsOfContinuousStates(fmi3Instance instance, fmi3Float64 nominals[],
-    size_t nContinuousStates)
-{
-    NOT_IMPLEMENTED;
-}
-
-fmi3Status
-fmi3GetNumberOfEventIndicators(fmi3Instance instance, size_t* nEventIndicators)
-{
-    NOT_IMPLEMENTED;
-}
-
-fmi3Status
-fmi3GetNumberOfContinuousStates(fmi3Instance instance, size_t* nContinuousStates)
-{
-    NOT_IMPLEMENTED;
-}
