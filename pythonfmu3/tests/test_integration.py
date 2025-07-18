@@ -1,5 +1,6 @@
 import math
 from pathlib import Path
+import ctypes
 
 import pytest
 
@@ -29,6 +30,53 @@ def test_integration_demo(tmp_path):
 
     assert res["realOut"][-1] == pytest.approx(res["time"][-1], rel=1e-7)
 
+
+@pytest.mark.integration
+def test_integration_demo_MX(tmp_path):
+    script_file = Path(__file__).parent / "slaves/pythonslaveMX.py"
+    fmu = FmuBuilder.build_FMU(script_file, dest=tmp_path, needsExecutionTool="false")
+    assert fmu.exists()
+    res = fmpy.simulate_fmu(str(fmu), stop_time=0.5)
+
+
+@pytest.mark.integration
+def test_integration_solve_MX(tmp_path):
+    script_file = Path(__file__).parent / "slaves/pythonslaveMX.py"
+    fmu = FmuBuilder.build_FMU(script_file, dest=tmp_path, needsExecutionTool="false")
+    assert fmu.exists()
+
+    md = fmpy.read_model_description(str(fmu))
+    unzipdir = fmpy.extract(str(fmu))
+    model = fmpy.fmi3.FMU3Model(guid=md.guid,
+                                unzipDirectory=unzipdir,
+                                modelIdentifier=md.modelExchange.modelIdentifier,
+                                instanceName="instance"
+                                )
+    model.instantiate()
+    model.enterInitializationMode()
+    model.exitInitializationMode()
+    
+    # forward euler
+    t = 0.0
+    step_size = 0.1
+    
+    values = (ctypes.c_double * 1)(0.0)
+    states = (ctypes.c_double *1)(0.0)
+
+    model.getContinuousStateDerivatives(values, 1)
+    model.getContinuousStates(states, 1)
+    
+    assert values[0] == pytest.approx(-1.0, rel=1e-7)
+
+    der = values[0]
+    new_state = states[0] + der * step_size
+
+    model.setContinuousStates((ctypes.c_double * 1)(new_state), 1)
+    model.setTime(t + step_size)
+    
+    model.getContinuousStates(states, 1)
+    
+    assert states[0] == pytest.approx(new_state, rel=1e-7)
 
 @pytest.mark.integration
 def test_integration_reset(tmp_path):

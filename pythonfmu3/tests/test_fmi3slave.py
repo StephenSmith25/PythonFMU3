@@ -1,6 +1,6 @@
 import pytest
 
-from pythonfmu3 import Fmi3Slave
+from pythonfmu3 import Fmi3Slave, ModelExchange
 from pythonfmu3 import __version__ as VERSION
 
 from .utils import FMI2PY, PY2FMI
@@ -150,3 +150,18 @@ def test_Fmi3Slave_customized_log_categories(new_categories):
             assert categories.find(f"Category[@name='{category}'][@description='{description}']") is not None
     else:
         assert categories is None
+
+
+def test_Fmi3Slave_model_exchange():
+    class Slave(Fmi3Slave, ModelExchange):
+
+        def get_continuous_state_derivatives(self, vals):
+            return []
+    
+    slave = Slave(instance_name="instance")
+    xml = slave.to_xml()
+
+    categories = xml.find("ModelExchange")
+    
+    assert categories is not None, "ModelExchange category should be present in the XML"
+
