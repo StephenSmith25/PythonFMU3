@@ -415,6 +415,50 @@ class Fmi3SlaveBase(object):
                 if v.setter is not None:
                     v.setter(value)
 
+    def set_continuous_states(self, values: List[float]):
+        offset = 0
+        continuous_state_derivatives = list(
+            filter(lambda v: v.variability == Fmi3Variability.continuous and (isinstance(v, Float64) and v.derivative is not None), self.vars.values())
+        )
+
+        vrs = [v.derivative for v in continuous_state_derivatives]
+        
+        for vr in vrs:
+            var = self.vars[vr]
+            size = var.size(self.vars)
+            if size > 1:
+                var.setter(values[offset:offset+size])
+            else:
+                var.setter(values[offset])
+            offset += size
+        
+    def get_continuous_states(self) -> List[float]:
+        offset = 0
+        continuous_state_derivatives = list(
+            filter(lambda v: v.variability == Fmi3Variability.continuous and (isinstance(v, Float64) and v.derivative is not None), self.vars.values())
+        )
+
+        vrs = [v.derivative for v in continuous_state_derivatives]
+        
+        refs = list()
+        for vr in vrs:
+            var = self.vars[vr]
+            if len(var.dimensions) == 0:
+                refs.append(float(var.getter()))
+            else:
+                refs.extend(var.getter())
+                
+        return refs
+    
+    def get_number_of_continuous_states(self) -> int:
+        continuous_state_derivatives = list(
+            filter(lambda v: v.variability == Fmi3Variability.continuous and (isinstance(v, Float64) and v.derivative is not None), self.vars.values())
+        )
+        return len(continuous_state_derivatives)
+    
+    def set_time(self, time: float):
+        self.time = time
+
     @staticmethod
     def _fmu_state_to_bytes(state: Dict[str, Any]) -> bytes:
         return json.dumps(state).encode("utf-8")

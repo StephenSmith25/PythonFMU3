@@ -21,18 +21,7 @@ class Dahlquist(Fmi3SlaveBase, ModelExchange):
         self.register_variable(Float64("k", causality=Fmi3Causality.parameter, variability=Fmi3Variability.fixed))
 
 
-    def get_continuous_states(self) -> List[float]:
-        return [self.x]
-    
-    def set_continuous_states(self, values: List[float]):
-        self.x = values[0]
-    
     def get_continuous_state_derivatives(self) -> List[float]:
         vals = [-self.k*self.x]
         return vals
        
-    def set_time(self, time: float):
-        self.time = time
-        
-    def get_number_of_continuous_states(self) -> int:
-        return 1
