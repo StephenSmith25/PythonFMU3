@@ -22,6 +22,6 @@ class Dahlquist(Fmi3SlaveBase, ModelExchange):
 
 
     def get_continuous_state_derivatives(self) -> List[float]:
-        vals = [-self.k*self.x]
-        return vals
+        self.derx = -self.k * self.x
+        return [self.derx]
        
