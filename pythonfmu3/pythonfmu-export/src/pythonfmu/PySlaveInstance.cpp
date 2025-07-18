@@ -55,7 +55,6 @@ PySlaveInstance::PySlaveInstance(std::string instanceName, std::string resources
 {
     py_safe_run([this](PyGILState_STATE gilState) {
         // Append resources path to python sys path
-        std::cout << "Creating PySlaveInstance for " << instanceName_ << " with resources: " << resources_ << std::endl;
         PyObject* sys_module = PyImport_ImportModule("sys");
         if (sys_module == nullptr) {
             handle_py_exception("[ctor] PyImport_ImportModule", gilState);
