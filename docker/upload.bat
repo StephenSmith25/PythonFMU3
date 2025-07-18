@@ -1,0 +1,1 @@
+twine upload -r pythonfmu3 dist/*
