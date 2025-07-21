@@ -24,78 +24,27 @@ inline std::string getline(const std::string& fileName)
     return line;
 }
 
-std::string getClassName(PyObject * pModule)
+inline std::string findClassName(const std::string& fileName)
 {
-    std::string className = "";
-    PyObject* dict = PyModule_GetDict(pModule);
-    PyObject* keys = PyDict_Keys(dict);
-    // Iterate through the dictionary keys to find classes derived from Fmi3Slave
-    for (int i = 0; i < PyList_Size(keys); i++) {
-        PyObject* key = PyList_GetItem(keys, i);
-        if (PyUnicode_Check(key)) {
-        PyObject* utf8Str = PyUnicode_AsEncodedString(key, "utf-8", nullptr);
-        if (utf8Str == nullptr) {
-            return "";
-        }
-        std::string classNameCandidate = PyBytes_AsString(utf8Str);
-        Py_DECREF(utf8Str);
-
-        // Check if the class is a subclass of Fmi3Slave
-        PyObject* obj = PyDict_GetItem(dict, key);
-        if (PyObject_HasAttrString(obj, "__bases__")) {
-            PyObject* bases = PyObject_GetAttrString(obj, "__bases__");
-            if (PyTuple_Check(bases)) {
-            for (int j = 0; j < PyTuple_Size(bases); j++) {
-                PyObject* base = PyTuple_GetItem(bases, j);
-                PyObject* baseNameObj = PyObject_GetAttrString(base, "__name__");
-                if (baseNameObj && PyUnicode_Check(baseNameObj)) {
-                PyObject* baseUtf8Str = PyUnicode_AsEncodedString(baseNameObj, "utf-8", nullptr);
-                if (baseUtf8Str != nullptr) {
-                    std::string baseName = PyBytes_AsString(baseUtf8Str);
-                    Py_DECREF(baseUtf8Str);
-                    if (baseName == "Fmi3Slave") {
-                    className = classNameCandidate;
-                    Py_DECREF(baseNameObj);
-                    Py_DECREF(bases);
-                    Py_DECREF(keys);
-                    return className;
-                    }
-                }
-                Py_DECREF(baseNameObj);
-                }
-            }
-            }
-            Py_DECREF(bases);
-        }
-
-        if (!className.empty()) {
-            break; // Break after finding the first subclass
-        }
+    std::string line;
+    std::ifstream infile(fileName);
+    std::string regexStr(R"(^class (\w+)\(\s*Fmi3Slave\s*\)\s*:)");
+    while (getline(infile, line)) {
+        std::smatch m;
+        std::regex re(regexStr);
+        if (std::regex_search(line, m, re)) {
+            return m[1];
         }
     }
-    return className;
+    return "";
 }
-
-class GILStateGuard {
-public:
-    GILStateGuard() : gil_state_(PyGILState_Ensure()) {}
-    ~GILStateGuard() { PyGILState_Release(gil_state_); }
-    
-    GILStateGuard(const GILStateGuard&) = delete;
-    GILStateGuard& operator=(const GILStateGuard&) = delete;
-    
-    PyGILState_STATE get() const { return gil_state_; }
-    
-private:
-    PyGILState_STATE gil_state_;
-};
 
 inline void py_safe_run(const std::function<void(PyGILState_STATE gilState)>& f)
 {
-    GILStateGuard guard;
-    f(guard.get());
+    PyGILState_STATE gil_state = PyGILState_Ensure();
+    f(gil_state);
+    PyGILState_Release(gil_state);
 }
-
 
 PySlaveInstance::PySlaveInstance(std::string instanceName, std::string resources, const cppfmu::Logger& logger, const bool visible, std::shared_ptr<IPyState> pyState)
     : pyState_{ std::move(pyState) }
@@ -128,7 +77,7 @@ PySlaveInstance::PySlaveInstance(std::string instanceName, std::string resources
             handle_py_exception("[ctor] PyImport_ImportModule", gilState);
         }
 
-        std::string className = getClassName(pModule);
+        std::string className = findClassName(resources_ + "/" + moduleName + ".py");
         if (className.empty()) {
             cleanPyObject();
             throw cppfmu::FatalError("Unable to find class extending Fmi3Slave!");

@@ -3,7 +3,6 @@ import argparse
 import importlib
 import itertools
 import logging
-import py_compile
 import re
 import shutil
 import sys
@@ -21,29 +20,11 @@ HERE = Path(__file__).parent
 
 logger = logging.getLogger(__name__)
 
-def compile_source_file(source_file: FilePath, clean_existing: bool = False) -> Path:
-    compiled_file = source_file.with_suffix(".pyc")
-    py_compile.compile(source_file, cfile=compiled_file)
-    if clean_existing:
-        source_file.unlink(missing_ok=True)
-    return compiled_file
 
 def get_class_name(file_name: Path) -> str:
-
-    if file_name.suffix == ".py":
-        with open(str(file_name), 'r') as file:
-            data = file.read()
-            return re.search(r'class (\w+)\(\s*Fmi3Slave\s*\)\s*:', data).group(1)
-
-    elif file_name.suffix == ".pyc":
-        # For .pyc files, use importlib to load the module and inspect its classes
-        import importlib.util
-        spec = importlib.util.spec_from_file_location("module_name", file_name)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        for name, obj in vars(module).items():
-            if isinstance(obj, type) and issubclass(obj, Fmi3Slave) and obj is not Fmi3Slave:
-                return name
+    with open(str(file_name), 'r') as file:
+        data = file.read()
+        return re.search(r'class (\w+)\(\s*Fmi3Slave\s*\)\s*:', data).group(1)
 
 
 def get_model_description(filepath: Path, module_name: str) -> Tuple[str, Element]:
@@ -105,7 +86,7 @@ class FmuBuilder:
                 raise ValueError(
                     f"The documentation folder does not exists {documentation_folder!s}"
                 )
-
+        
         if terminals is not None:
             terminals = Path(terminals)
             if not terminals.exists():
@@ -118,14 +99,11 @@ class FmuBuilder:
                 )
 
         module_name = script_file.stem
-        compile_flag = options.get("compile", False)
 
         with tempfile.TemporaryDirectory(prefix="pythonfmu_") as tempd:
             temp_dir = Path(tempd)
             shutil.copy2(script_file, temp_dir)
 
-            if compile_flag:
-                script_file = compile_source_file(temp_dir / script_file.name, clean_existing=True)
             # Embed pythonfmu in the FMU so it does not need to be included
             dep_folder = temp_dir / "pythonfmu3"
             dep_folder.mkdir()
@@ -151,11 +129,6 @@ class FmuBuilder:
                         shutil.copytree(file_, temp_dest)
                     else:
                         shutil.copy2(file_, temp_dir)
-
-            for f in temp_dir.rglob("*.py"):
-                if f.suffix == ".py" and compile_flag:
-                    compile_source_file(f, clean_existing=True)
-
 
             model_identifier, xml = get_model_description(
                 temp_dir.absolute() / script_file.name, module_name
@@ -221,7 +194,7 @@ class FmuBuilder:
                     terminalsFolder = Path("terminalsAndIcons")
                     relative_f = terminals.relative_to(terminals.parent)
                     zip_fmu.write(f, arcname=(terminalsFolder / relative_f))
-
+                    
 
                 # Add the model description
                 xml_str = parseString(tostring(xml, "UTF-8"))
@@ -265,13 +238,6 @@ def create_command_parser(parser: argparse.ArgumentParser):
         dest="terminals",
         help="Terminals file (terminalsAndIcons.xml) to include in the FMU.",
         default=None
-    )
-
-    parser.add_argument(
-        "--compile",
-        dest="compile",
-        help="If given, the Python script and project files will be compiled to bytecode.",
-        action="store_true"
     )
 
     for option in FMI3_MODEL_OPTIONS:
