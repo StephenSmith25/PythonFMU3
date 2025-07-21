@@ -27,7 +27,7 @@ target_include_directories(pythonfmu-export
         )
 
 if (WIN32)
-  target_link_libraries(pythonfmu-export PRIVATE ${Python_LIBRARIES})
+  target_link_libraries(pythonfmu-export PRIVATE ${Python3_LIBRARIES})
 elseif (APPLE)
   set_target_properties(pythonfmu-export PROPERTIES LINK_FLAGS "-undefined dynamic_lookup")
 endif ()
