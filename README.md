@@ -188,6 +188,8 @@ class PythonSlaveMX(Fmi3SlaveBase, ModelExchange):
 
 ```
 
+Note: There is a hard requirement that we have a `self.time` member in the derived class.
+
 #### Create the FMU
 
 ```
