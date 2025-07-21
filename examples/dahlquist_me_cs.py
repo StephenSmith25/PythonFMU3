@@ -8,7 +8,7 @@ class Dahlquist(Fmi3SlaveBase, ModelExchange, CoSimulation):
         super().__init__(**kwargs)
 
         self.author = "Stephen Smith"
-        self.description = "Dahlquist's test problem for model exchange FMUs"
+        self.description = "Dahlquist's test problem"
 
         self.time = 0.0
         self.k = 1.0
