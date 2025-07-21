@@ -35,6 +35,3 @@ build/
 # c++
 compile_commands.json
 *.idx
-
-# exclude docker files
-docker
