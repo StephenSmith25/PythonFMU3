@@ -41,10 +41,6 @@ class Fmi3Status(IntEnum):
     error = 3
     fatal = 4
 
-class Fmi3Interface(Enum):
-    """Enumeration of FMI 3.0 interfaces."""
-    coSimulation = "CoSimulation"
-    modelExchange = "ModelExchange"
 
 class PackageManager(Enum):
     """Enumeration of Python packages manager."""

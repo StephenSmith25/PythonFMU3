@@ -1,4 +1,4 @@
-from pythonfmu3 import Fmi3Causality, Fmi3Interface, ModelExchange, Fmi3Variability, Fmi3SlaveBase, Fmi3Status, Float64, Fmi3Initial, Unit, Float64Type, Fmi3StepResult
+from pythonfmu3 import Fmi3Causality,  ModelExchange, Fmi3Variability, Fmi3SlaveBase, Fmi3Status, Float64, Fmi3Initial, Unit, Float64Type, Fmi3StepResult
 
 from typing import List
 
