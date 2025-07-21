@@ -43,7 +43,7 @@ jobs:
         if : startsWith(runner.os, 'Linux') || startsWith(runner.os, 'macOS')
         run: |
           docker create --name extract pythonfmu3-wrapper
-          docker cp extract:/io/pythonfmu3/resources .
+          docker cp extract:/io/pythonfmu3/resources $GITHUB_WORKSPACE/pythonfmu3
           docker rm extract
 
       - name: Archive wrapper library
