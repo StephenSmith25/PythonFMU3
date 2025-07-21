@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 def get_class_name(file_name: Path) -> str:
     with open(str(file_name), 'r') as file:
         data = file.read()
-        return re.search(r'class (\w+)\(\s*Fmi3Slave\s*\)\s*:', data).group(1)
+        return re.search(r'class (\w+)\(([^)]*\bFmi3Slave(?:Base)?\b[^)]*)\)\s*:', data).group(1)
 
 
 def get_model_description(filepath: Path, module_name: str) -> Tuple[str, Element]:
@@ -52,7 +52,7 @@ def get_model_description(filepath: Path, module_name: str) -> Tuple[str, Elemen
 
     if not isinstance(instance, Fmi3SlaveBase):
         raise TypeError(
-            f"The provided class '{class_name}' does not inherit from {Fmi3Slave.__qualname__}"
+            f"The provided class '{class_name}' does not inherit from {Fmi3SlaveBase.__qualname__}"
         )
     # Produce the xml
     return instance.modelName, instance.to_xml()
