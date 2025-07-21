@@ -35,9 +35,9 @@ set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 # Force to use stable Python ABI https://docs.python.org/3/c-api/stable.html
 add_compile_definitions(Py_LIMITED_API)
-find_package(Python REQUIRED COMPONENTS Interpreter Development.Module)
+find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
 if (WIN32)
-  set(Python3_LIBRARIES ${Python_LIBRARY_DIRS}/python3.lib)
+  set(Python3_LIBRARIES ${Python3_LIBRARY_DIRS}/python3.lib)
 endif ()
 
 if (WIN32)

@@ -22,7 +22,7 @@ target_compile_features(pythonfmu-export PUBLIC "cxx_std_17")
 
 target_include_directories(pythonfmu-export
         PRIVATE
-        "${Python_INCLUDE_DIRS}"
+        "${Python3_INCLUDE_DIRS}"
         "${CMAKE_CURRENT_SOURCE_DIR}"
         )
 
