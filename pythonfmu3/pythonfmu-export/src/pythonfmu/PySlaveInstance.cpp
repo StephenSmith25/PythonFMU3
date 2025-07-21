@@ -57,8 +57,7 @@ std::string getClassName(PyObject * pModule)
                     className = classNameCandidate;
                     Py_DECREF(baseNameObj);
                     Py_DECREF(bases);
-                    Py_DECREF(keys);
-                    return className;
+                    break;
                     }
                 }
                 Py_DECREF(baseNameObj);
@@ -76,26 +75,12 @@ std::string getClassName(PyObject * pModule)
     return className;
 }
 
-class GILStateGuard {
-public:
-    GILStateGuard() : gil_state_(PyGILState_Ensure()) {}
-    ~GILStateGuard() { PyGILState_Release(gil_state_); }
-    
-    GILStateGuard(const GILStateGuard&) = delete;
-    GILStateGuard& operator=(const GILStateGuard&) = delete;
-    
-    PyGILState_STATE get() const { return gil_state_; }
-    
-private:
-    PyGILState_STATE gil_state_;
-};
-
 inline void py_safe_run(const std::function<void(PyGILState_STATE gilState)>& f)
 {
-    GILStateGuard guard;
-    f(guard.get());
+    PyGILState_STATE gil_state = PyGILState_Ensure();
+    f(gil_state);
+    PyGILState_Release(gil_state);
 }
-
 
 PySlaveInstance::PySlaveInstance(std::string instanceName, std::string resources, const cppfmu::Logger& logger, const bool visible, std::shared_ptr<IPyState> pyState)
     : pyState_{ std::move(pyState) }
