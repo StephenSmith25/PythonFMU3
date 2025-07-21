@@ -40,6 +40,7 @@ jobs:
           docker build -f DockerFile -t pythonfmu3-wrapper --target build .
       
       - name: Create container and copy out artifact
+        if : startsWith(runner.os, 'Linux') || startsWith(runner.os, 'macOS')
         run: |
           docker create --name extract pythonfmu3-wrapper
           docker cp extract:/io/pythonfmu3/resources .
