@@ -37,11 +37,14 @@ jobs:
       - name: Compile wrapper on Linux / macOS
         if: startsWith(runner.os, 'Linux') || startsWith(runner.os, 'macOS')
         run: |
-          mkdir tmp-build
-          cd tmp-build
-          cmake $GITHUB_WORKSPACE/pythonfmu3/pythonfmu-export -DCMAKE_BUILD_TYPE=Release
-          cmake --build . --config Release
-          cd ..
+          docker build -f DockerFile -t pythonfmu3-wrapper --target build .
+      
+      - name: Create container and copy out artifact
+        if : startsWith(runner.os, 'Linux') || startsWith(runner.os, 'macOS')
+        run: |
+          docker create --name extract pythonfmu3-wrapper
+          docker cp extract:/io/pythonfmu3/resources $GITHUB_WORKSPACE/pythonfmu3
+          docker rm extract
 
       - name: Archive wrapper library
         uses: actions/upload-artifact@v4

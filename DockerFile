@@ -1,0 +1,20 @@
+FROM quay.io/pypa/manylinux_2_28_x86_64 AS build
+
+RUN yum install -y \
+    cmake \
+    gcc \
+    gcc-c++ \
+    make \
+    git \
+    python3 \
+    python3-pip \
+    python3-devel
+
+WORKDIR /io
+
+COPY . .
+
+WORKDIR /io/tmp-build
+
+RUN cmake /io/pythonfmu3/pythonfmu-export -DCMAKE_BUILD_TYPE=Release \
+    && cmake --build . --config Release
