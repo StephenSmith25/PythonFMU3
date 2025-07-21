@@ -79,6 +79,19 @@ def test_integration_solve_MX(tmp_path):
     assert states[0] == pytest.approx(new_state, rel=1e-7)
 
 @pytest.mark.integration
+def test_integration_demo_CS_MX(tmp_path):
+    script_file = Path(__file__).parent / "slaves/pythonslaveMXCS.py"
+    fmu = FmuBuilder.build_FMU(script_file, dest=tmp_path, needsExecutionTool="false")
+    assert fmu.exists()
+    res = fmpy.simulate_fmu(str(fmu), stop_time=0.5, fmi_type="ModelExchange")
+    
+    res1 = fmpy.simulate_fmu(str(fmu), stop_time=0.5, fmi_type="CoSimulation")
+    
+    assert res[-1][0] == pytest.approx(res1[-1][0], rel=1e-7)
+    assert res[-1][1] == pytest.approx(res1[-1][1], rel=0.1)
+
+
+@pytest.mark.integration
 def test_integration_reset(tmp_path):
     script_file = Path(__file__).parent / "slaves/pythonslave.py"
     fmu = FmuBuilder.build_FMU(script_file, dest=tmp_path, needsExecutionTool="false")

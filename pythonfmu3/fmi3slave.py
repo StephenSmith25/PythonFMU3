@@ -114,10 +114,11 @@ class Fmi3SlaveBase(object):
         options_me["needsCompletedIntegratorStep"] = "false"
 
         # check if we have cosim mixin or model exchange mixin
-        if isinstance(self, CoSimulation):
-            SubElement(root, "CoSimulation", attrib=options)
         if isinstance(self, ModelExchange):
             SubElement(root, "ModelExchange", attrib=options_me)
+        
+        if isinstance(self, CoSimulation):
+            SubElement(root, "CoSimulation", attrib=options)
 
         if self.units:
             unit_defs = SubElement(root, "UnitDefinitions")
