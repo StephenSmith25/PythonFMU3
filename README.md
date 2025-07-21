@@ -15,7 +15,16 @@ This project is a fork of the original PythonFMU repository available at https:/
 ### Support:
 
 Please take a look at the examples to see the supported features.
-We currently support both the Model exchange and Cosimulation Interfaces. For both interfaces event mode is not supported.
+We currently support both the Model exchange and Cosimulation Interfaces.
+
+For both interfaces event mode is not supported.
+
+We currently do not support the following methods (beyond a default, trivial implementation)
+
+- fmi3UpdateDiscreteStates
+- fmi3GetNumberOfEventindicators
+- fmi3GetNominalsOfContinuousStates
+- fmi3EvaluateDiscreteStates
 
 ### How do I build an FMU from python code?
 
