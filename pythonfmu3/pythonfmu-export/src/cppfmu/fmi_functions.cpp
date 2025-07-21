@@ -110,10 +110,16 @@ fmi3Instance fmi3InstantiateCoSimulation(
             component->logger);
         return component;
     } catch (const cppfmu::FatalError& e) {
-        logMessage(environment, fmi3Fatal, "", e.what());
+        if (logMessage)
+        {
+            logMessage(environment, fmi3Fatal, "", e.what());
+        }
         return nullptr;
     } catch (const std::exception& e) {
-        logMessage(environment, fmi3Error, "", e.what());
+        if (logMessage)
+        {
+            logMessage(environment, fmi3Error, "", e.what());
+        }
         return nullptr;
     }
 }
@@ -143,10 +149,16 @@ fmi3Instance fmi3InstantiateModelExchange(
             component->logger);
         return component;
     } catch (const cppfmu::FatalError& e) {
-        logMessage(environment, fmi3Fatal, "", e.what());
+        if (logMessage)
+        {
+            logMessage(environment, fmi3Fatal, "", e.what());
+        }
         return nullptr;
     } catch (const std::exception& e) {
-        logMessage(environment, fmi3Error, "", e.what());
+        if (logMessage)
+        {
+            logMessage(environment, fmi3Error, "", e.what());
+        }
         return nullptr;
     }
 
