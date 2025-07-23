@@ -13,7 +13,7 @@ from typing import Iterable, Optional, Tuple, Union
 from xml.dom.minidom import parseString
 from xml.etree.ElementTree import Element, SubElement, tostring
 from .osutil import get_lib_extension, get_platform
-from .fmi3slave import FMI3_MODEL_OPTIONS, Fmi3Slave
+from .fmi3slave import FMI3_MODEL_OPTIONS, Fmi3Slave, Fmi3SlaveBase
 
 FilePath = Union[str, Path]
 HERE = Path(__file__).parent
@@ -24,7 +24,7 @@ logger = logging.getLogger(__name__)
 def get_class_name(file_name: Path) -> str:
     with open(str(file_name), 'r') as file:
         data = file.read()
-        return re.search(r'class (\w+)\(\s*Fmi3Slave\s*\)\s*:', data).group(1)
+        return re.search(r'class (\w+)\(([^)]*\bFmi3Slave(?:Base)?\b[^)]*)\)\s*:', data).group(1)
 
 
 def get_model_description(filepath: Path, module_name: str) -> Tuple[str, Element]:
@@ -50,9 +50,9 @@ def get_model_description(filepath: Path, module_name: str) -> Tuple[str, Elemen
     finally:
         sys.path.remove(str(filepath.parent))  # remove inserted temporary path
 
-    if not isinstance(instance, Fmi3Slave):
+    if not isinstance(instance, Fmi3SlaveBase):
         raise TypeError(
-            f"The provided class '{class_name}' does not inherit from {Fmi3Slave.__qualname__}"
+            f"The provided class '{class_name}' does not inherit from {Fmi3SlaveBase.__qualname__}"
         )
     # Produce the xml
     return instance.modelName, instance.to_xml()
@@ -138,9 +138,16 @@ class FmuBuilder:
 
             type_node = xml.find("CoSimulation")
             option_names = [opt.name for opt in FMI3_MODEL_OPTIONS]
-            for option, value in options.items():
-                if option in option_names:
-                    type_node.set(option, str(value).lower())
+            if type_node:
+                for option, value in options.items():
+                    if option in option_names:
+                        type_node.set(option, str(value).lower())
+
+            type_node = xml.find("ModelExchange")
+            if type_node:
+                for option, value in options.items():
+                    if option in option_names:
+                        type_node.set(option, str(value).lower())
 
             with zipfile.ZipFile(dest_file, "w") as zip_fmu:
 

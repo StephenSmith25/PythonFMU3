@@ -50,6 +50,23 @@ public:
     void GetFMUstate(fmi3FMUState& State) override;
     void SetFMUstate(const fmi3FMUState& State) override;
     void FreeFMUstate(fmi3FMUState& State) override;
+    
+    // Model Exchange methods
+    void GetContinuousStates(cppfmu::FMIFloat64* continuousStates, std::size_t nStates) const override;
+    void GetNumberOfContinuousStates(std::size_t& nStates) const override;
+    void GetNumberOfEventIndicators(std::size_t& nEventIndicators) const override;
+    void GetContinuousStateDerivatives(cppfmu::FMIFloat64* derivatives, std::size_t nStates) const override;
+    void GetNominalsOfContinuousStates(cppfmu::FMIFloat64* nominalContinuousStates, std::size_t nStates) const override;
+    void SetContinuousStates(const cppfmu::FMIFloat64* continuousStates, std::size_t nStates) override;
+    void SetTime(cppfmu::FMIFloat64 time) override;
+    void UpdateDiscreteStates(
+        cppfmu::FMIBoolean* discreteStatesNeedUpdate,
+        cppfmu::FMIBoolean* terminateSimulation,
+        cppfmu::FMIBoolean* nominalContinuousStatesChanged,
+        cppfmu::FMIBoolean* valuesOfContinuousStatesChanged,
+        cppfmu::FMIBoolean* nextEventTimeDefined,
+        cppfmu::FMIFloat64* nextEventTime) override;
+
 
     size_t SerializedFMUstateSize(const fmi3FMUState& State) override;
     void SerializeFMUstate(const fmi3FMUState& State, fmi3Byte bytes[], size_t size) override;

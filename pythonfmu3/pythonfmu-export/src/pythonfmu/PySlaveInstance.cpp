@@ -28,7 +28,7 @@ inline std::string findClassName(const std::string& fileName)
 {
     std::string line;
     std::ifstream infile(fileName);
-    std::string regexStr(R"(^class (\w+)\(\s*Fmi3Slave\s*\)\s*:)");
+    std::string regexStr(R"(^class (\w+)\(([^)]*\bFmi3Slave(?:Base)?\b[^)]*)\)\s*:)");
     while (getline(infile, line)) {
         std::smatch m;
         std::regex re(regexStr);
@@ -80,7 +80,7 @@ PySlaveInstance::PySlaveInstance(std::string instanceName, std::string resources
         std::string className = findClassName(resources_ + "/" + moduleName + ".py");
         if (className.empty()) {
             cleanPyObject();
-            throw cppfmu::FatalError("Unable to find class extending Fmi3Slave!");
+            throw cppfmu::FatalError("Unable to find class extending Fmi3SlaveBase!");
         }
 
         PyObject* pyClassName = Py_BuildValue("s", className.c_str());
@@ -528,6 +528,109 @@ void PySlaveInstance::GetString(const cppfmu::FMIValueReference* vr, std::size_t
         Py_DECREF(refs);
         clearLogBuffer();
     });
+}
+
+void PySlaveInstance::GetContinuousStates(cppfmu::FMIFloat64* continuousStates, std::size_t nStates) const
+{
+    py_safe_run([this, &continuousStates, nStates](PyGILState_STATE gilState) {
+        auto f = PyObject_CallMethod(pInstance_, "get_continuous_states", nullptr);
+        if (f == nullptr) {
+            handle_py_exception("[get_continuous_states] PyObject_CallMethod", gilState);
+        }
+        // Assuming f is a list of floats
+        for (std::size_t i = 0; i < nStates; i++) {
+            PyObject* item = PyList_GetItem(f, i);
+            continuousStates[i] = static_cast<cppfmu::FMIFloat64>(PyFloat_AsDouble(item));
+        }
+        clearLogBuffer();
+    });
+}
+
+void PySlaveInstance::GetContinuousStateDerivatives(cppfmu::FMIFloat64* continuousStateDerivatives, std::size_t nStates) const
+{
+    py_safe_run([this, &continuousStateDerivatives, nStates](PyGILState_STATE gilState) {
+        auto f = PyObject_CallMethod(pInstance_, "get_continuous_state_derivatives", nullptr);
+        if (f == nullptr) {
+            handle_py_exception("[get_continuous_state_derivatives] PyObject_CallMethod", gilState);
+        }
+        // Assuming f is a list of floats
+        for (std::size_t i = 0; i < nStates; i++) {
+            PyObject* item = PyList_GetItem(f, i);
+            continuousStateDerivatives[i] = static_cast<cppfmu::FMIFloat64>(PyFloat_AsDouble(item));
+        }
+        clearLogBuffer();
+    });
+}
+
+void PySlaveInstance::GetNominalsOfContinuousStates(cppfmu::FMIFloat64* nominalsOfContinuousStates, std::size_t nStates) const
+{
+    for (size_t i = 0u; i < nStates; i++) {
+        nominalsOfContinuousStates[i] = 1.0;
+    }
+}
+
+void PySlaveInstance::SetContinuousStates(const cppfmu::FMIFloat64* continuousStates, std::size_t nStates)
+{
+    py_safe_run([this, &continuousStates, nStates](PyGILState_STATE gilState) {
+        PyObject* refs = PyList_New(nStates);
+        for (int i = 0; i < nStates; i++) {
+            PyList_SetItem(refs, i, Py_BuildValue("d", continuousStates[i]));
+        }
+
+        auto f = PyObject_CallMethod(pInstance_, "set_continuous_states", "(O)", refs);
+        Py_DECREF(refs);
+        if (f == nullptr) {
+            handle_py_exception("[setContinuousStates] PyObject_CallMethod", gilState);
+        }
+        Py_DECREF(f);
+        clearLogBuffer();
+    });
+}
+
+void PySlaveInstance::GetNumberOfContinuousStates(std::size_t& nStates) const
+{
+    py_safe_run([this, &nStates](PyGILState_STATE gilState) {
+        auto f = PyObject_CallMethod(pInstance_, "get_number_of_continuous_states", nullptr);
+        if (f == nullptr) {
+            handle_py_exception("[getNumberOfContinuousStates] PyObject_CallMethod", gilState);
+        }
+        nStates = static_cast<std::size_t>(PyLong_AsLong(f));
+        Py_DECREF(f);
+        clearLogBuffer();
+    });
+}
+
+void PySlaveInstance::GetNumberOfEventIndicators(std::size_t& nIndicators) const
+{
+   nIndicators= 0u;
+}
+
+void PySlaveInstance::SetTime(cppfmu::FMIFloat64 time)
+{
+    py_safe_run([this, time](PyGILState_STATE gilState) {
+        auto f = PyObject_CallMethod(pInstance_, "set_time", "(d)", time);
+        if (f == nullptr) {
+            handle_py_exception("[setTime] PyObject_CallMethod", gilState);
+        }
+        Py_DECREF(f);
+        clearLogBuffer();
+    });
+}
+
+void PySlaveInstance::UpdateDiscreteStates(
+    cppfmu::FMIBoolean* discreteStatesNeedUpdate,
+    cppfmu::FMIBoolean* terminateSimulation,
+    cppfmu::FMIBoolean* nominalContinuousStatesChanged,
+    cppfmu::FMIBoolean* valuesOfContinuousStatesChanged,
+    cppfmu::FMIBoolean* nextEventTimeDefined,
+    cppfmu::FMIFloat64* nextEventTime)
+{
+    *discreteStatesNeedUpdate = false;
+    *terminateSimulation = false;
+    *nominalContinuousStatesChanged = false;
+    *valuesOfContinuousStatesChanged = false;
+    *nextEventTimeDefined = false;
+    *nextEventTime = 0.0;
 }
 
 void PySlaveInstance::GetFMUstate(fmi3FMUState& state)

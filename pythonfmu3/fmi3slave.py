@@ -11,6 +11,8 @@ from xml.etree.ElementTree import Element, SubElement
 
 from .logmsg import LogMsg
 from .default_experiment import DefaultExperiment
+from .cosimulation import CoSimulation
+from .modelexchange import ModelExchange
 from ._version import __version__ as VERSION
 from .enums import Fmi3Type, Fmi3Status, Fmi3Causality, Fmi3Initial, Fmi3Variability
 from .variables import Boolean, Enumeration, Int32, Int64, UInt64, Float64, ModelVariable, String
@@ -33,7 +35,8 @@ class Fmi3StepResult(NamedTuple):
     terminateSimulation: bool = False
     earlyReturn: bool = False
 
-class Fmi3Slave(ABC):
+
+class Fmi3SlaveBase(object):
     """Abstract facade class to execute Python through FMI standard."""
 
     # Dictionary of (category, description) entries
@@ -104,8 +107,18 @@ class Fmi3Slave(ABC):
             options[option.name] = str(value).lower()
         options["modelIdentifier"] = self.modelName
         options["canNotUseMemoryManagementFunctions"] = "true"
+        
+        options_me = dict()
+        options_me["canGetAndSetFMUState"] = "true"
+        options_me["modelIdentifier"] = self.modelName
+        options_me["needsCompletedIntegratorStep"] = "false"
 
-        SubElement(root, "CoSimulation", attrib=options)
+        # check if we have cosim mixin or model exchange mixin
+        if isinstance(self, ModelExchange):
+            SubElement(root, "ModelExchange", attrib=options_me)
+        
+        if isinstance(self, CoSimulation):
+            SubElement(root, "CoSimulation", attrib=options)
 
         if self.units:
             unit_defs = SubElement(root, "UnitDefinitions")
@@ -239,7 +252,6 @@ class Fmi3Slave(ABC):
     def exit_initialization_mode(self):
         pass
 
-    @abstractmethod
     def do_step(self, current_time: float, step_size: float) -> Fmi3StepResult:
         pass
 
@@ -404,6 +416,50 @@ class Fmi3Slave(ABC):
                 if v.setter is not None:
                     v.setter(value)
 
+    def set_continuous_states(self, values: List[float]):
+        offset = 0
+        continuous_state_derivatives = list(
+            filter(lambda v: v.variability == Fmi3Variability.continuous and (isinstance(v, Float64) and v.derivative is not None), self.vars.values())
+        )
+
+        vrs = [v.derivative for v in continuous_state_derivatives]
+        
+        for vr in vrs:
+            var = self.vars[vr]
+            size = var.size(self.vars)
+            if size > 1:
+                var.setter(values[offset:offset+size])
+            else:
+                var.setter(values[offset])
+            offset += size
+        
+    def get_continuous_states(self) -> List[float]:
+        offset = 0
+        continuous_state_derivatives = list(
+            filter(lambda v: v.variability == Fmi3Variability.continuous and (isinstance(v, Float64) and v.derivative is not None), self.vars.values())
+        )
+
+        vrs = [v.derivative for v in continuous_state_derivatives]
+        
+        refs = list()
+        for vr in vrs:
+            var = self.vars[vr]
+            if len(var.dimensions) == 0:
+                refs.append(float(var.getter()))
+            else:
+                refs.extend(var.getter())
+                
+        return refs
+    
+    def get_number_of_continuous_states(self) -> int:
+        continuous_state_derivatives = list(
+            filter(lambda v: v.variability == Fmi3Variability.continuous and (isinstance(v, Float64) and v.derivative is not None), self.vars.values())
+        )
+        return len(continuous_state_derivatives)
+    
+    def set_time(self, time: float):
+        self.time = time
+
     @staticmethod
     def _fmu_state_to_bytes(state: Dict[str, Any]) -> bytes:
         return json.dumps(state).encode("utf-8")
@@ -436,3 +492,6 @@ class Fmi3Slave(ABC):
                 category = "logAll"
         log_msg = LogMsg(status, category, msg, debug)
         self.log_queue.append(log_msg)
+
+class Fmi3Slave(Fmi3SlaveBase, CoSimulation):
+    pass

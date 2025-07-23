@@ -1,6 +1,6 @@
 # PythonFMU3
 
-> A lightweight framework that enables the packaging of Python 3 code as co-simulation FMUs (following FMI version 3.0).
+> A lightweight framework that enables the packaging of Python 3 code as FMUs (following FMI version 3.0).
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/StephenSmith25/PythonFMU3/issues)
@@ -15,14 +15,16 @@ This project is a fork of the original PythonFMU repository available at https:/
 ### Support:
 
 Please take a look at the examples to see the supported features.
+We currently support both the Model exchange and Cosimulation Interfaces.
 
-### Future
+For both interfaces event mode is not supported.
 
-In no particular order, we plan to add support for:
+We currently do not support the following methods (beyond a default, trivial implementation)
 
-- Support more variable types from FMI3
-- Improve array support
-- Add event mode
+- fmi3UpdateDiscreteStates
+- fmi3GetNumberOfEventindicators
+- fmi3GetNominalsOfContinuousStates
+- fmi3EvaluateDiscreteStates
 
 ### How do I build an FMU from python code?
 
@@ -96,7 +98,7 @@ optional arguments:
                         Requirements or environment file.
 ```
 
-### Example:
+### Cosimulation Example:
 
 #### Write the script
 
@@ -142,3 +144,54 @@ pythonfmu3 build -f pythonslave.py myproject
 In this example a python class named `PythonSlave` that extends `Fmi3Slave` is declared in a file named `pythonslave.py`,
 where `myproject` is an optional folder containing additional project files required by the python script.
 Project folders such as this will be recursively copied into the FMU. Multiple project files/folders may be added.
+
+
+### Model Exchange Example
+
+To create a model exchange FMU you must inherit from `Fmi3SlaveBase` and one of (or both) mixin classes `ModelExchange` or `CoSimulation`.
+
+#### Write the script
+
+```python
+
+from pythonfmu3 import Fmi3Causality, Fmi3SlaveBase, Float64, ModelExchange
+
+
+class PythonSlaveMX(Fmi3SlaveBase, ModelExchange):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.author = "John Doe"
+        self.description = "A simple description"
+
+        self.time = 0.0
+        self.mu = 1.0
+        self.x0 = 2
+        self.x1 = 0
+        self.derx0 = 0.0
+        self.derx1 = 0.0
+
+        self.register_variable(Float64("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
+        self.register_variable(Float64("x0", causality=Fmi3Causality.output, start=2, variability=Fmi3Variability.continuous, initial=Fmi3Initial.exact))
+        self.register_variable(Float64("x1", causality=Fmi3Causality.output, start=0, variability=Fmi3Variability.continuous, initial=Fmi3Initial.exact))
+        self.register_variable(Float64("derx0", causality=Fmi3Causality.local, variability=Fmi3Variability.continuous, derivative=1))
+        self.register_variable(Float64("derx1", causality=Fmi3Causality.local, variability=Fmi3Variability.continuous, derivative=2))
+        self.register_variable(Float64("mu", causality=Fmi3Causality.parameter, variability=Fmi3Variability.fixed))
+
+
+    def get_continuous_state_derivatives(self) -> List[float]:
+        self.derx0 = self.x1
+        self.derx1 = self.mu * ((1 - self.x0**2) * self.x1) - self.x0
+        return [self.derx0, self.derx1]
+        
+
+```
+
+Note: There is a hard requirement that we have a `self.time` member in the derived class.
+
+#### Create the FMU
+
+```
+pythonfmu3 build -f pythonslaveMX.py
+```
