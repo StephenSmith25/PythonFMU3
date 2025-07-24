@@ -155,6 +155,10 @@ def test_Fmi3Slave_customized_log_categories(new_categories):
 def test_Fmi3Slave_model_exchange():
     class Slave(Fmi3Slave, ModelExchange):
 
+        def __init__(self, **kwargs):
+            super().__init__(**kwargs)
+            self.time = 0.0
+
         def get_continuous_state_derivatives(self, vals):
             return []
     
