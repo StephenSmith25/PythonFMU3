@@ -622,7 +622,17 @@ fmi3Status fmi3GetEventIndicators(
     fmi3Float64 eventIndicators[],
     size_t nEventIndicators)
 {
-    return fmi3OK;
+    const auto component = reinterpret_cast<Component*>(c);
+    try {
+        component->slave->GetEventIndicators(eventIndicators, nEventIndicators);
+        return fmi3OK;
+    } catch (const cppfmu::FatalError& e) {
+        component->logger.Log(fmi3Fatal, "", e.what());
+        return fmi3Fatal;
+    } catch (const std::exception& e) {
+        component->logger.Log(fmi3Error, "", e.what());
+        return fmi3Error;
+    }
 }
 
 fmi3Status fmi3GetNominalsOfContinuousStates(

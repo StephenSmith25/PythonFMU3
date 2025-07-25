@@ -602,8 +602,33 @@ void PySlaveInstance::GetNumberOfContinuousStates(std::size_t& nStates) const
 
 void PySlaveInstance::GetNumberOfEventIndicators(std::size_t& nIndicators) const
 {
-   nIndicators= 0u;
+    py_safe_run([this, &nIndicators](PyGILState_STATE gilState) {
+        auto f = PyObject_CallMethod(pInstance_, "get_number_of_event_indicators", nullptr);
+        if (f == nullptr) {
+            handle_py_exception("[getNumberOfEventIndicators] PyObject_CallMethod", gilState);
+        }
+        nIndicators = static_cast<std::size_t>(PyLong_AsLong(f));
+        Py_DECREF(f);
+        clearLogBuffer();
+    });
 }
+
+void PySlaveInstance::GetEventIndicators(cppfmu::FMIFloat64* eventIndicators, std::size_t nIndicators) const
+{
+    py_safe_run([this, &eventIndicators, nIndicators](PyGILState_STATE gilState) {
+        auto f = PyObject_CallMethod(pInstance_, "get_event_indicators", nullptr);
+        if (f == nullptr) {
+            handle_py_exception("[getEventIndicators] PyObject_CallMethod", gilState);
+        }
+        // Assuming f is a list of floats
+        for (std::size_t i = 0; i < nIndicators; i++) {
+            PyObject* item = PyList_GetItem(f, i);
+            eventIndicators[i] = static_cast<cppfmu::FMIFloat64>(PyFloat_AsDouble(item));
+        }
+        clearLogBuffer();
+    });
+}
+
 
 void PySlaveInstance::SetTime(cppfmu::FMIFloat64 time)
 {

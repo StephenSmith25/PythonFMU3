@@ -21,3 +21,7 @@ class ModelExchange(ABC, metaclass=RequireTimeMeta):
     def get_continuous_state_derivatives(self):
         """Return the continuous state derivatives of the model."""
         pass
+    
+    def get_event_indicators(self):
+        """Return the event indicators of the model."""
+        return []
