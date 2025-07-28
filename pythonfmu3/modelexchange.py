@@ -1,4 +1,14 @@
 from abc import ABC, ABCMeta, abstractmethod
+from dataclasses import dataclass
+
+@dataclass
+class Fmi3UpdateDiscreteStatesResult:
+    discreteStateNeedsUpdate: bool = False
+    terminateSimulation: bool = False
+    nominalsOfContinuousStatesChanged: bool = False
+    valuesOfContinuousStatesChanged: bool = False
+    nextEventTimeDefined: bool = False
+    nextEventTime: float = 0.0
 
 class RequireTimeMeta(ABCMeta):
     def __init__(cls, name, bases, namespace):
@@ -15,9 +25,24 @@ class RequireTimeMeta(ABCMeta):
 class ModelExchange(ABC, metaclass=RequireTimeMeta):
     """
     Classes derived from ModelExchange must define a 'self.time' member variable.
+    
+    Required methods to override:
+    - `get_continuous_state_derivatives`: Must return a list of continuous state derivatives.
+
+    Optional methods:
+    - `get_event_indicators`: Should return a list of event indicators.
+    - `update_discrete_states`: Signify converged solution at current super-dense time instant.
     """
     
     @abstractmethod
     def get_continuous_state_derivatives(self):
         """Return the continuous state derivatives of the model."""
         pass
+    
+    def get_event_indicators(self):
+        """Return the event indicators of the model."""
+        return []
+    
+    def update_discrete_states(self):
+        """Update the discrete states of the model."""
+        return Fmi3UpdateDiscreteStatesResult()

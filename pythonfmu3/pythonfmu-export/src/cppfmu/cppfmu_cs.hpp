@@ -141,6 +141,7 @@ public:
     virtual void SetTime(cppfmu::FMIFloat64 time) = 0;
     virtual void GetNumberOfContinuousStates(std::size_t& nStates) const = 0;
     virtual void GetNumberOfEventIndicators(std::size_t& nEventIndicators) const = 0;
+    virtual void GetEventIndicators(cppfmu::FMIFloat64* eventIndicators, std::size_t nEventIndicators) const = 0;
     virtual void UpdateDiscreteStates(
         cppfmu::FMIBoolean* discreteStatesNeedUpdate,
         cppfmu::FMIBoolean* terminateSimulation,

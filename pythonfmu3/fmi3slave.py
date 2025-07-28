@@ -50,6 +50,7 @@ class Fmi3SlaveBase(object):
 
     def __init__(self, **kwargs):
         self.vars = OrderedDict()
+        self.event_indicators: List[int] = []
         self.instance_name = kwargs["instance_name"]
         self.resources = kwargs.get("resources", None)
         self.visible = kwargs.get("visible", False)
@@ -184,7 +185,8 @@ class Fmi3SlaveBase(object):
         for v in initial_unknown:
             SubElement(structure, "InitialUnknown", attrib=dict(valueReference=str(v.value_reference)))
         
-
+        for v in self.event_indicators:
+            SubElement(structure, "EventIndicator", attrib=dict(valueReference=str(v)))
 
         return root
 
@@ -206,7 +208,7 @@ class Fmi3SlaveBase(object):
             raise Exception(f"Unsupported type {type(var)}!")
         var.start = refs if len(getattr(var, "dimensions", [])) > 0 else refs[0]
 
-    def register_variable(self, var: ModelVariable, nested: bool = True, var_type: Any = None):
+    def register_variable(self, var: ModelVariable, nested: bool = True, var_type: Any = None, has_event_indicator: bool = False):
         """Register a variable as FMU interface.
         
         Args:
@@ -238,6 +240,12 @@ class Fmi3SlaveBase(object):
         if var_type:
             self.type_definitions[var_type.name] = var_type
             var.declared_type = var_type.name
+            
+        if has_event_indicator:
+            self.register_event_indicator(var.value_reference)
+
+    def register_event_indicator(self, vr):
+        self.event_indicators.append(vr)
 
     def setup_experiment(self, start_time: float):
         pass
@@ -415,6 +423,9 @@ class Fmi3SlaveBase(object):
                 v = vars_by_name[name]
                 if v.setter is not None:
                     v.setter(value)
+
+    def get_number_of_event_indicators(self) -> int:
+        return len(self.event_indicators)
 
     def set_continuous_states(self, values: List[float]):
         offset = 0

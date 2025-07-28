@@ -542,6 +542,7 @@ void PySlaveInstance::GetContinuousStates(cppfmu::FMIFloat64* continuousStates, 
             PyObject* item = PyList_GetItem(f, i);
             continuousStates[i] = static_cast<cppfmu::FMIFloat64>(PyFloat_AsDouble(item));
         }
+        Py_DECREF(f);
         clearLogBuffer();
     });
 }
@@ -551,6 +552,7 @@ void PySlaveInstance::GetContinuousStateDerivatives(cppfmu::FMIFloat64* continuo
     py_safe_run([this, &continuousStateDerivatives, nStates](PyGILState_STATE gilState) {
         auto f = PyObject_CallMethod(pInstance_, "get_continuous_state_derivatives", nullptr);
         if (f == nullptr) {
+            PyErr_Print();
             handle_py_exception("[get_continuous_state_derivatives] PyObject_CallMethod", gilState);
         }
         // Assuming f is a list of floats
@@ -558,6 +560,7 @@ void PySlaveInstance::GetContinuousStateDerivatives(cppfmu::FMIFloat64* continuo
             PyObject* item = PyList_GetItem(f, i);
             continuousStateDerivatives[i] = static_cast<cppfmu::FMIFloat64>(PyFloat_AsDouble(item));
         }
+        Py_DECREF(f);
         clearLogBuffer();
     });
 }
@@ -602,8 +605,35 @@ void PySlaveInstance::GetNumberOfContinuousStates(std::size_t& nStates) const
 
 void PySlaveInstance::GetNumberOfEventIndicators(std::size_t& nIndicators) const
 {
-   nIndicators= 0u;
+    py_safe_run([this, &nIndicators](PyGILState_STATE gilState) {
+         auto f = PyObject_CallMethod(pInstance_, "get_number_of_event_indicators", nullptr);
+         if (f == nullptr) {
+             handle_py_exception("[getNumberOfEventIndicators] PyObject_CallMethod", gilState);
+         }
+         nIndicators = static_cast<std::size_t>(PyLong_AsLong(f));
+         Py_DECREF(f);
+         clearLogBuffer();
+    });
 }
+
+void PySlaveInstance::GetEventIndicators(cppfmu::FMIFloat64* eventIndicators, std::size_t nIndicators) const
+{
+    py_safe_run([this, &eventIndicators, nIndicators](PyGILState_STATE gilState) {
+        auto f = PyObject_CallMethod(pInstance_, "get_event_indicators", nullptr);
+        if (f == nullptr) {
+            handle_py_exception("[getEventIndicators] PyObject_CallMethod", gilState);
+        }
+        // Assuming f is a list of floats
+        for (std::size_t i = 0; i < nIndicators; i++) {
+            PyObject* item = PyList_GetItem(f, i);
+            eventIndicators[i] = static_cast<cppfmu::FMIFloat64>(PyFloat_AsDouble(item));
+        }
+        Py_DECREF(f);
+        clearLogBuffer();
+    });
+
+}
+
 
 void PySlaveInstance::SetTime(cppfmu::FMIFloat64 time)
 {
@@ -625,12 +655,46 @@ void PySlaveInstance::UpdateDiscreteStates(
     cppfmu::FMIBoolean* nextEventTimeDefined,
     cppfmu::FMIFloat64* nextEventTime)
 {
-    *discreteStatesNeedUpdate = false;
-    *terminateSimulation = false;
-    *nominalContinuousStatesChanged = false;
-    *valuesOfContinuousStatesChanged = false;
-    *nextEventTimeDefined = false;
-    *nextEventTime = 0.0;
+    py_safe_run([this, discreteStatesNeedUpdate, terminateSimulation, nominalContinuousStatesChanged, valuesOfContinuousStatesChanged, nextEventTimeDefined, nextEventTime](PyGILState_STATE gilState) {
+        auto f = PyObject_CallMethod(pInstance_, "update_discrete_states", nullptr);
+        if (f == nullptr) {
+            handle_py_exception("[updateDiscreteStates] PyObject_CallMethod", gilState);
+        }
+
+        if (PyObject_HasAttrString(f, "discreteStatesNeedUpdate")) {
+            PyObject * pyDiscreteStatesNeedUpdate = PyObject_GetAttrString(f, "discreteStatesNeedUpdate");
+            *discreteStatesNeedUpdate = static_cast<bool>(PyObject_IsTrue(pyDiscreteStatesNeedUpdate));
+            Py_DECREF(pyDiscreteStatesNeedUpdate);
+        }
+        if (PyObject_HasAttrString(f, "terminateSimulation")) {
+            PyObject* pyTerminateSimulation = PyObject_GetAttrString(f, "terminateSimulation");
+            *terminateSimulation = static_cast<bool>(PyObject_IsTrue(pyTerminateSimulation));
+            Py_DECREF(pyTerminateSimulation);
+        }
+        if (PyObject_HasAttrString(f, "nominalContinuousStatesChanged")) {
+            PyObject* pyNominalContinuousStatesChanged = PyObject_GetAttrString(f, "nominalContinuousStatesChanged");
+            *nominalContinuousStatesChanged = static_cast<bool>(PyObject_IsTrue(pyNominalContinuousStatesChanged));
+            Py_DECREF(pyNominalContinuousStatesChanged);
+        }
+        if (PyObject_HasAttrString(f, "valuesOfContinuousStatesChanged")) {
+            PyObject* pyValuesOfContinuousStatesChanged = PyObject_GetAttrString(f, "valuesOfContinuousStatesChanged");
+            *valuesOfContinuousStatesChanged = static_cast<bool>(PyObject_IsTrue(pyValuesOfContinuousStatesChanged));
+            Py_DECREF(pyValuesOfContinuousStatesChanged);
+        }
+        if (PyObject_HasAttrString(f, "nextEventTimeDefined")) {
+            PyObject* pyNextEventTimeDefined = PyObject_GetAttrString(f, "nextEventTimeDefined");
+            *nextEventTimeDefined = static_cast<bool>(PyObject_IsTrue(pyNextEventTimeDefined));
+            Py_DECREF(pyNextEventTimeDefined);
+        }
+        if (nextEventTimeDefined && *nextEventTimeDefined) {
+            PyObject* pyNextEventTime = PyObject_GetAttrString(f, "nextEventTime");
+            *nextEventTime = PyFloat_AsDouble(pyNextEventTime);
+            Py_DECREF(pyNextEventTime);
+        }
+
+        Py_DECREF(f);
+        clearLogBuffer();
+    });
 }
 
 void PySlaveInstance::GetFMUstate(fmi3FMUState& state)
