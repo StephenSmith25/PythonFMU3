@@ -17,8 +17,6 @@ This project is a fork of the original PythonFMU repository available at https:/
 Please take a look at the examples to see the supported features.
 We currently support both the Model exchange and Cosimulation Interfaces.
 
-For both interfaces event mode is not supported.
-
 ### How do I build an FMU from python code?
 
 1. Install `pythonfmu3` package:
