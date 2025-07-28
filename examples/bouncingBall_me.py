@@ -1,7 +1,8 @@
-from pythonfmu3 import Fmi3Causality, Fmi3Variability, Fmi3SlaveBase, ModelExchange, Fmi3Status, Float64, Fmi3Initial, Unit, Float64Type, Fmi3StepResult
+from pythonfmu3 import Fmi3Causality, Fmi3Variability, Fmi3SlaveBase, ModelExchange, Fmi3Status, Float64, Fmi3Initial, Unit, Fmi3UpdateDiscreteStatesResult
 
 from typing import List
 
+import sys
 
 EVENT_EPS = 1e-12
 
@@ -49,27 +50,26 @@ class BouncingBall(Fmi3SlaveBase, ModelExchange):
     def get_continuous_state_derivatives(self) -> List[float]:
         self.derh = self.v
         self.derv = self.g
+        return [self.derh, self.derv]
         
     def get_event_indicators(self) -> List[float]:
         z = [self.h]
         if self.h > -EVENT_EPS and self.h <=0 and self.v > 0:
             z[0] = -EVENT_EPS
 
-        return [self.h - 0.0]
+        return z
     
     def update_discrete_states(self):
-        discrete_states_need_update = False
-        terminate_simulation = False
-        nominals_of_continuous_states_changed = False
-        values_of_continuous_states_changed = False
-        next_event_time_defined = False
-        next_event_time = 0.0
+        fdsr = Fmi3UpdateDiscreteStatesResult()
 
         if self.h <= 0 and self.v < 0:
-            self.v = -self.e * self.v
-            if abs(self.v) < self.v_min:
-                self.v = 0.0
-                terminate_simulation = True
-            discrete_states_need_update = True
+            self.h = sys.float_info.min
+            self.v = -self.v * self.e
+            
+            if self.v < self.v_min:
+                self.v = 0.0;
+                self.g = 0.0;
+            
+            fdsr.valuesOfContinuousStatesChanged = True
 
-        return Fmi3Status.ok, discrete_states_need_update, terminate_simulation
+        return fdsr

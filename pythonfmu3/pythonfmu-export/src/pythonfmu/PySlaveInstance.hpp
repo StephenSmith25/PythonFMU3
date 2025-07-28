@@ -57,6 +57,7 @@ public:
     void GetNumberOfEventIndicators(std::size_t& nEventIndicators) const override;
     void GetContinuousStateDerivatives(cppfmu::FMIFloat64* derivatives, std::size_t nStates) const override;
     void GetNominalsOfContinuousStates(cppfmu::FMIFloat64* nominalContinuousStates, std::size_t nStates) const override;
+    void GetEventIndicators(cppfmu::FMIFloat64* eventIndicators, std::size_t nEventIndicators) const override;
     void SetContinuousStates(const cppfmu::FMIFloat64* continuousStates, std::size_t nStates) override;
     void SetTime(cppfmu::FMIFloat64 time) override;
     void UpdateDiscreteStates(
