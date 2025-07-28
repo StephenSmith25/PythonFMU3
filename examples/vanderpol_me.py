@@ -30,3 +30,5 @@ class VanDerPol(Fmi3SlaveBase, ModelExchange):
         self.derx1 = self.mu * ((1 - self.x0**2) * self.x1) - self.x0
         return [self.derx0, self.derx1]
        
+    def get_nominals_of_continuous_states(self, nStates: int) -> List[float]:
+        return [1.0, 1.0]

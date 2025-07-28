@@ -46,3 +46,7 @@ class ModelExchange(ABC, metaclass=RequireTimeMeta):
     def update_discrete_states(self):
         """Update the discrete states of the model."""
         return Fmi3UpdateDiscreteStatesResult()
+
+    def get_nominals_of_continuous_states(self, size: int) -> list[float]:
+        """Return the nominal values of the continuous states."""
+        return [1.0] * size

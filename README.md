@@ -19,13 +19,6 @@ We currently support both the Model exchange and Cosimulation Interfaces.
 
 For both interfaces event mode is not supported.
 
-We currently do not support the following methods (beyond a default, trivial implementation)
-
-- fmi3UpdateDiscreteStates
-- fmi3GetNumberOfEventindicators
-- fmi3GetNominalsOfContinuousStates
-- fmi3EvaluateDiscreteStates
-
 ### How do I build an FMU from python code?
 
 1. Install `pythonfmu3` package:

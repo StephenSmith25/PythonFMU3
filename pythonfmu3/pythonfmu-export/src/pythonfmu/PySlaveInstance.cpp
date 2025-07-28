@@ -567,9 +567,20 @@ void PySlaveInstance::GetContinuousStateDerivatives(cppfmu::FMIFloat64* continuo
 
 void PySlaveInstance::GetNominalsOfContinuousStates(cppfmu::FMIFloat64* nominalsOfContinuousStates, std::size_t nStates) const
 {
-    for (size_t i = 0u; i < nStates; i++) {
-        nominalsOfContinuousStates[i] = 1.0;
-    }
+    py_safe_run([this, &nominalsOfContinuousStates, nStates](PyGILState_STATE gilState) {
+        auto f = PyObject_CallMethod(pInstance_, "get_nominals_of_continuous_states", "(i)", static_cast<int>(nStates));
+         // Check if f is a valid object
+         if (f == nullptr) {
+            handle_py_exception("[getNominalContinuousStates] PyObject_CallMethod", gilState);
+        }
+        // Assuming f is a list of floats
+        for (std::size_t i = 0; i < nStates; i++) {
+            PyObject* item = PyList_GetItem(f, i);
+            nominalsOfContinuousStates[i] = static_cast<cppfmu::FMIFloat64>(PyFloat_AsDouble(item));
+        }
+        Py_DECREF(f);
+        clearLogBuffer();
+    });
 }
 
 void PySlaveInstance::SetContinuousStates(const cppfmu::FMIFloat64* continuousStates, std::size_t nStates)
