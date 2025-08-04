@@ -1,9 +1,3 @@
-import pathlib
-import pytest
-
-from mktestdocs import check_md_file
-
-# pythonfmu3/tests/test_docs.py
 import pytest
 import pathlib
 import re
