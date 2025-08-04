@@ -35,3 +35,4 @@ build/
 # c++
 compile_commands.json
 *.idx
+.clangd

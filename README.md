@@ -146,6 +146,7 @@ To create a model exchange FMU you must inherit from `Fmi3SlaveBase` and one of 
 ```python
 
 from pythonfmu3 import Fmi3Causality, Fmi3SlaveBase, Float64, ModelExchange
+from typing import List
 
 
 class PythonSlaveMX(Fmi3SlaveBase, ModelExchange):

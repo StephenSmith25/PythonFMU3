@@ -2,6 +2,7 @@ site_name: pythonfmu3
 nav:
     - Home: index.md
     - Installation: install.md
-    - Tutorial: usage.md
+    - Co-simulation: usage.md
+    - Model Exchange: usageMX.md
     - Dependencies: dependencies.md
 theme: readthedocs
