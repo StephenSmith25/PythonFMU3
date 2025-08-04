@@ -26,7 +26,8 @@ For Co-simulation FMUs, you must implement:
 ### Variable Registration
 Co-simulation FMUs support various variable types and causalities:
 
-```python skip
+<!-- skip-test -->
+```python
 # Input variables (set by master algorithm)
 self.register_variable(Float64("input_signal", causality=Fmi3Causality.input, start=0.0))
 
@@ -36,9 +37,8 @@ self.register_variable(Float64("output_signal", causality=Fmi3Causality.output))
 # Parameters (configurable, usually fixed during simulation)
 self.register_variable(Float64("gain", causality=Fmi3Causality.parameter,
                               variability=Fmi3Variability.tunable, start=1.0))
-
-
 ```
+<!-- /skip-test -->
 
 ### PID Controller Example
 ```python
@@ -110,7 +110,8 @@ class PIDController(Fmi3Slave):
 
 Units can be added to this example through the `Unit` class along with `register_units` and the `unit` kwarg in `register_variable`
 
-```python skip
+<!-- skip-test -->
+```python
 from pythonfmu3 import Unit
 velocity_unit = Unit(name="m/s", m=1, s=-1)
 ```
@@ -120,6 +121,7 @@ velocity_unit =  Unit(name="m/s", m=1, s=-1)
 self.register_units([velocity_unit])
 self.register_variable(Float64("v", causality=Fmi3Causality.output, start=0, variability=Fmi3Variability.continuous, initial=Fmi3Initial.exact, unit=velocity_unit.name))
 ```
+<!-- /skip-test -->
 
 ### Arrays
 If numpy is installed, arrays may be used with,
@@ -164,14 +166,15 @@ class LinearTransform(Fmi3Slave):
 
 The `do_step` function can also return a tuple of flags, corresponding to those expected by the FMI standard. This can be achieved through use of the `FmiStepResult` tuple,
 
+
 ```python
-    from pythonfmu3 import Fmi3Status, Fmi3StepResult
-    ...
-    def do_step(self, current_time, step_size):
-        self.y = 1 + 2 + 3 + 4 + ...
-        terminate = False
-        status = Fmi3Status.ok
-        return Fmi3StepResult(status=Fmi3Status.ok, terminateSimulation=terminate)
+from pythonfmu3 import Fmi3Status, Fmi3StepResult
+
+def do_step(self, current_time, step_size):
+    self.y = 1 + 2 + 3 + 4 + ...
+    terminate = False
+    status = Fmi3Status.ok
+    return Fmi3StepResult(status=Fmi3Status.ok, terminateSimulation=terminate)
 ```
 
 ### Create the FMU
@@ -187,7 +190,8 @@ Project folders such as this will be recursively copied into the FMU. Multiple p
 ## Integration and Testing
 
 ### Using FMPy for Testing
-```python skip
+<!-- skip-test -->
+```python
 # Example of co-simulation setup
 import fmpy
 from fmpy import simulate_fmu
@@ -227,13 +231,4 @@ plt.legend()
 plt.grid(True)
 plt.show()
 ```
-
-
-{% raw %}
-<!-- This will be hidden in MkDocs -->
-```python
-LinearTransform(instance_name="dummy")
-PIDController(instance_name="dummy")
-```
-{% endraw %}
-```
+<!-- /skip-test -->

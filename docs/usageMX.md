@@ -21,7 +21,8 @@ For Model Exchange FMUs, you must implement:
 ### Variable Registration
 Model Exchange FMUs require specific variable declarations:
 
-```python skip
+<!-- skip-test -->
+```python
 # Independent variable (time)
 self.register_variable(Float64("time", 
                               causality=Fmi3Causality.independent, 
@@ -40,6 +41,7 @@ self.register_variable(Float64("derx0",
                               variability=Fmi3Variability.continuous,
                               derivative=1))                # Derivative of variable 1 (x0)
 ```
+<!-- /skip-test -->
 
 ### Derivative Function
 The core of Model Exchange is the derivative function:
@@ -112,7 +114,8 @@ pythonfmu3 build -f van_der_pol.py
 
 The generated FMU can be used with any FMI-compatible tool:
 
-```python skip
+<!-- skip-test -->
+```python
 # Example with FMPy
 import fmpy
 
@@ -135,19 +138,23 @@ plt.legend()
 plt.grid(True)
 plt.show()
 ```
+<!-- /skip-test -->
 
 ## Advanced Features
 
 ### Event Handling
 For systems with discrete events. Firstly, mark the event indicators in register variable with `has_event_indicator`,
 
-```python skip
+<!-- skip-test -->
+```python
 self.register_variable(Float64("h", causality=Fmi3Causality.output, start=1, variability=Fmi3Variability.continuous, initial=Fmi3Initial.exact), has_event_indicator=True)
 ```
+<!-- /skip-test -->
 
 Then define the event methods, `get_event_indicators()` and `update_discrete_states`.
 
-```python skip
+<!-- skip-test -->
+```python
 def get_event_indicators(self):
     return [0.2]
 
@@ -156,6 +163,7 @@ def update_discrete_states(self):
     fdsr = Fmi3UpdateDiscreteStatesResult()
     fdsr.valuesOfContinuousStatesChanged = True
 ```
+<!-- /skip-test -->
 
 
 ### Example
@@ -239,13 +247,4 @@ Once your Python script is ready, build the FMU:
 ```bash
 # Using the CLI
 pythonfmu3 build -f bouncing_ball.py
-```
-
-{% raw %}
-<!-- This will be hidden in MkDocs -->
-```python
-VanDerPol(instance_name="dummy")
-BouncingBall(instance_name="dummy")
-```
-{% endraw %}
 ```
