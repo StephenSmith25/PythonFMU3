@@ -21,13 +21,21 @@ from .unit import Unit
 
 ModelOptions = namedtuple("ModelOptions", ["name", "value", "cli"])
 
-FMI3_MODEL_OPTIONS: List[ModelOptions] = [
+FMI3_MODEL_OPTIONS_COMMON: List[ModelOptions] = [
     ModelOptions("needsExecutionTool", True, "no-external-tool"),
-    ModelOptions("canHandleVariableCommunicationStepSize", True, "no-variable-step"),
     ModelOptions("canBeInstantiatedOnlyOncePerProcess", False, "only-one-per-process"),
     ModelOptions("canGetAndSetFMUState", False, "handle-state"),
     ModelOptions("canSerializeFMUState", False, "serialize-state")
 ]
+
+FMI3_MODEL_OPTIONS_COSIM: List[ModelOptions] = [
+    ModelOptions("canHandleVariableCommunicationStepSize", True, "no-variable-step"),
+]
+
+FMI3_MODEL_OPTIONS_MX: List[ModelOptions] = [
+    ModelOptions("needsCompletedIntegratorStep", False, "needs-completed-step"),
+]
+
 
 class Fmi3StepResult(NamedTuple):
     status: Fmi3Status = Fmi3Status.ok
@@ -103,23 +111,26 @@ class Fmi3SlaveBase(object):
         root = Element("fmiModelDescription", attrib)
 
         options = dict()
-        for option in FMI3_MODEL_OPTIONS:
+        for option in FMI3_MODEL_OPTIONS_COMMON:
             value = model_options.get(option.name, option.value)
             options[option.name] = str(value).lower()
-        options["modelIdentifier"] = self.modelName
-        options["canNotUseMemoryManagementFunctions"] = "true"
         
-        options_me = dict()
-        options_me["canGetAndSetFMUState"] = "true"
-        options_me["modelIdentifier"] = self.modelName
-        options_me["needsCompletedIntegratorStep"] = "false"
+        options["modelIdentifier"] = self.modelName
+
+        options_cs = options.copy()
+        for option in FMI3_MODEL_OPTIONS_COSIM:
+            options_cs[option.name] = str(value).lower()
+        
+        options_me = options.copy()
+        for option in FMI3_MODEL_OPTIONS_MX:
+            options_me[option.name] = str(value).lower()
 
         # check if we have cosim mixin or model exchange mixin
         if isinstance(self, ModelExchange):
             SubElement(root, "ModelExchange", attrib=options_me)
         
         if isinstance(self, CoSimulation):
-            SubElement(root, "CoSimulation", attrib=options)
+            SubElement(root, "CoSimulation", attrib=options_cs)
 
         if self.units:
             unit_defs = SubElement(root, "UnitDefinitions")

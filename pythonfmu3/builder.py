@@ -13,7 +13,7 @@ from typing import Iterable, Optional, Tuple, Union
 from xml.dom.minidom import parseString
 from xml.etree.ElementTree import Element, SubElement, tostring
 from .osutil import get_lib_extension, get_platform
-from .fmi3slave import FMI3_MODEL_OPTIONS, Fmi3Slave, Fmi3SlaveBase
+from .fmi3slave import FMI3_MODEL_OPTIONS_COMMON, FMI3_MODEL_OPTIONS_COSIM, FMI3_MODEL_OPTIONS_MX, Fmi3Slave, Fmi3SlaveBase
 
 FilePath = Union[str, Path]
 HERE = Path(__file__).parent
@@ -137,16 +137,20 @@ class FmuBuilder:
             dest_file = dest / f"{model_identifier}.fmu"
 
             type_node = xml.find("CoSimulation")
-            option_names = [opt.name for opt in FMI3_MODEL_OPTIONS]
-            if type_node:
+            option_names = [opt.name for opt in FMI3_MODEL_OPTIONS_COMMON]
+            cosim_option_names = option_names.copy()
+            cosim_option_names.extend(opt.name for opt in FMI3_MODEL_OPTIONS_COSIM)
+            if type_node is not None:
                 for option, value in options.items():
-                    if option in option_names:
+                    if option in cosim_option_names:
                         type_node.set(option, str(value).lower())
 
             type_node = xml.find("ModelExchange")
-            if type_node:
+            mx_option_names = option_names.copy()
+            mx_option_names.extend(opt.name for opt in FMI3_MODEL_OPTIONS_MX)
+            if type_node is not None:
                 for option, value in options.items():
-                    if option in option_names:
+                    if option in mx_option_names:
                         type_node.set(option, str(value).lower())
 
             with zipfile.ZipFile(dest_file, "w") as zip_fmu:
@@ -247,7 +251,25 @@ def create_command_parser(parser: argparse.ArgumentParser):
         default=None
     )
 
-    for option in FMI3_MODEL_OPTIONS:
+    for option in FMI3_MODEL_OPTIONS_COMMON:
+        action = "store_false" if option.value else "store_true"
+        parser.add_argument(
+            f"--{option.cli}",
+            dest=option.name,
+            help=f"If given, {option.name}={action[6:]}",
+            action=action
+        )
+
+    for option in FMI3_MODEL_OPTIONS_COSIM:
+        action = "store_false" if option.value else "store_true"
+        parser.add_argument(
+            f"--{option.cli}",
+            dest=option.name,
+            help=f"If given, {option.name}={action[6:]}",
+            action=action
+        )
+    
+    for option in FMI3_MODEL_OPTIONS_MX:
         action = "store_false" if option.value else "store_true"
         parser.add_argument(
             f"--{option.cli}",
