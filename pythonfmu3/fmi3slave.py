@@ -338,7 +338,11 @@ class Fmi3SlaveBase(object):
         for vr in vrs:
             var = self.vars[vr]
             if isinstance(var, Boolean):
-                refs.append(bool(var.getter()))
+                if len(var.dimensions == 0):
+                    refs.append(bool(var.getter()))
+                else:
+                    refs.extend(var.getter())
+            
             else:
                 raise TypeError(
                     f"Variable with valueReference={vr} is not of type Boolean!"

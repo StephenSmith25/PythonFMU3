@@ -156,7 +156,6 @@ class Start(object):
         attrib["value"] = self.value
         return Element("Start", attrib)
 
-
 class Dimension(object):
     def __init__(self, start: str = "", valueReference: str = ""):
         if start and valueReference and any((start, valueReference)):
@@ -182,15 +181,38 @@ class Dimension(object):
         ele = Element("Dimension", attrib)
         return ele
 
-class Float64(ModelVariable):
+class Arrayable(object):
+    def __init__(self, dimensions : List[Dimension] = [], **kwargs):
+        if dimensions:
+            check_numpy()
+        self._dimensions = dimensions
+    
+    @property
+    def dimensions(self) -> List[Dimension]:
+        return self._dimensions
+
+    def get_start_str(self, value, formatter):
+        if len(self.dimensions) > 0:
+            output = "".join([formatter(val) for val in flatten(value)])
+            if len(output) > MAX_LENGTH:
+                output = output[0]
+            return output
+        else:
+            return formatter(value)
+        
+    def dimensions_xml(self) -> List[Element]:
+        return [dim.to_xml() for dim in self._dimensions]
+
+    def size(self, vars):
+        return reduce(lambda x, dim: x * int(dim.size(vars)), self._dimensions, 1)
+
+class Float64(ModelVariable, Arrayable):
     def __init__(self, name: str, start: Optional[Any] = None, derivative: Optional[Any] = None, dimensions: List[Dimension] = [], unit: Optional[str] = None, **kwargs):
-        super().__init__(name, **kwargs)
+        ModelVariable.__init__(self, name, **kwargs)
+        Arrayable.__init__(self, dimensions)
         self.__attrs = {"start": start, "derivative": derivative}
         self._type = "Float64"
         self._unit = unit
-        if dimensions:
-            check_numpy()
-        self.__dimensions = dimensions
 
     @property
     def start(self) -> Optional[Any]:
@@ -211,11 +233,6 @@ class Float64(ModelVariable):
     @property
     def derivative(self):
         return self.__attrs["derivative"]
-    
-    @property
-    def dimensions(self) -> List[Dimension]:
-        return self.__dimensions
-
 
     def to_xml(self) -> Element:
         attrib = dict()
@@ -223,13 +240,7 @@ class Float64(ModelVariable):
             if value is not None:
                 # In order to not loose precision, a number of this type should be
                 # stored on an XML file with at least 16 significant digits
-                output = ""
-                if len(self.dimensions) > 0:
-                    output = " ".join([f"{val:.16g}" for val in flatten(value)])
-                    if len(output) > MAX_LENGTH:
-                        output = output[0]
-                else:
-                    output = f"{value:.16g}"
+                output = self.get_start_str(value, lambda v: f"{v:.16g}")
                 attrib[key] = output
 
         if self.unit:
@@ -238,8 +249,7 @@ class Float64(ModelVariable):
         self._extras = attrib
         parent = super().to_xml()
 
-        for dimension in self.__dimensions:
-            parent.append(dimension.to_xml())
+        parent.extend(self.dimensions_xml())
 
         return parent
     
@@ -247,9 +257,10 @@ class Float64(ModelVariable):
         return reduce(lambda x, dim: x * int(dim.size(vars)), self.__dimensions, 1)
 
 
-class Int32(ModelVariable):
-    def __init__(self, name: str, start: Optional[Any] = None, **kwargs):
-        super().__init__(name, **kwargs)
+class Int32(ModelVariable, Arrayable):
+    def __init__(self, name: str, start: Optional[Any] = None, dimensions: List[Dimension] = [], **kwargs):
+        ModelVariable.__init__(self, name, **kwargs)
+        Arrayable.__init__(self, dimensions, **kwargs)
         self.__attrs = {"start": start}
         self._type = "Int32";
 
@@ -265,15 +276,18 @@ class Int32(ModelVariable):
         attrib = dict()
         for key, value in self.__attrs.items():
             if value is not None:
-                attrib[key] = str(value)
+                attrib[key] = self.get_start_str(value, lambda v: str(v))
         self._extras = attrib
         parent = super().to_xml()
+        
+        parent.extend(self.dimensions_xml())
 
         return parent
         
-class Int64(ModelVariable):
-    def __init__(self, name: str, start: Optional[Any] = None, **kwargs):
-        super().__init__(name, **kwargs)
+class Int64(ModelVariable, Arrayable):
+    def __init__(self, name: str, start: Optional[Any] = None, dimensions: List[Dimension] = [], **kwargs):
+        ModelVariable.__init__(self, name, **kwargs)
+        Arrayable.__init__(self, dimensions, **kwargs)
         self.__attrs = {"start": start}
         self._type = "Int64";
 
@@ -289,15 +303,18 @@ class Int64(ModelVariable):
         attrib = dict()
         for key, value in self.__attrs.items():
             if value is not None:
-                attrib[key] = str(value)
+                attrib[key] = self.get_start_str(value, lambda v: str(v))
         self._extras = attrib
         parent = super().to_xml()
 
+        parent.extend(self.dimensions_xml())
+
         return parent
 
-class UInt64(ModelVariable):
+class UInt64(ModelVariable, Arrayable):
     def __init__(self, name: str, start: Optional[Any] = None, dimensions: List[Dimension] = [], **kwargs):
-        super().__init__(name, **kwargs)
+        ModelVariable.__init__(self, name, **kwargs)
+        Arrayable.__init__(self, dimensions, **kwargs)
         self.__attrs = {"start": start}
         self._type = "UInt64";
         
@@ -321,26 +338,21 @@ class UInt64(ModelVariable):
         attrib = dict()
         for key, value in self.__attrs.items():
             if value is not None:
-                if len(self.dimensions) > 0:
-                    output = " ".join([str(val) for val in flatten(value)])
-                    if len(output) > MAX_LENGTH:
-                        output = output[0]
-                else:
-                    attrib[key] = str(value)
+                attrib[key] = self.get_start_str(value, lambda v: str(v))
         self._extras = attrib
         parent = super().to_xml()
-        
-        for dimension in self.__dimensions:
-            parent.append(dimension.to_xml())
+
+        parent.extend(self.dimensions_xml())
 
         return parent
     
     def size(self, vars):
         return reduce(lambda x, dim: x * int(dim.size(vars)), self.__dimensions, 1)
 
-class Boolean(ModelVariable):
-    def __init__(self, name: str, start: Optional[Any] = None, **kwargs):
-        super().__init__(name, **kwargs)
+class Boolean(ModelVariable, Arrayable):
+    def __init__(self, name: str, start: Optional[Any] = None, dimensions: List[Dimension] = [], **kwargs):
+        ModelVariable.__init__(self, name, **kwargs)
+        Arrayable.__init__(self, dimensions, **kwargs)
         self.__attrs = {"start": start}
         self._type = "Boolean"
 
@@ -356,16 +368,19 @@ class Boolean(ModelVariable):
         attrib = dict()
         for key, value in self.__attrs.items():
             if value is not None:
-                attrib[key] = str(value).lower()
+                attrib[key] = self.get_start_str(value, lambda v: str(v).lower())
         self._extras = attrib
         parent = super().to_xml()
+        
+        parent.extend(self.dimensions_xml())
 
         return parent
 
 
-class String(ModelVariable):
-    def __init__(self, name: str, start: Optional[Any] = None, **kwargs):
-        super().__init__(name, **kwargs)
+class String(ModelVariable, Arrayable):
+    def __init__(self, name: str, start: Optional[Any] = None, dimensions: List[Dimension] = [], **kwargs):
+        ModelVariable.__init__(self, name, **kwargs)
+        Arrayable.__init__(self, dimensions, **kwargs)
         self.__attrs = dict()
         self._type = "String"
         self._start = Start(start)
@@ -382,12 +397,14 @@ class String(ModelVariable):
         attrib = dict()
         for key, value in self.__attrs.items():
             if value is not None:
-                attrib[key] = str(value)
+                attrib[key] = self.get_start_str(value, lambda v: str(v))
         self._extras = attrib
         parent = super().to_xml()
         
         if self.start is not None:
             parent.append(self._start.to_xml())
+        
+        parent.extend(self.dimensions_xml())
 
         return parent
     
