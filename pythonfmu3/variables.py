@@ -50,6 +50,11 @@ class ModelVariable(ABC):
         self.setter = setter
         self._type = None
         self.local_name = name.split(".")[-1]
+        
+        # demanagle names
+        self.local_name = self.local_name.lstrip('_')
+
+
         self.__attrs = {
             "name": name,
             "valueReference": None,
@@ -291,14 +296,22 @@ class Int64(ModelVariable):
         return parent
 
 class UInt64(ModelVariable):
-    def __init__(self, name: str, start: Optional[Any] = None, **kwargs):
+    def __init__(self, name: str, start: Optional[Any] = None, dimensions: List[Dimension] = [], **kwargs):
         super().__init__(name, **kwargs)
         self.__attrs = {"start": start}
         self._type = "UInt64";
+        
+        if dimensions:
+            check_numpy()
+        self.__dimensions = dimensions
 
     @property
     def start(self) -> Optional[Any]:
         return self.__attrs["start"]
+
+    @property
+    def dimensions(self) -> List[Dimension]:
+        return self.__dimensions
 
     @start.setter
     def start(self, value: int):
@@ -308,11 +321,22 @@ class UInt64(ModelVariable):
         attrib = dict()
         for key, value in self.__attrs.items():
             if value is not None:
-                attrib[key] = str(value)
+                if len(self.dimensions) > 0:
+                    output = " ".join([str(val) for val in flatten(value)])
+                    if len(output) > MAX_LENGTH:
+                        output = output[0]
+                else:
+                    attrib[key] = str(value)
         self._extras = attrib
         parent = super().to_xml()
+        
+        for dimension in self.__dimensions:
+            parent.append(dimension.to_xml())
 
         return parent
+    
+    def size(self, vars):
+        return reduce(lambda x, dim: x * int(dim.size(vars)), self.__dimensions, 1)
 
 class Boolean(ModelVariable):
     def __init__(self, name: str, start: Optional[Any] = None, **kwargs):

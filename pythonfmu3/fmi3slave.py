@@ -306,11 +306,15 @@ class Fmi3SlaveBase(object):
         for vr in vrs:
             var = self.vars[vr]
             if isinstance(var, UInt64):
-                val = var.getter()
-                refs.append(val if isinstance(val, ctypes.c_uint64) else ctypes.c_uint64(val))
+                if len(var.dimensions) == 0:
+                    val = var.getter()
+                    refs.append(ctypes.c_uint64(val) if not isinstance(val, ctypes.c_uint64) else val)
+                else:
+                    vals = [ctypes.c_uint64(v) for v in var.getter()]
+                    refs.extend(vals)
             else:
                 raise TypeError(
-                    f"Variable with valueReference={vr} is not of type UInt64!"
+                    f"Variable with valueReference={vr} is not of type Real!"
                 )
         return refs
 

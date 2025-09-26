@@ -334,7 +334,7 @@ fmi3Status fmi3GetInt32(
 {
     const auto component = reinterpret_cast<Component*>(c);
     try {
-        component->slave->GetInt32(vr, nvr, values);
+        component->slave->GetInt32(vr, nvr, values, nValues);
         return fmi3OK;
     } catch (const cppfmu::FatalError& e) {
         component->logger.Log(fmi3Fatal, "", e.what());
@@ -354,7 +354,7 @@ fmi3Status fmi3GetInt64(
 {
     const auto component = reinterpret_cast<Component*>(c);
     try {
-        component->slave->GetInt64(vr, nvr, values);
+        component->slave->GetInt64(vr, nvr, values, nValues);
         return fmi3OK;
     } catch (const cppfmu::FatalError& e) {
         component->logger.Log(fmi3Fatal, "", e.what());
@@ -374,7 +374,7 @@ fmi3Status fmi3GetUInt64(
 {
     const auto component = reinterpret_cast<Component*>(c);
     try {
-        component->slave->GetUInt64(vr, nvr, values);
+        component->slave->GetUInt64(vr, nvr, values, nValues);
         return fmi3OK;
     } catch (const cppfmu::FatalError& e) {
         component->logger.Log(fmi3Fatal, "", e.what());
@@ -394,7 +394,7 @@ fmi3Status fmi3GetBoolean(
 {
     const auto component = reinterpret_cast<Component*>(c);
     try {
-        component->slave->GetBoolean(vr, nvr, values);
+        component->slave->GetBoolean(vr, nvr, values, nValues);
         return fmi3OK;
     } catch (const cppfmu::FatalError& e) {
         component->logger.Log(fmi3Fatal, "", e.what());
@@ -414,7 +414,7 @@ fmi3Status fmi3GetString(
 {
     const auto component = reinterpret_cast<Component*>(c);
     try {
-        component->slave->GetString(vr, nvr, values);
+        component->slave->GetString(vr, nvr, values, nValues);
         return fmi3OK;
     } catch (const cppfmu::FatalError& e) {
         component->logger.Log(fmi3Fatal, "", e.what());
@@ -455,7 +455,7 @@ fmi3Status fmi3SetInt32(
 {
     const auto component = reinterpret_cast<Component*>(c);
     try {
-        component->slave->SetInt32(vr, nvr, values);
+        component->slave->SetInt32(vr, nvr, values, nValues);
         return fmi3OK;
     } catch (const cppfmu::FatalError& e) {
         component->logger.Log(fmi3Fatal, "", e.what());
@@ -475,7 +475,7 @@ fmi3Status fmi3SetInt64(
 {
     const auto component = reinterpret_cast<Component*>(c);
     try {
-        component->slave->SetInt64(vr, nvr, values);
+        component->slave->SetInt64(vr, nvr, values, nValues);
         return fmi3OK;
     } catch (const cppfmu::FatalError& e) {
         component->logger.Log(fmi3Fatal, "", e.what());
@@ -495,7 +495,7 @@ fmi3Status fmi3SetUInt64(
 {
     const auto component = reinterpret_cast<Component*>(c);
     try {
-        component->slave->SetUInt64(vr, nvr, values);
+        component->slave->SetUInt64(vr, nvr, values, nValues);
         return fmi3OK;
     } catch (const cppfmu::FatalError& e) {
         component->logger.Log(fmi3Fatal, "", e.what());
@@ -515,7 +515,7 @@ fmi3Status fmi3SetBoolean(
 {
     const auto component = reinterpret_cast<Component*>(c);
     try {
-        component->slave->SetBoolean(vr, nvr, values);
+        component->slave->SetBoolean(vr, nvr, values, nValues);
         return fmi3OK;
     } catch (const cppfmu::FatalError& e) {
         component->logger.Log(fmi3Fatal, "", e.what());
@@ -535,7 +535,7 @@ fmi3Status fmi3SetString(
 {
     const auto component = reinterpret_cast<Component*>(c);
     try {
-        component->slave->SetString(vr, nvr, values);
+        component->slave->SetString(vr, nvr, values, nValues);
         return fmi3OK;
     } catch (const cppfmu::FatalError& e) {
         component->logger.Log(fmi3Fatal, "", e.what());

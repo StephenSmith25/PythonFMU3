@@ -76,23 +76,28 @@ public:
     virtual void SetInt32(
         const FMIValueReference vr[],
         std::size_t nvr,
-        const FMIInt32 value[]);
+        const FMIInt32 value[],
+        std::size_t nValues);
     virtual void SetInt64(
         const FMIValueReference vr[],
         std::size_t nvr,
-        const FMIInt64 value[]);
+        const FMIInt64 value[],
+        std::size_t nValues);
     virtual void SetUInt64(
         const FMIValueReference vr[],
         std::size_t nvr,
-        const FMIUInt64 value[]);
+        const FMIUInt64 value[],
+        std::size_t nValues);
     virtual void SetBoolean(
         const FMIValueReference vr[],
         std::size_t nvr,
-        const FMIBoolean value[]);
+        const FMIBoolean value[],
+        std::size_t nValues);
     virtual void SetString(
         const FMIValueReference vr[],
         std::size_t nvr,
-        const FMIString value[]);
+        const FMIString value[],
+        std::size_t nValues);
 
     /* Called from fmi3GetXxx()/fmiGetXxx().
      * Throws std::logic_error by default.
@@ -105,23 +110,28 @@ public:
     virtual void GetInt32(
         const FMIValueReference vr[],
         std::size_t nvr,
-        FMIInt32 value[]) const;
+        FMIInt32 value[],
+        std::size_t nValues) const;
     virtual void GetInt64(
         const FMIValueReference vr[],
         std::size_t nvr,
-        FMIInt64 value[]) const;
+        FMIInt64 value[],
+        std::size_t nValues) const;
     virtual void GetUInt64(
         const FMIValueReference vr[],
         std::size_t nvr,
-        FMIUInt64 value[]) const;
+        FMIUInt64 value[],
+        std::size_t nValues) const;
     virtual void GetBoolean(
         const FMIValueReference vr[],
         std::size_t nvr,
-        FMIBoolean value[]) const;
+        FMIBoolean value[],
+        std::size_t nValues) const;
     virtual void GetString(
         const FMIValueReference vr[],
         std::size_t nvr,
-        FMIString value[]) const;
+        FMIString value[],
+        std::size_t nValues) const;
 
     // Called from fmi3DoStep()/fmiDoStep(). Must be implemented in model code.
     virtual FMIStatus DoStep(
