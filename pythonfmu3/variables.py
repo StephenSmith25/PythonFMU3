@@ -193,7 +193,7 @@ class Arrayable(object):
 
     def get_start_str(self, value, formatter):
         if len(self.dimensions) > 0:
-            output = "".join([formatter(val) for val in flatten(value)])
+            output = " ".join([formatter(val) for val in flatten(value)])
             if len(output) > MAX_LENGTH:
                 output = output[0]
             return output
@@ -317,18 +317,10 @@ class UInt64(ModelVariable, Arrayable):
         Arrayable.__init__(self, dimensions, **kwargs)
         self.__attrs = {"start": start}
         self._type = "UInt64";
-        
-        if dimensions:
-            check_numpy()
-        self.__dimensions = dimensions
 
     @property
     def start(self) -> Optional[Any]:
         return self.__attrs["start"]
-
-    @property
-    def dimensions(self) -> List[Dimension]:
-        return self.__dimensions
 
     @start.setter
     def start(self, value: int):
@@ -377,10 +369,9 @@ class Boolean(ModelVariable, Arrayable):
         return parent
 
 
-class String(ModelVariable, Arrayable):
+class String(ModelVariable):
     def __init__(self, name: str, start: Optional[Any] = None, dimensions: List[Dimension] = [], **kwargs):
         ModelVariable.__init__(self, name, **kwargs)
-        Arrayable.__init__(self, dimensions, **kwargs)
         self.__attrs = dict()
         self._type = "String"
         self._start = Start(start)

@@ -183,8 +183,7 @@ class Fmi3SlaveBase(object):
         initial_unknown = list(
             filter(lambda v: (v.causality == Fmi3Causality.output and (v.initial in allowed_variability))
                               or v.causality == Fmi3Causality.calculatedParameter
-                              or v in continuous_state_derivatives and v.initial in allowed_variability
-                              or v.variability == Fmi3Variability.continuous and v.initial in allowed_variability and v.causality != Fmi3Causality.independent, self.vars.values())
+                              or v in continuous_state_derivatives and v.initial in allowed_variability, self.vars.values())
         )
 
         for v in outputs:
@@ -282,7 +281,10 @@ class Fmi3SlaveBase(object):
         for vr in vrs:
             var = self.vars[vr]
             if isinstance(var, Int32):
-                refs.append(int(var.getter()))
+                if len(var.dimensions) == 0:
+                    refs.append(int(var.getter()))
+                else:
+                    refs.extend(map(int, var.getter()))
             else:
                 raise TypeError(
                     f"Variable with valueReference={vr} is not of type Integer!"
@@ -294,7 +296,10 @@ class Fmi3SlaveBase(object):
         for vr in vrs:
             var = self.vars[vr]
             if isinstance(var, (Enumeration, Int64)):
-                refs.append(int(var.getter()))
+                if len(var.dimensions) == 0:
+                    refs.append(int(var.getter()))
+                else:
+                    refs.extend(map(int, var.getter()))
             else:
                 raise TypeError(
                     f"Variable with valueReference={vr} is not of type Int64!"
@@ -310,8 +315,7 @@ class Fmi3SlaveBase(object):
                     val = var.getter()
                     refs.append(ctypes.c_uint64(val) if not isinstance(val, ctypes.c_uint64) else val)
                 else:
-                    vals = [ctypes.c_uint64(v) for v in var.getter()]
-                    refs.extend(vals)
+                    refs.extend(map(ctypes.c_uint64, var.getter()))
             else:
                 raise TypeError(
                     f"Variable with valueReference={vr} is not of type Real!"
@@ -338,7 +342,7 @@ class Fmi3SlaveBase(object):
         for vr in vrs:
             var = self.vars[vr]
             if isinstance(var, Boolean):
-                if len(var.dimensions == 0):
+                if len(var.dimensions) == 0:
                     refs.append(bool(var.getter()))
                 else:
                     refs.extend(var.getter())
