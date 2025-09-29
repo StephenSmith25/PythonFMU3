@@ -253,9 +253,6 @@ class Float64(ModelVariable, Arrayable):
 
         return parent
     
-    def size(self, vars):
-        return reduce(lambda x, dim: x * int(dim.size(vars)), self.__dimensions, 1)
-
 
 class Int32(ModelVariable, Arrayable):
     def __init__(self, name: str, start: Optional[Any] = None, dimensions: List[Dimension] = [], **kwargs):
@@ -338,9 +335,6 @@ class UInt64(ModelVariable, Arrayable):
 
         return parent
     
-    def size(self, vars):
-        return reduce(lambda x, dim: x * int(dim.size(vars)), self.__dimensions, 1)
-
 class Boolean(ModelVariable, Arrayable):
     def __init__(self, name: str, start: Optional[Any] = None, dimensions: List[Dimension] = [], **kwargs):
         ModelVariable.__init__(self, name, **kwargs)
@@ -388,15 +382,13 @@ class String(ModelVariable):
         attrib = dict()
         for key, value in self.__attrs.items():
             if value is not None:
-                attrib[key] = self.get_start_str(value, lambda v: str(v))
+                attrib[key] = str(value, lambda v: str(v))
         self._extras = attrib
         parent = super().to_xml()
         
         if self.start is not None:
             parent.append(self._start.to_xml())
         
-        parent.extend(self.dimensions_xml())
-
         return parent
     
 class Enumeration(ModelVariable):
