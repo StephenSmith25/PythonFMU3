@@ -366,30 +366,48 @@ class Fmi3SlaveBase(object):
         return refs
 
     def set_int32(self, vrs: List[int], values: List[int]):
-        for vr, value in zip(vrs, values):
+        offset = 0
+        for vr in vrs:
             var = self.vars[vr]
             if isinstance(var, Int32):
-                var.setter(value)
+                size = var.size(self.vars)
+                if size > 1:
+                    var.setter(values[offset:offset+size])
+                else:
+                    var.setter(values[offset])
+                offset += size
             else:
                 raise TypeError(
                     f"Variable with valueReference={vr} is not of type Integer!"
                 )
                 
     def set_int64(self, vrs: List[int], values: List[int]):
-        for vr, value in zip(vrs, values):
+        offset = 0
+        for vr in vrs:
             var = self.vars[vr]
             if isinstance(var, (Enumeration, Int64)):
-                var.setter(value)
+                size = var.size(self.vars)
+                if size > 1:
+                    var.setter(values[offset:offset+size])
+                else:
+                    var.setter(values[offset])
+                offset += size
             else:
                 raise TypeError(
                     f"Variable with valueReference={vr} is not of type Integer!"
                 )
 
     def set_uint64(self, vrs: List[int], values: List[int]):
-        for vr, value in zip(vrs, values):
+        offset = 0
+        for vr in vrs:
             var = self.vars[vr]
             if isinstance(var, UInt64):
-                var.setter(value)
+                size = var.size(self.vars)
+                if size > 1:
+                    var.setter(values[offset:offset+size])
+                else:
+                    var.setter(values[offset])
+                offset += size
             else:
                 raise TypeError(
                     f"Variable with valueReference={vr} is not of type UInt64!"
@@ -412,10 +430,16 @@ class Fmi3SlaveBase(object):
                 )
 
     def set_boolean(self, vrs: List[int], values: List[bool]):
-        for vr, value in zip(vrs, values):
+        offset = 0
+        for vr in vrs:
             var = self.vars[vr]
             if isinstance(var, Boolean):
-                var.setter(value)
+                size = var.size(self.vars)
+                if size > 1:
+                    var.setter(values[offset:offset+size])
+                else:
+                    var.setter(values[offset])
+                offset += size
             else:
                 raise TypeError(
                     f"Variable with valueReference={vr} is not of type Boolean!"

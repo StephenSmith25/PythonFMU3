@@ -52,8 +52,7 @@ def generate_random_data(self):
       else:
           setattr(self, name, np.random.rand(SIZE).astype(TYPE_MAP[var_type]))
 
-class AllTypes(Fmi3Slave):
-  
+class ArrayTypes(Fmi3Slave):
 
   def __init__(self, **kwargs):
       super().__init__(**kwargs)
