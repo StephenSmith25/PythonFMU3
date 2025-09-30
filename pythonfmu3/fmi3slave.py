@@ -183,8 +183,7 @@ class Fmi3SlaveBase(object):
         initial_unknown = list(
             filter(lambda v: (v.causality == Fmi3Causality.output and (v.initial in allowed_variability))
                               or v.causality == Fmi3Causality.calculatedParameter
-                              or v in continuous_state_derivatives and v.initial in allowed_variability
-                              or v.variability == Fmi3Variability.continuous and v.initial in allowed_variability and v.causality != Fmi3Causality.independent, self.vars.values())
+                              or v in continuous_state_derivatives and v.initial in allowed_variability, self.vars.values())
         )
 
         for v in outputs:
@@ -282,10 +281,13 @@ class Fmi3SlaveBase(object):
         for vr in vrs:
             var = self.vars[vr]
             if isinstance(var, Int32):
-                refs.append(int(var.getter()))
+                if len(var.dimensions) == 0:
+                    refs.append(int(var.getter()))
+                else:
+                    refs.extend(map(int, var.getter()))
             else:
                 raise TypeError(
-                    f"Variable with valueReference={vr} is not of type Integer!"
+                    f"Variable with valueReference={vr} is not of type Int32!"
                 )
         return refs
     
@@ -294,7 +296,10 @@ class Fmi3SlaveBase(object):
         for vr in vrs:
             var = self.vars[vr]
             if isinstance(var, (Enumeration, Int64)):
-                refs.append(int(var.getter()))
+                if len(var.dimensions) == 0:
+                    refs.append(int(var.getter()))
+                else:
+                    refs.extend(map(int, var.getter()))
             else:
                 raise TypeError(
                     f"Variable with valueReference={vr} is not of type Int64!"
@@ -306,11 +311,14 @@ class Fmi3SlaveBase(object):
         for vr in vrs:
             var = self.vars[vr]
             if isinstance(var, UInt64):
-                val = var.getter()
-                refs.append(val if isinstance(val, ctypes.c_uint64) else ctypes.c_uint64(val))
+                if len(var.dimensions) == 0:
+                    val = var.getter()
+                    refs.append(ctypes.c_uint64(val) if not isinstance(val, ctypes.c_uint64) else val)
+                else:
+                    refs.extend(map(ctypes.c_uint64, var.getter()))
             else:
                 raise TypeError(
-                    f"Variable with valueReference={vr} is not of type UInt64!"
+                    f"Variable with valueReference={vr} is not of type Uint64!"
                 )
         return refs
 
@@ -325,7 +333,7 @@ class Fmi3SlaveBase(object):
                     refs.extend(var.getter())
             else:
                 raise TypeError(
-                    f"Variable with valueReference={vr} is not of type Real!"
+                    f"Variable with valueReference={vr} is not of type Float64!"
                 )
         return refs
 
@@ -334,7 +342,11 @@ class Fmi3SlaveBase(object):
         for vr in vrs:
             var = self.vars[vr]
             if isinstance(var, Boolean):
-                refs.append(bool(var.getter()))
+                if len(var.dimensions) == 0:
+                    refs.append(bool(var.getter()))
+                else:
+                    refs.extend(var.getter())
+            
             else:
                 raise TypeError(
                     f"Variable with valueReference={vr} is not of type Boolean!"
@@ -354,30 +366,48 @@ class Fmi3SlaveBase(object):
         return refs
 
     def set_int32(self, vrs: List[int], values: List[int]):
-        for vr, value in zip(vrs, values):
+        offset = 0
+        for vr in vrs:
             var = self.vars[vr]
             if isinstance(var, Int32):
-                var.setter(value)
+                size = var.size(self.vars)
+                if size > 1:
+                    var.setter(values[offset:offset+size])
+                else:
+                    var.setter(values[offset])
+                offset += size
             else:
                 raise TypeError(
-                    f"Variable with valueReference={vr} is not of type Integer!"
+                    f"Variable with valueReference={vr} is not of type Int32!"
                 )
                 
     def set_int64(self, vrs: List[int], values: List[int]):
-        for vr, value in zip(vrs, values):
+        offset = 0
+        for vr in vrs:
             var = self.vars[vr]
             if isinstance(var, (Enumeration, Int64)):
-                var.setter(value)
+                size = var.size(self.vars)
+                if size > 1:
+                    var.setter(values[offset:offset+size])
+                else:
+                    var.setter(values[offset])
+                offset += size
             else:
                 raise TypeError(
-                    f"Variable with valueReference={vr} is not of type Integer!"
+                    f"Variable with valueReference={vr} is not of type Int64!"
                 )
 
     def set_uint64(self, vrs: List[int], values: List[int]):
-        for vr, value in zip(vrs, values):
+        offset = 0
+        for vr in vrs:
             var = self.vars[vr]
             if isinstance(var, UInt64):
-                var.setter(value)
+                size = var.size(self.vars)
+                if size > 1:
+                    var.setter(values[offset:offset+size])
+                else:
+                    var.setter(values[offset])
+                offset += size
             else:
                 raise TypeError(
                     f"Variable with valueReference={vr} is not of type UInt64!"
@@ -396,14 +426,20 @@ class Fmi3SlaveBase(object):
                 offset += size
             else:
                 raise TypeError(
-                    f"Variable with valueReference={vr} is not of type Real!"
+                    f"Variable with valueReference={vr} is not of type Float64!"
                 )
 
     def set_boolean(self, vrs: List[int], values: List[bool]):
-        for vr, value in zip(vrs, values):
+        offset = 0
+        for vr in vrs:
             var = self.vars[vr]
             if isinstance(var, Boolean):
-                var.setter(value)
+                size = var.size(self.vars)
+                if size > 1:
+                    var.setter(values[offset:offset+size])
+                else:
+                    var.setter(values[offset])
+                offset += size
             else:
                 raise TypeError(
                     f"Variable with valueReference={vr} is not of type Boolean!"

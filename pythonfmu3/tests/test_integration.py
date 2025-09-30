@@ -280,6 +280,57 @@ def test_integration_get(tmp_path):
     model.terminate()
     model.freeInstance()
 
+@pytest.mark.integration
+def test_integration_get_array(tmp_path):
+    script_file = Path(__file__).parent / "slaves/pythonslave_arraytypes.py"
+    fmu = FmuBuilder.build_FMU(script_file, dest=tmp_path, needsExecutionTool="false")
+    assert fmu.exists()
+
+    md = fmpy.read_model_description(fmu)
+    unzip_dir = fmpy.extract(fmu)
+
+    model = fmpy.fmi3.FMU3Slave(
+        guid=md.guid,
+        unzipDirectory=unzip_dir,
+        modelIdentifier=md.coSimulation.modelIdentifier,
+        instanceName='instance1')
+
+    model.instantiate()
+    model.enterInitializationMode()
+    model.exitInitializationMode()
+
+    to_test = {
+        "int32_output": [1,2,3,4,5,6,7,8,9,10],
+        "int64_output": [1,2,3,4,5,6,7,8,9,10],
+        "uint64_output": [1,2,3,4,5,6,7,8,9,10],
+        "float64_output": [1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0],
+        "boolean_output": [False, True, False, True, True, False, False, True, False, True]
+    }
+
+    model_value = None
+    variables = mapped(md)
+    for key, value in to_test.items():
+        var = variables[key]
+        vrs = [var.valueReference]
+        if var.type == "Int32":
+            model_values = model.getInt32(vrs, nValues=10)
+        elif var.type == "Int64":
+            model_values = model.getInt64(vrs, nValues=10)
+        elif var.type == "UInt64":
+            model_values = model.getUInt64(vrs, nValues=10)
+        elif var.type == "Float64":
+            model_values = model.getFloat64(vrs, nValues=10)
+        elif var.type == "Boolean":
+            model_values = model.getBoolean(vrs, nValues=10)
+        else:
+            pytest.xfail("Unsupported type")
+
+        assert len(model_values) == len(value)
+        assert model_values == value
+        
+    model.terminate()
+    model.freeInstance()
+
 
 @pytest.mark.integration
 def test_integration_read_from_file(tmp_path):
@@ -363,6 +414,61 @@ def test_integration_set(tmp_path):
             pytest.xfail("Unsupported type")
 
         assert model_value == value
+
+    model.terminate()
+    model.freeInstance()
+
+@pytest.mark.integration
+def test_integration_set_array(tmp_path):
+    script_file = Path(__file__).parent / "slaves/pythonslave_arraytypes.py"
+    fmu = FmuBuilder.build_FMU(script_file, dest=tmp_path, needsExecutionTool="false")
+    assert fmu.exists()
+
+    md = fmpy.read_model_description(fmu)
+    unzip_dir = fmpy.extract(fmu)
+
+    model = fmpy.fmi3.FMU3Slave(
+        guid=md.guid,
+        unzipDirectory=unzip_dir,
+        modelIdentifier=md.coSimulation.modelIdentifier,
+        instanceName='instance1')
+
+    model.instantiate()
+    model.enterInitializationMode()
+    model.exitInitializationMode()
+
+    to_test = {
+        "int32_input": [1,2,3,4,5,6,7,8,9,10],
+        "int64_input": [1,2,3,4,5,6,7,8,9,10],
+        "uint64_input": [1,2,3,4,5,6,7,8,9,10],
+        "float64_input": [1.0,2.0,3.0,4.0,5.0,6.0,7.0,8.0,9.0,10.0],
+        "boolean_input": [False, True, False, True, True, False, False, True, False, True]
+    }
+
+    model_value = None
+    variables = mapped(md)
+    for key, value in to_test.items():
+        var = variables[key]
+        vrs = [var.valueReference]
+        if var.type == "Int32":
+            model.setInt32(vrs, value)
+            model_value = model.getInt32(vrs, nValues=10)
+        elif var.type == "Int64":
+            model.setInt64(vrs, value)
+            model_value = model.getInt64(vrs, nValues=10)
+        elif var.type == "UInt64":
+            model.setUInt64(vrs, value)
+            model_value = model.getUInt64(vrs, nValues=10)
+        elif var.type == "Float64":
+            model.setFloat64(vrs, value)
+            model_value = model.getFloat64(vrs,nValues=10)
+        elif var.type == "Boolean":
+            model.setBoolean(vrs, value)
+            model_value = model.getBoolean(vrs, nValues=10)
+        else:
+            pytest.xfail("Unsupported type")
+        
+        assert list(model_value) == value
 
     model.terminate()
     model.freeInstance()
