@@ -287,7 +287,7 @@ class Fmi3SlaveBase(object):
                     refs.extend(map(int, var.getter()))
             else:
                 raise TypeError(
-                    f"Variable with valueReference={vr} is not of type Integer!"
+                    f"Variable with valueReference={vr} is not of type Int32!"
                 )
         return refs
     
@@ -318,7 +318,7 @@ class Fmi3SlaveBase(object):
                     refs.extend(map(ctypes.c_uint64, var.getter()))
             else:
                 raise TypeError(
-                    f"Variable with valueReference={vr} is not of type Real!"
+                    f"Variable with valueReference={vr} is not of type Uint64!"
                 )
         return refs
 
@@ -333,7 +333,7 @@ class Fmi3SlaveBase(object):
                     refs.extend(var.getter())
             else:
                 raise TypeError(
-                    f"Variable with valueReference={vr} is not of type Real!"
+                    f"Variable with valueReference={vr} is not of type Float64!"
                 )
         return refs
 
@@ -378,7 +378,7 @@ class Fmi3SlaveBase(object):
                 offset += size
             else:
                 raise TypeError(
-                    f"Variable with valueReference={vr} is not of type Integer!"
+                    f"Variable with valueReference={vr} is not of type Int32!"
                 )
                 
     def set_int64(self, vrs: List[int], values: List[int]):
@@ -394,7 +394,7 @@ class Fmi3SlaveBase(object):
                 offset += size
             else:
                 raise TypeError(
-                    f"Variable with valueReference={vr} is not of type Integer!"
+                    f"Variable with valueReference={vr} is not of type Int64!"
                 )
 
     def set_uint64(self, vrs: List[int], values: List[int]):
@@ -426,7 +426,7 @@ class Fmi3SlaveBase(object):
                 offset += size
             else:
                 raise TypeError(
-                    f"Variable with valueReference={vr} is not of type Real!"
+                    f"Variable with valueReference={vr} is not of type Float64!"
                 )
 
     def set_boolean(self, vrs: List[int], values: List[bool]):
