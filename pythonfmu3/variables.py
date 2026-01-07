@@ -391,9 +391,10 @@ class String(ModelVariable):
         
         return parent
     
-class Enumeration(ModelVariable):
-    def __init__(self, name: str, start: Optional[Any] = None, declared_type: Optional[Any] = None, **kwargs):
-        super().__init__(name, **kwargs)
+class Enumeration(ModelVariable, Arrayable):
+    def __init__(self, name: str, start: Optional[Any] = None, declared_type: Optional[Any] = None,  dimensions: List[Dimension] = [], **kwargs):
+        ModelVariable.__init__(self, name, **kwargs)
+        Arrayable.__init__(self, dimensions, **kwargs)
         self.__attrs = {"start": start, "declaredType": declared_type}
         self._type = "Enumeration"
 
