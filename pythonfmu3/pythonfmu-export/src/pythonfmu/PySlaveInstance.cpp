@@ -850,8 +850,22 @@ PySlaveInstance::~PySlaveInstance()
 } // namespace pythonfmu
 
 namespace {
-    std::mutex pyStateMutex{};
-    std::shared_ptr<pythonfmu::PyState> pyState{};
+    // Never destroyed (allocated once, no static destructor). On Linux the library's
+    // destructor function (onLibraryUnload, run by _dl_fini) resets the state after the C++
+    // static destructors have run at exit: a namespace-scope shared_ptr was destroyed by then,
+    // and resetting it again decremented a reference count in freed memory, corrupting the
+    // heap (glibc then aborted in a later free, e.g. libgfortran's close_units).
+    std::mutex& pyStateMutex()
+    {
+        static auto* const mutex = new std::mutex();
+        return *mutex;
+    }
+
+    std::shared_ptr<pythonfmu::PyState>& pyState()
+    {
+        static auto* const state = new std::shared_ptr<pythonfmu::PyState>();
+        return *state;
+    }
 }
 
 std::unique_ptr<cppfmu::SlaveInstance> CppfmuInstantiateSlave(
@@ -879,13 +893,13 @@ std::unique_ptr<cppfmu::SlaveInstance> CppfmuInstantiateSlave(
 
     {
         auto const ensurePyStateAlive = [&]() {
-            auto const lock = std::lock_guard{pyStateMutex};
-            if (nullptr == pyState) pyState = std::make_shared<pythonfmu::PyState>();
+            auto const lock = std::lock_guard{pyStateMutex()};
+            if (nullptr == pyState()) pyState() = std::make_shared<pythonfmu::PyState>();
+            return pyState();
             };
 
-        ensurePyStateAlive();
         return std::make_unique<pythonfmu::PySlaveInstance>(
-            instanceName, resources, logger, visible, pyState);
+            instanceName, resources, logger, visible, ensurePyStateAlive());
     }
 }
 
@@ -897,7 +911,8 @@ extern "C" {
     // Thus, use DllMain on Windows and __attribute__((destructor)) on Linux for signaling to the PyState about de-initialization.
     void finalizePythonInterpreter()
     {
-        pyState = nullptr;
+        auto const lock = std::lock_guard{pyStateMutex()};
+        pyState().reset();
     }
 }
 
