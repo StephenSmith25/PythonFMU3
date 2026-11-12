@@ -68,7 +68,7 @@ def test_zip_content(tmp_path):
         assert len(names) >= nfiles  # Library + python script + XML + module name + sources
 
         with files.open(module_file) as myfile:
-            assert myfile.read() == b"pythonslave"
+            assert myfile.read().decode().splitlines() == ["pythonslave", "PythonSlave"]
 
 
 @pytest.mark.parametrize("pfiles", PROJECT_TEST_CASES)
@@ -193,3 +193,49 @@ def test_terminals(tmp_path):
         names = files.namelist()
 
         assert "terminalsAndIcons/terminalsAndIcons.xml" in names
+
+
+def test_terminals_file_is_embedded(tmp_path):
+    script_file = Path(__file__).parent / "slaves/pythonslave.py"
+    terminals = tmp_path / "terminalsAndIcons.xml"
+    terminals.write_text("<fmiTerminalsAndIcons fmiVersion=\"3.0\"/>")
+    doc = tmp_path / "doc"
+    doc.mkdir()
+    (doc / "index.html").write_text("<html/>")
+
+    fmu = FmuBuilder.build_FMU(
+        script_file, dest=tmp_path, documentation_folder=doc, terminals=terminals
+    )
+    with zipfile.ZipFile(fmu) as files:
+        assert files.read("terminalsAndIcons/terminalsAndIcons.xml") == terminals.read_bytes()
+
+
+def test_default_cosim_options_in_model_description(tmp_path):
+    from xml.etree.ElementTree import parse
+    from pythonfmu3.fmi3slave import FMI3_MODEL_OPTIONS_COSIM
+
+    script_file = Path(__file__).parent / "slaves/pythonslave.py"
+    fmu = FmuBuilder.build_FMU(script_file, dest=tmp_path)
+    with zipfile.ZipFile(fmu) as files:
+        cs = parse(files.open("modelDescription.xml")).getroot().find("CoSimulation")
+    for option in FMI3_MODEL_OPTIONS_COSIM:
+        assert cs.get(option.name) == str(option.value).lower()
+
+
+def test_class_with_multiline_bases(tmp_path):
+    script = tmp_path / "multiline.py"
+    script.write_text(
+        "from pythonfmu3 import Fmi3Slave, Float64, Fmi3Causality\n"
+        "class Multi(\n"
+        "    Fmi3Slave,\n"
+        "):\n"
+        "    def __init__(self, **kwargs):\n"
+        "        super().__init__(**kwargs)\n"
+        "        self.x = 1.0\n"
+        "        self.register_variable(Float64('x', causality=Fmi3Causality.output))\n"
+        "    def do_step(self, t, dt):\n"
+        "        return True\n"
+    )
+    fmu = FmuBuilder.build_FMU(script, dest=tmp_path)
+    with zipfile.ZipFile(fmu) as files:
+        assert files.read("resources/slavemodule.txt").decode().splitlines() == ["multiline", "Multi"]

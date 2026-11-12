@@ -121,6 +121,9 @@ public:
         FMIString message,
         Args&&... args) CPPFMU_NOEXCEPT
     {
+        if (m_fmiLogger == nullptr) {
+            return; // FMI 3.0 allows instantiating without a logger callback
+        }
         if (m_settings->loggedCategories.empty() ||
             detail::CanFind(m_settings->loggedCategories, category)) {
             m_fmiLogger(

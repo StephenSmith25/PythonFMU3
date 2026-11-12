@@ -18,7 +18,8 @@ class PySlaveInstance : public cppfmu::SlaveInstance
 public:
     PySlaveInstance(std::string instanceName, std::string resources, const cppfmu::Logger& logger, bool visible, std::shared_ptr<IPyState> pyState);
 
-    void initialize(PyGILState_STATE gilState);
+    // Must be called with the GIL held.
+    void initialize();
 
     void SetupExperiment(cppfmu::FMIBoolean toleranceDefined, cppfmu::FMIFloat64 tolerance, cppfmu::FMIFloat64 tStart, cppfmu::FMIBoolean stopTimeDefined, cppfmu::FMIFloat64 tStop) override;
     void EnterInitializationMode() override;
@@ -79,7 +80,7 @@ public:
 
 private:
     std::shared_ptr<IPyState> pyState_;
-    PyObject* pClass_;
+    PyObject* pClass_{};
     PyObject* pInstance_{};
     PyObject* pMessages_{};
 
@@ -91,7 +92,18 @@ private:
     mutable std::vector<PyObject*> strBuffer;
     mutable std::vector<PyObject*> logStrBuffer;
 
-    void handle_py_exception(const std::string& what, PyGILState_STATE gilState) const;
+    // Formats the pending Python exception (with traceback) and throws cppfmu::FatalError.
+    // Must be called with the GIL held; never returns.
+    [[noreturn]] void handle_py_exception(const std::string& what) const;
+
+    // Helpers shared by the getters/setters. All require the GIL.
+    void callVoidMethod(const char* method) const;
+    // Takes ownership of valuesList (may be nullptr if building it failed).
+    void callSetter(const char* method, const cppfmu::FMIValueReference* vr, std::size_t nvr, PyObject* valuesList);
+    // Return new references to lists holding at least the requested number of items.
+    PyObject* callGetter(const char* method, const cppfmu::FMIValueReference* vr, std::size_t nvr, std::size_t nValues) const;
+    PyObject* callListMethod(const char* method, std::size_t expected) const;
+    void checkListSize(PyObject* list, std::size_t expected, const char* method) const;
 
     inline void clearStrBuffer() const
     {
@@ -113,14 +125,15 @@ private:
         }
     }
 
-    inline void cleanPyObject() const
+    // Releases every Python reference held by this instance. Safe to call more than once.
+    inline void cleanPyObject()
     {
         clearLogBuffer();
         clearLogStrBuffer();
         clearStrBuffer();
-        Py_XDECREF(pClass_);
-        Py_XDECREF(pInstance_);
-        Py_XDECREF(pMessages_);
+        Py_CLEAR(pClass_);
+        Py_CLEAR(pInstance_);
+        Py_CLEAR(pMessages_);
     }
 };
 

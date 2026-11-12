@@ -324,7 +324,7 @@ def test_array_to_xml(name, start, dims):
 ])
 def test_array_output_to_xml(name, start, dims):
     import numpy as np
-    start = np.reshape(start, newshape=dims) 
+    start = np.reshape(start, dims) 
     r = Float64(name, start, dimensions=[Dimension(start=val) for val in dims], causality=Fmi3Causality.output)
     xml = r.to_xml()
     if start is not None:

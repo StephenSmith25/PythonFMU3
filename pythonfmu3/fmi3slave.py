@@ -76,7 +76,7 @@ class Fmi3SlaveBase(object):
         self.type_definitions: Dict[str, VariableType] = {}
         self.units: Dict[str, Unit] = {}
 
-    def to_xml(self, model_options: Dict[str, str] = dict()) -> Element:
+    def to_xml(self, model_options: Optional[Dict[str, Any]] = None) -> Element:
         """Build the XML representation of the model.
         
         Args:
@@ -110,20 +110,24 @@ class Fmi3SlaveBase(object):
 
         root = Element("fmiModelDescription", attrib)
 
+        model_options = model_options or {}
+
+        def _resolve(option: ModelOptions) -> str:
+            return str(model_options.get(option.name, option.value)).lower()
+
         options = dict()
         for option in FMI3_MODEL_OPTIONS_COMMON:
-            value = model_options.get(option.name, option.value)
-            options[option.name] = str(value).lower()
+            options[option.name] = _resolve(option)
         
         options["modelIdentifier"] = self.modelName
 
         options_cs = options.copy()
         for option in FMI3_MODEL_OPTIONS_COSIM:
-            options_cs[option.name] = str(value).lower()
+            options_cs[option.name] = _resolve(option)
         
         options_me = options.copy()
         for option in FMI3_MODEL_OPTIONS_MX:
-            options_me[option.name] = str(value).lower()
+            options_me[option.name] = _resolve(option)
 
         # check if we have cosim mixin or model exchange mixin
         if isinstance(self, ModelExchange):
@@ -175,9 +179,7 @@ class Fmi3SlaveBase(object):
             filter(lambda v: v.causality == Fmi3Causality.output, self.vars.values())
         )
 
-        continuous_state_derivatives = list(
-            filter(lambda v: v.variability == Fmi3Variability.continuous and (isinstance(v, Float64) and v.derivative is not None), self.vars.values())
-        )
+        continuous_state_derivatives = self._continuous_state_derivatives()
 
         allowed_variability = [None, Fmi3Initial.approx, Fmi3Initial.calculated]
         initial_unknown = list(
@@ -199,6 +201,15 @@ class Fmi3SlaveBase(object):
             SubElement(structure, "EventIndicator", attrib=dict(valueReference=str(v)))
 
         return root
+
+    def _continuous_state_derivatives(self) -> List[Float64]:
+        """Return the registered derivative variables (one per continuous state), in registration order."""
+        return [
+            v for v in self.vars.values()
+            if isinstance(v, Float64)
+            and v.variability == Fmi3Variability.continuous
+            and v.derivative is not None
+        ]
 
     def __apply_start_value(self, var: ModelVariable):
         vrs = [var.value_reference]
@@ -243,7 +254,7 @@ class Fmi3SlaveBase(object):
         if var.setter is None and hasattr(owner, var.local_name) and var.variability != Fmi3Variability.constant:
             if hasattr(var, "dimensions") and len(var.dimensions) > 0:
                 import numpy as np
-                var.setter = lambda v: setattr(owner, var.local_name, np.reshape(v, newshape=getattr(owner, var.local_name).shape))
+                var.setter = lambda v: setattr(owner, var.local_name, np.reshape(v, getattr(owner, var.local_name).shape))
             else:
                 var.setter = lambda v: setattr(owner, var.local_name, v)
         
@@ -476,9 +487,7 @@ class Fmi3SlaveBase(object):
 
     def set_continuous_states(self, values: List[float]):
         offset = 0
-        continuous_state_derivatives = list(
-            filter(lambda v: v.variability == Fmi3Variability.continuous and (isinstance(v, Float64) and v.derivative is not None), self.vars.values())
-        )
+        continuous_state_derivatives = self._continuous_state_derivatives()
 
         vrs = [v.derivative for v in continuous_state_derivatives]
         
@@ -492,10 +501,7 @@ class Fmi3SlaveBase(object):
             offset += size
         
     def get_continuous_states(self) -> List[float]:
-        offset = 0
-        continuous_state_derivatives = list(
-            filter(lambda v: v.variability == Fmi3Variability.continuous and (isinstance(v, Float64) and v.derivative is not None), self.vars.values())
-        )
+        continuous_state_derivatives = self._continuous_state_derivatives()
 
         vrs = [v.derivative for v in continuous_state_derivatives]
         
@@ -510,9 +516,7 @@ class Fmi3SlaveBase(object):
         return refs
     
     def get_number_of_continuous_states(self) -> int:
-        continuous_state_derivatives = list(
-            filter(lambda v: v.variability == Fmi3Variability.continuous and (isinstance(v, Float64) and v.derivative is not None), self.vars.values())
-        )
+        continuous_state_derivatives = self._continuous_state_derivatives()
         return len(continuous_state_derivatives)
     
     def set_time(self, time: float):
