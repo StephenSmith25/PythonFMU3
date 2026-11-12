@@ -1,6 +1,6 @@
 """Python FMU builder"""
 import argparse
-import importlib
+import importlib.util
 import itertools
 import logging
 import re
@@ -21,13 +21,49 @@ HERE = Path(__file__).parent
 logger = logging.getLogger(__name__)
 
 
+_SLAVE_CLASS_RE = re.compile(r'^class (\w+)\(([^)]*\bFmi3Slave(?:Base)?\b[^)]*)\)\s*:', re.MULTILINE)
+
+
 def get_class_name(file_name: Path) -> str:
-    with open(str(file_name), 'r') as file:
-        data = file.read()
-        return re.search(r'class (\w+)\(([^)]*\bFmi3Slave(?:Base)?\b[^)]*)\)\s*:', data).group(1)
+    """Find the name of the first class in *file_name* that textually extends Fmi3Slave/Fmi3SlaveBase."""
+    data = Path(file_name).read_text(encoding="utf-8")
+    match = _SLAVE_CLASS_RE.search(data)
+    if match is None:
+        raise ValueError(f"Unable to find a class extending Fmi3Slave or Fmi3SlaveBase in {file_name!s}")
+    return match.group(1)
 
 
-def get_model_description(filepath: Path, module_name: str) -> Tuple[str, Element]:
+def _find_slave_class(module, filepath: Path) -> type:
+    """Locate the FMU class in an imported module.
+
+    Classes defined in the module that inherit from Fmi3SlaveBase are candidates. If the
+    regex-based lookup (also used by the native wrapper as a fallback) matches one of them
+    it wins, so behaviour stays identical for existing scripts; otherwise a single
+    candidate is accepted (this handles multi-line base lists and indirect inheritance).
+    """
+    candidates = {
+        name: obj for name, obj in vars(module).items()
+        if isinstance(obj, type)
+        and obj.__module__ == module.__name__
+        and any(base.__name__ == Fmi3SlaveBase.__name__ for base in obj.__mro__)
+    }
+    try:
+        preferred = get_class_name(filepath)
+    except ValueError:
+        preferred = None
+    if preferred in candidates:
+        return candidates[preferred]
+    if len(candidates) == 1:
+        return next(iter(candidates.values()))
+    if not candidates:
+        raise ValueError(f"No class inheriting from {Fmi3SlaveBase.__qualname__} found in {filepath!s}")
+    raise ValueError(
+        f"Several FMU classes found in {filepath!s} ({', '.join(sorted(candidates))}); "
+        "keep a single Fmi3Slave subclass per script."
+    )
+
+
+def get_model_description(filepath: Path, module_name: str) -> Tuple[str, Element, str]:
     """Extract the FMU model description as XML.
 
     Args:
@@ -35,7 +71,7 @@ def get_model_description(filepath: Path, module_name: str) -> Tuple[str, Elemen
         module_name (str) : python module to load
 
     Returns:
-        Tuple[str, xml.etree.TreeElement.Element] : FMU model name, model description
+        Tuple[str, xml.etree.TreeElement.Element, str] : FMU model name, model description, class name
     """
     # Add current folder to handle local dependencies
     sys.path.insert(0, str(filepath.parent))
@@ -45,8 +81,9 @@ def get_model_description(filepath: Path, module_name: str) -> Tuple[str, Elemen
         fmu_interface = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(fmu_interface)
         # Instantiate the interface
-        class_name = get_class_name(filepath)
-        instance = getattr(fmu_interface, class_name)(instance_name="dummyInstance", resources=str(filepath.parent))
+        slave_class = _find_slave_class(fmu_interface, filepath)
+        class_name = slave_class.__name__
+        instance = slave_class(instance_name="dummyInstance", resources=str(filepath.parent))
     finally:
         sys.path.remove(str(filepath.parent))  # remove inserted temporary path
 
@@ -55,7 +92,7 @@ def get_model_description(filepath: Path, module_name: str) -> Tuple[str, Elemen
             f"The provided class '{class_name}' does not inherit from {Fmi3SlaveBase.__qualname__}"
         )
     # Produce the xml
-    return instance.modelName, instance.to_xml()
+    return instance.modelName, instance.to_xml(), class_name
 
 
 class FmuBuilder:
@@ -64,7 +101,7 @@ class FmuBuilder:
     def build_FMU(
         script_file: FilePath,
         dest: FilePath = ".",
-        project_files: Iterable[FilePath] = set(),
+        project_files: Iterable[FilePath] = (),
         documentation_folder: Optional[FilePath] = None,
         terminals : Optional[FilePath] = None,
         **options,
@@ -130,7 +167,7 @@ class FmuBuilder:
                     else:
                         shutil.copy2(file_, temp_dir)
 
-            model_identifier, xml = get_model_description(
+            model_identifier, xml, class_name = get_model_description(
                 temp_dir.absolute() / script_file.name, module_name
             )
 
@@ -163,8 +200,11 @@ class FmuBuilder:
                         relative_f = f.relative_to(temp_dir)
                         zip_fmu.write(f, arcname=(resource / relative_f))
 
-                # Add information for the Python loader
-                zip_fmu.writestr(str(resource.joinpath("slavemodule.txt")), module_name)
+                # Add information for the Python loader: line 1 is the module, line 2 the class.
+                # Older wrappers only read the first line, so this stays backward compatible.
+                zip_fmu.writestr(
+                    str(resource.joinpath("slavemodule.txt")), f"{module_name}\n{class_name}\n"
+                )
 
                 # Add FMI API wrapping Python class source
                 sources = Path("sources")
@@ -174,7 +214,7 @@ class FmuBuilder:
                 ):
                     relative_f = f.relative_to(src)
                     if "build" in relative_f.parts:
-                        continue;
+                        continue
                     zip_fmu.write(f, arcname=(sources / relative_f))
 
                 # Add FMI API wrapping Python class library
@@ -203,9 +243,7 @@ class FmuBuilder:
 
                 if terminals is not None:
                     terminalsFolder = Path("terminalsAndIcons")
-                    relative_f = terminals.relative_to(terminals.parent)
-                    zip_fmu.write(f, arcname=(terminalsFolder / relative_f))
-                    
+                    zip_fmu.write(terminals, arcname=(terminalsFolder / terminals.name))
 
                 # Add the model description
                 xml_str = parseString(tostring(xml, "UTF-8"))

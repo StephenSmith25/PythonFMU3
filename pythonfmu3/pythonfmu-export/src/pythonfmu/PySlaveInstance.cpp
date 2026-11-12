@@ -6,32 +6,101 @@
 
 #include "cppfmu/cppfmu_cs.hpp"
 
+#include <algorithm>
+#include <cctype>
 #include <fstream>
-#include <functional>
 #include <mutex>
 #include <regex>
 #include <sstream>
+#include <stdexcept>
 #include <utility>
 
 namespace pythonfmu
 {
 
-inline std::string getline(const std::string& fileName)
+namespace
 {
-    std::string line;
-    std::ifstream infile(fileName);
-    std::getline(infile, line);
-    return line;
+
+// Holds the GIL for the lifetime of the object. Releasing in the destructor guarantees
+// the GIL is given back on every exit path, including C++ exceptions.
+class GilGuard
+{
+public:
+    GilGuard()
+        : state_(PyGILState_Ensure())
+    { }
+    ~GilGuard() { PyGILState_Release(state_); }
+    GilGuard(const GilGuard&) = delete;
+    GilGuard& operator=(const GilGuard&) = delete;
+
+private:
+    PyGILState_STATE state_;
+};
+
+// Owning reference to a PyObject (Py_XDECREF on destruction).
+// Must only be destroyed while the GIL is held; declare it after the GilGuard.
+class PyRef
+{
+public:
+    explicit PyRef(PyObject* obj = nullptr)
+        : obj_(obj)
+    { }
+    ~PyRef() { Py_XDECREF(obj_); }
+    PyRef(const PyRef&) = delete;
+    PyRef& operator=(const PyRef&) = delete;
+    PyRef(PyRef&& other) noexcept
+        : obj_(other.release())
+    { }
+
+    PyObject* get() const { return obj_; }
+    PyObject* release()
+    {
+        PyObject* tmp = obj_;
+        obj_ = nullptr;
+        return tmp;
+    }
+    explicit operator bool() const { return obj_ != nullptr; }
+
+private:
+    PyObject* obj_;
+};
+
+template<typename F>
+auto py_safe_run(F&& f) -> decltype(f())
+{
+    GilGuard gil;
+    return f();
 }
 
-inline std::string findClassName(const std::string& fileName)
+// Reads the first two lines of resources/slavemodule.txt: the module name and
+// (for FMUs built by newer versions of PythonFMU3) the name of the slave class.
+std::pair<std::string, std::string> readSlaveModuleInfo(const std::string& fileName)
+{
+    std::ifstream infile(fileName);
+    if (!infile) {
+        throw cppfmu::FatalError(("Unable to open " + fileName).c_str());
+    }
+    std::string moduleName, className;
+    std::getline(infile, moduleName);
+    std::getline(infile, className);
+    auto trim = [](std::string& s) {
+        const auto ws = " \t\r\n";
+        s.erase(s.find_last_not_of(ws) + 1);
+        s.erase(0, s.find_first_not_of(ws));
+    };
+    trim(moduleName);
+    trim(className);
+    return {moduleName, className};
+}
+
+// Fallback for FMUs built by older versions that do not record the class name.
+std::string findClassName(const std::string& fileName)
 {
     std::string line;
     std::ifstream infile(fileName);
-    std::string regexStr(R"(^class (\w+)\(([^)]*\bFmi3Slave(?:Base)?\b[^)]*)\)\s*:)");
-    while (getline(infile, line)) {
+    const std::regex re(R"(^class (\w+)\(([^)]*\bFmi3Slave(?:Base)?\b[^)]*)\)\s*:)");
+    while (std::getline(infile, line)) {
         std::smatch m;
-        std::regex re(regexStr);
         if (std::regex_search(line, m, re)) {
             return m[1];
         }
@@ -39,63 +108,137 @@ inline std::string findClassName(const std::string& fileName)
     return "";
 }
 
-inline void py_safe_run(const std::function<void(PyGILState_STATE gilState)>& f)
+// Returns nullptr (with a Python error set) on failure.
+PyObject* makeVrList(const cppfmu::FMIValueReference* vr, std::size_t nvr)
 {
-    PyGILState_STATE gil_state = PyGILState_Ensure();
-    f(gil_state);
-    PyGILState_Release(gil_state);
+    PyRef list(PyList_New(static_cast<Py_ssize_t>(nvr)));
+    if (!list) return nullptr;
+    for (std::size_t i = 0; i < nvr; i++) {
+        PyObject* item = PyLong_FromUnsignedLong(vr[i]);
+        if (item == nullptr) return nullptr;
+        PyList_SetItem(list.get(), static_cast<Py_ssize_t>(i), item); // steals item
+    }
+    return list.release();
 }
+
+template<typename T, typename Convert>
+PyObject* makeValueList(const T* values, std::size_t n, Convert convert)
+{
+    PyRef list(PyList_New(static_cast<Py_ssize_t>(n)));
+    if (!list) return nullptr;
+    for (std::size_t i = 0; i < n; i++) {
+        PyObject* item = convert(values[i]);
+        if (item == nullptr) return nullptr;
+        PyList_SetItem(list.get(), static_cast<Py_ssize_t>(i), item); // steals item
+    }
+    return list.release();
+}
+
+PyObject* makeString(cppfmu::FMIString s)
+{
+    if (s == nullptr) {
+        Py_RETURN_NONE;
+    }
+    return PyUnicode_FromString(s);
+}
+
+std::string toUtf8(PyObject* str)
+{
+    PyRef bytes(str ? PyUnicode_AsEncodedString(str, "utf-8", "replace") : nullptr);
+    const char* data = bytes ? PyBytes_AsString(bytes.get()) : nullptr;
+    if (data == nullptr) {
+        PyErr_Clear();
+        return {};
+    }
+    return data;
+}
+
+// Formats the pending Python exception, including its traceback, and clears it.
+std::string fetchPythonError()
+{
+    PyObject *type = nullptr, *value = nullptr, *traceback = nullptr;
+    PyErr_Fetch(&type, &value, &traceback);
+    if (type == nullptr) {
+        return "unknown error (no Python exception set)";
+    }
+    PyErr_NormalizeException(&type, &value, &traceback);
+    PyRef pType(type), pValue(value), pTraceback(traceback);
+
+    std::string result;
+    PyRef tbModule(PyImport_ImportModule("traceback"));
+    if (tbModule) {
+        PyRef lines(PyObject_CallMethod(tbModule.get(), "format_exception", "OOO",
+            pType.get(), pValue ? pValue.get() : Py_None, pTraceback ? pTraceback.get() : Py_None));
+        if (lines) {
+            PyRef sep(PyUnicode_FromString(""));
+            PyRef joined(sep ? PyUnicode_Join(sep.get(), lines.get()) : nullptr);
+            if (joined) result = toUtf8(joined.get());
+        }
+    }
+    if (result.empty()) {
+        PyRef repr(PyObject_Repr(pValue ? pValue.get() : pType.get()));
+        result = toUtf8(repr.get());
+        if (result.empty()) result = "unknown error";
+    }
+    PyErr_Clear(); // in case formatting itself raised
+    return result;
+}
+
+
+// Reads `obj.name` as a bool. Returns `fallback` when the attribute is absent.
+// Returns -1 (Python error set) on failure.
+int readBoolAttr(PyObject* obj, const char* name, bool fallback)
+{
+    if (!PyObject_HasAttrString(obj, name)) return fallback ? 1 : 0;
+    PyRef attr(PyObject_GetAttrString(obj, name));
+    if (!attr) return -1;
+    return PyObject_IsTrue(attr.get());
+}
+
+} // namespace
 
 PySlaveInstance::PySlaveInstance(std::string instanceName, std::string resources, const cppfmu::Logger& logger, const bool visible, std::shared_ptr<IPyState> pyState)
     : pyState_{ std::move(pyState) }
+    , visible_(visible)
     , instanceName_(std::move(instanceName))
     , resources_(std::move(resources))
     , logger_(logger)
-    , visible_(visible)
 {
-    py_safe_run([this](PyGILState_STATE gilState) {
-        // Append resources path to python sys path
-        PyObject* sys_module = PyImport_ImportModule("sys");
-        if (sys_module == nullptr) {
-            handle_py_exception("[ctor] PyImport_ImportModule", gilState);
-        }
-        PyObject* sys_path = PyObject_GetAttrString(sys_module, "path");
-        Py_DECREF(sys_module);
-        if (sys_path == nullptr) {
-            handle_py_exception("[ctor] PyObject_GetAttrString", gilState);
-        }
-        int success = PyList_Insert(sys_path, 0, PyUnicode_FromString(resources_.c_str()));
-        Py_DECREF(sys_path);
-        if (success != 0) {
-            handle_py_exception("[ctor] PyList_Insert", gilState);
-        }
+    py_safe_run([this]() {
+        // The destructor does not run when a constructor throws, so release what was
+        // acquired so far before propagating the error.
+        try {
+            // Prepend resources path to python sys path
+            PyRef sysModule(PyImport_ImportModule("sys"));
+            if (!sysModule) handle_py_exception("[ctor] PyImport_ImportModule(sys)");
+            PyRef sysPath(PyObject_GetAttrString(sysModule.get(), "path"));
+            if (!sysPath) handle_py_exception("[ctor] PyObject_GetAttrString(sys.path)");
+            PyRef resourcesStr(PyUnicode_FromString(resources_.c_str()));
+            if (!resourcesStr || PyList_Insert(sysPath.get(), 0, resourcesStr.get()) != 0) {
+                handle_py_exception("[ctor] PyList_Insert");
+            }
 
-        std::string moduleName = getline(resources_ + "/slavemodule.txt");
-        PyObject* pModule = PyImport_ImportModule(moduleName.c_str());
-        if (pModule == nullptr) {
-            PyErr_Print();
-            handle_py_exception("[ctor] PyImport_ImportModule", gilState);
-        }
+            const auto info = readSlaveModuleInfo(resources_ + "/slavemodule.txt");
+            const std::string& moduleName = info.first;
+            PyRef module(PyImport_ImportModule(moduleName.c_str()));
+            if (!module) handle_py_exception("[ctor] PyImport_ImportModule(" + moduleName + ")");
 
-        std::string className = findClassName(resources_ + "/" + moduleName + ".py");
-        if (className.empty()) {
+            std::string className = info.second;
+            if (className.empty()) {
+                className = findClassName(resources_ + "/" + moduleName + ".py");
+            }
+            if (className.empty()) {
+                throw cppfmu::FatalError("Unable to find class extending Fmi3SlaveBase!");
+            }
+
+            pClass_ = PyObject_GetAttrString(module.get(), className.c_str());
+            if (pClass_ == nullptr) handle_py_exception("[ctor] PyObject_GetAttr(" + className + ")");
+
+            initialize();
+        } catch (...) {
             cleanPyObject();
-            throw cppfmu::FatalError("Unable to find class extending Fmi3SlaveBase!");
+            throw;
         }
-
-        PyObject* pyClassName = Py_BuildValue("s", className.c_str());
-        if (pyClassName == nullptr) {
-            handle_py_exception("[ctor] Py_BuildValue", gilState);
-        }
-
-        pClass_ = PyObject_GetAttr(pModule, pyClassName);
-        Py_DECREF(pyClassName);
-        Py_DECREF(pModule);
-        if (pClass_ == nullptr) {
-            handle_py_exception("[ctor] PyObject_GetAttr", gilState);
-        }
-
-        initialize(gilState);
     });
 }
 
@@ -103,568 +246,423 @@ void PySlaveInstance::clearLogBuffer() const
 {
     clearLogStrBuffer();
 
-    PyObject* debugField = Py_BuildValue("s", "debug");
-    PyObject* msgField = Py_BuildValue("s", "msg");
-    PyObject* categoryField = Py_BuildValue("s", "category");
-    PyObject* statusField = Py_BuildValue("s", "status");
+    if (pMessages_ == nullptr || !PyList_Check(pMessages_)) {
+        return;
+    }
 
-    if ( pMessages_ != NULL && PyList_Check(pMessages_) ) {
-        auto size = PyList_Size(pMessages_);
-        for (auto i = 0; i < size; i++) {
-            PyObject* msg = PyList_GetItem(pMessages_, i);
+    // Logging must never mask the original problem: keep any pending exception aside.
+    PyObject *errType, *errValue, *errTraceback;
+    PyErr_Fetch(&errType, &errValue, &errTraceback);
 
-            auto debugAttr = PyObject_GetAttr(msg, debugField);
-            auto msgAttr = PyObject_GetAttr(msg, msgField);
-            auto categoryAttr = PyObject_GetAttr(msg, categoryField);
-            auto statusAttr = PyObject_GetAttr(msg, statusField);
+    auto& logger = const_cast<cppfmu::Logger&>(logger_);
+    const auto size = PyList_Size(pMessages_);
+    for (Py_ssize_t i = 0; i < size; i++) {
+        PyObject* msg = PyList_GetItem(pMessages_, i); // borrowed
 
-            auto statusValue = static_cast<cppfmu::FMIStatus>(PyLong_AsLong(statusAttr));
+        PyRef debugAttr(PyObject_GetAttrString(msg, "debug"));
+        PyRef msgAttr(PyObject_GetAttrString(msg, "msg"));
+        PyRef categoryAttr(PyObject_GetAttrString(msg, "category"));
+        PyRef statusAttr(PyObject_GetAttrString(msg, "status"));
+        if (!debugAttr || !msgAttr || !categoryAttr || !statusAttr) {
+            PyErr_Clear();
+            continue;
+        }
 
-            PyObject* msgValue = PyUnicode_AsEncodedString(msgAttr, "utf-8", nullptr);
-            char* msgStr = PyBytes_AsString(msgValue);
-            logStrBuffer.emplace_back(msgValue);
+        auto statusValue = static_cast<cppfmu::FMIStatus>(PyLong_AsLong(statusAttr.get()));
 
-            const char* categoryStr = "";
-            if (categoryAttr != Py_None) {
-                PyObject* categoryValue = PyUnicode_AsEncodedString(categoryAttr, "utf-8", nullptr);
+        PyObject* msgValue = PyUnicode_AsEncodedString(msgAttr.get(), "utf-8", "replace");
+        if (msgValue == nullptr) {
+            PyErr_Clear();
+            continue;
+        }
+        const char* msgStr = PyBytes_AsString(msgValue);
+        logStrBuffer.emplace_back(msgValue);
+
+        const char* categoryStr = "";
+        if (categoryAttr.get() != Py_None) {
+            PyObject* categoryValue = PyUnicode_AsEncodedString(categoryAttr.get(), "utf-8", "replace");
+            if (categoryValue != nullptr) {
                 categoryStr = PyBytes_AsString(categoryValue);
                 logStrBuffer.emplace_back(categoryValue);
             }
-
-            if (PyObject_IsTrue(debugAttr)) {
-                const_cast<cppfmu::Logger&>(logger_).DebugLog(statusValue, categoryStr, msgStr);
-            } else {
-                const_cast<cppfmu::Logger&>(logger_).Log(statusValue, categoryStr, msgStr);
-            }
         }
-        PyList_SetSlice(pMessages_, 0, size, nullptr);
+
+        if (PyObject_IsTrue(debugAttr.get()) == 1) {
+            logger.DebugLog(statusValue, categoryStr, msgStr);
+        } else {
+            logger.Log(statusValue, categoryStr, msgStr);
+        }
+        PyErr_Clear();
     }
-    Py_DECREF(debugField);
-    Py_DECREF(msgField);
-    Py_DECREF(categoryField);
-    Py_DECREF(statusField);
+    PyList_SetSlice(pMessages_, 0, size, nullptr);
+
+    PyErr_Restore(errType, errValue, errTraceback);
 }
 
-void PySlaveInstance::initialize(PyGILState_STATE gilState)
+void PySlaveInstance::initialize()
 {
-    Py_XDECREF(pInstance_);
-    Py_XDECREF(pMessages_);
+    clearLogBuffer();
+    Py_CLEAR(pInstance_);
+    Py_CLEAR(pMessages_);
 
-    PyObject* args = PyTuple_New(0);
-    PyObject* kwargs = Py_BuildValue("{ss,ss,sn,si}",
+    PyRef args(PyTuple_New(0));
+    PyRef kwargs(Py_BuildValue("{ss,ss,sn,si}",
         "instance_name", instanceName_.c_str(),
         "resources", resources_.c_str(),
-        "logger", &logger_,
-        "visible", visible_);
-    pInstance_ = PyObject_Call(pClass_, args, kwargs);
-    Py_DECREF(args);
-    Py_DECREF(kwargs);
-    if (pInstance_ == nullptr) {
-        handle_py_exception("[initialize] PyObject_Call", gilState);
-    }
+        "logger", reinterpret_cast<Py_ssize_t>(&logger_),
+        "visible", static_cast<int>(visible_)));
+    if (!args || !kwargs) handle_py_exception("[initialize] Py_BuildValue");
+
+    pInstance_ = PyObject_Call(pClass_, args.get(), kwargs.get());
+    if (pInstance_ == nullptr) handle_py_exception("[initialize] PyObject_Call");
+
     pMessages_ = PyObject_CallMethod(pInstance_, "_get_log_queue", nullptr);
+    if (pMessages_ == nullptr) handle_py_exception("[initialize] _get_log_queue");
+    clearLogBuffer();
+}
+
+void PySlaveInstance::callVoidMethod(const char* method) const
+{
+    PyRef result(PyObject_CallMethod(pInstance_, method, nullptr));
+    if (!result) handle_py_exception(std::string("[") + method + "]");
+    clearLogBuffer();
+}
+
+void PySlaveInstance::callSetter(const char* method, const cppfmu::FMIValueReference* vr, std::size_t nvr, PyObject* valuesList)
+{
+    PyRef values(valuesList);
+    if (!values) handle_py_exception(std::string("[") + method + "] building values");
+    PyRef vrs(makeVrList(vr, nvr));
+    if (!vrs) handle_py_exception(std::string("[") + method + "] building value references");
+
+    PyRef result(PyObject_CallMethod(pInstance_, method, "(OO)", vrs.get(), values.get()));
+    if (!result) handle_py_exception(std::string("[") + method + "]");
+    clearLogBuffer();
+}
+
+PyObject* PySlaveInstance::callGetter(const char* method, const cppfmu::FMIValueReference* vr, std::size_t nvr, std::size_t nValues) const
+{
+    PyRef vrs(makeVrList(vr, nvr));
+    if (!vrs) handle_py_exception(std::string("[") + method + "] building value references");
+
+    PyRef refs(PyObject_CallMethod(pInstance_, method, "(O)", vrs.get()));
+    if (!refs) handle_py_exception(std::string("[") + method + "]");
+    checkListSize(refs.get(), nValues, method);
+    return refs.release();
+}
+
+PyObject* PySlaveInstance::callListMethod(const char* method, std::size_t expected) const
+{
+    PyRef refs(PyObject_CallMethod(pInstance_, method, nullptr));
+    if (!refs) handle_py_exception(std::string("[") + method + "]");
+    checkListSize(refs.get(), expected, method);
+    return refs.release();
+}
+
+void PySlaveInstance::checkListSize(PyObject* list, std::size_t expected, const char* method) const
+{
+    if (!PyList_Check(list)) {
+        clearLogBuffer();
+        throw std::runtime_error(std::string("[") + method + "] must return a list");
+    }
+    const auto actual = static_cast<std::size_t>(PyList_Size(list));
+    if (actual < expected) {
+        clearLogBuffer();
+        std::ostringstream oss;
+        oss << "[" << method << "] returned " << actual << " values, but " << expected << " were requested";
+        throw std::runtime_error(oss.str());
+    }
 }
 
 void PySlaveInstance::SetupExperiment(cppfmu::FMIBoolean, cppfmu::FMIFloat64, cppfmu::FMIFloat64 startTime, cppfmu::FMIBoolean, cppfmu::FMIFloat64)
 {
-    py_safe_run([this, startTime](PyGILState_STATE gilState) {
-        auto f = PyObject_CallMethod(pInstance_, "setup_experiment", "(d)", startTime);
-        if (f == nullptr) {
-            handle_py_exception("[setupExperiment] PyObject_CallMethod", gilState);
-        }
-        Py_DECREF(f);
+    py_safe_run([this, startTime]() {
+        PyRef result(PyObject_CallMethod(pInstance_, "setup_experiment", "(d)", startTime));
+        if (!result) handle_py_exception("[setup_experiment]");
         clearLogBuffer();
     });
 }
 
 void PySlaveInstance::EnterInitializationMode()
 {
-    py_safe_run([this](PyGILState_STATE gilState) {
-        auto f = PyObject_CallMethod(pInstance_, "enter_initialization_mode", nullptr);
-        if (f == nullptr) {
-            handle_py_exception("[enterInitializationMode] PyObject_CallMethod", gilState);
-        }
-        Py_DECREF(f);
-        clearLogBuffer();
-    });
+    py_safe_run([this]() { callVoidMethod("enter_initialization_mode"); });
 }
 
 void PySlaveInstance::ExitInitializationMode()
 {
-    py_safe_run([this](PyGILState_STATE gilState) {
-        auto f = PyObject_CallMethod(pInstance_, "exit_initialization_mode", nullptr);
-        if (f == nullptr) {
-            handle_py_exception("[exitInitializationMode] PyObject_CallMethod", gilState);
-        }
-        Py_DECREF(f);
-        clearLogBuffer();
-    });
+    py_safe_run([this]() { callVoidMethod("exit_initialization_mode"); });
 }
 
 cppfmu::FMIStatus PySlaveInstance::DoStep(cppfmu::FMIFloat64 currentTime,
     cppfmu::FMIFloat64 stepSize,
-    cppfmu::FMIBoolean noSetFmuStatePriorToCurrentPoint,
+    cppfmu::FMIBoolean,
     cppfmu::FMIBoolean* eventHandlingNeeded,
     cppfmu::FMIBoolean* terminateSimulation,
     cppfmu::FMIBoolean* earlyReturn,
     cppfmu::FMIFloat64& endOfStep)
 {
-    cppfmu::FMIStatus fmuStatus = cppfmu::FMIOK;
-    py_safe_run([this, &fmuStatus, currentTime, stepSize, terminateSimulation](PyGILState_STATE gilState) {
-        auto f = PyObject_CallMethod(pInstance_, "do_step", "(dd)", currentTime, stepSize);
-        if (f == nullptr) {
-            handle_py_exception("[doStep] PyObject_CallMethod", gilState);
-        }
+    // The FMI standard requires these outputs to always be written.
+    if (eventHandlingNeeded) *eventHandlingNeeded = false;
+    if (terminateSimulation) *terminateSimulation = false;
+    if (earlyReturn) *earlyReturn = false;
+
+    return py_safe_run([&]() {
+        cppfmu::FMIStatus fmuStatus = cppfmu::FMIOK;
+        PyRef result(PyObject_CallMethod(pInstance_, "do_step", "(dd)", currentTime, stepSize));
+        if (!result) handle_py_exception("[do_step]");
+        PyObject* f = result.get();
 
         if (PyObject_HasAttrString(f, "status")) {
-            PyObject* pyStatus = PyObject_GetAttrString(f, "status");
-            if (pyStatus) {
-                fmuStatus = static_cast<cppfmu::FMIStatus>(PyLong_AsLong(pyStatus));
-                Py_DECREF(pyStatus);
-            }
+            PyRef pyStatus(PyObject_GetAttrString(f, "status"));
+            if (!pyStatus) handle_py_exception("[do_step] status");
+            fmuStatus = static_cast<cppfmu::FMIStatus>(PyLong_AsLong(pyStatus.get()));
+            if (PyErr_Occurred()) handle_py_exception("[do_step] status conversion");
         } else {
-            bool status = static_cast<bool>(PyObject_IsTrue(f));
-            if (!status) {
-                fmuStatus = cppfmu::FMIDiscard;
-            }
+            const int ok = PyObject_IsTrue(f);
+            if (ok < 0) handle_py_exception("[do_step] return value");
+            if (!ok) fmuStatus = cppfmu::FMIDiscard;
         }
 
-        if (PyObject_HasAttrString(f, "terminateSimulation")) {
-            PyObject* pyTerminateSimulation = PyObject_GetAttrString(f, "terminateSimulation");
-            if (pyTerminateSimulation) {
-                *terminateSimulation = static_cast<bool>(PyObject_IsTrue(pyTerminateSimulation));
-                Py_DECREF(pyTerminateSimulation);
-            }
-        }
-        Py_DECREF(f);
+        const int ehn = readBoolAttr(f, "eventHandlingNeeded", false);
+        const int term = readBoolAttr(f, "terminateSimulation", false);
+        const int early = readBoolAttr(f, "earlyReturn", false);
+        if (ehn < 0 || term < 0 || early < 0) handle_py_exception("[do_step] result");
+
+        if (eventHandlingNeeded) *eventHandlingNeeded = ehn == 1;
+        if (terminateSimulation) *terminateSimulation = term == 1;
+        if (earlyReturn) *earlyReturn = early == 1;
+        if (fmuStatus == cppfmu::FMIOK) endOfStep = currentTime + stepSize;
+
         clearLogBuffer();
+        return fmuStatus;
     });
-
-    return fmuStatus;
 }
 
 void PySlaveInstance::Reset()
 {
-    py_safe_run([this](PyGILState_STATE gilState) {
-        initialize(gilState);
-    });
+    py_safe_run([this]() { initialize(); });
 }
 
 void PySlaveInstance::Terminate()
 {
-    py_safe_run([this](PyGILState_STATE gilState) {
-        auto f = PyObject_CallMethod(pInstance_, "terminate", nullptr);
-        if (f == nullptr) {
-            handle_py_exception("[terminate] PyObject_CallMethod", gilState);
-        }
-        Py_DECREF(f);
-        clearLogBuffer();
-    });
+    py_safe_run([this]() { callVoidMethod("terminate"); });
 }
 
 void PySlaveInstance::SetFloat64(const cppfmu::FMIValueReference* vr, std::size_t nvr, const cppfmu::FMIFloat64* values, std::size_t nValues)
 {
-    py_safe_run([this, &vr, nvr, &values, nValues](PyGILState_STATE gilState) {
-        PyObject* vrs = PyList_New(nvr);
-        PyObject* refs = PyList_New(nValues);
-        for (int i = 0; i < nvr; i++) {
-            PyList_SetItem(vrs, i, Py_BuildValue("i", vr[i]));
-        }
-        for (int i = 0; i < nValues; i++) {
-            PyList_SetItem(refs, i, Py_BuildValue("d", values[i]));
-        }
-
-        auto f = PyObject_CallMethod(pInstance_, "set_float64", "(OO)", vrs, refs);
-        Py_DECREF(vrs);
-        Py_DECREF(refs);
-        if (f == nullptr) {
-            handle_py_exception("[setFloat64] PyObject_CallMethod", gilState);
-        }
-        Py_DECREF(f);
-        clearLogBuffer();
+    py_safe_run([&]() {
+        callSetter("set_float64", vr, nvr, makeValueList(values, nValues, [](cppfmu::FMIFloat64 v) { return PyFloat_FromDouble(v); }));
     });
 }
 
 void PySlaveInstance::SetInt32(const cppfmu::FMIValueReference* vr, std::size_t nvr, const cppfmu::FMIInt32* values, std::size_t nValues)
 {
-    py_safe_run([this, &vr, nvr, &values, nValues](PyGILState_STATE gilState) {
-        PyObject* vrs = PyList_New(nvr);
-        PyObject* refs = PyList_New(nValues);
-        for (int i = 0; i < nvr; i++) {
-            PyList_SetItem(vrs, i, Py_BuildValue("i", vr[i]));
-        }
-
-        for (int i = 0; i < nValues; i++) {
-            PyList_SetItem(refs, i, Py_BuildValue("i", values[i]));
-        }
-
-        auto f = PyObject_CallMethod(pInstance_, "set_int32", "(OO)", vrs, refs);
-        Py_DECREF(vrs);
-        Py_DECREF(refs);
-        if (f == nullptr) {
-            handle_py_exception("[setInt32] PyObject_CallMethod", gilState);
-        }
-        Py_DECREF(f);
-        clearLogBuffer();
+    py_safe_run([&]() {
+        callSetter("set_int32", vr, nvr, makeValueList(values, nValues, [](cppfmu::FMIInt32 v) { return PyLong_FromLong(v); }));
     });
 }
 
 void PySlaveInstance::SetInt64(const cppfmu::FMIValueReference* vr, std::size_t nvr, const cppfmu::FMIInt64* values, std::size_t nValues)
 {
-    py_safe_run([this, &vr, nvr, &values, nValues](PyGILState_STATE gilState) {
-        PyObject* vrs = PyList_New(nvr);
-        PyObject* refs = PyList_New(nValues);
-        for (int i = 0; i < nvr; i++) {
-            PyList_SetItem(vrs, i, Py_BuildValue("i", vr[i]));
-        }
-        for (int i = 0; i < nValues; i++) {
-            PyList_SetItem(refs, i, Py_BuildValue("L", values[i]));
-        }
-
-        auto f = PyObject_CallMethod(pInstance_, "set_int64", "(OO)", vrs, refs);
-        Py_DECREF(vrs);
-        Py_DECREF(refs);
-        if (f == nullptr) {
-            handle_py_exception("[setInt64] PyObject_CallMethod", gilState);
-        }
-        Py_DECREF(f);
-        clearLogBuffer();
+    py_safe_run([&]() {
+        callSetter("set_int64", vr, nvr, makeValueList(values, nValues, [](cppfmu::FMIInt64 v) { return PyLong_FromLongLong(v); }));
     });
 }
 
 void PySlaveInstance::SetUInt64(const cppfmu::FMIValueReference* vr, std::size_t nvr, const cppfmu::FMIUInt64* values, std::size_t nValues)
 {
-    py_safe_run([this, &vr, nvr, &values, nValues](PyGILState_STATE gilState) {
-        PyObject* vrs = PyList_New(nvr);
-        PyObject* refs = PyList_New(nValues);
-        for (int i = 0; i < nvr; i++) {
-            PyList_SetItem(vrs, i, Py_BuildValue("i", vr[i]));
-        }
-        for (int i = 0; i < nValues; i++) {
-            PyList_SetItem(refs, i, Py_BuildValue("K", values[i]));
-        }
-
-        auto f = PyObject_CallMethod(pInstance_, "set_uint64", "(OO)", vrs, refs);
-        Py_DECREF(vrs);
-        Py_DECREF(refs);
-        if (f == nullptr) {
-            handle_py_exception("[setUInt64] PyObject_CallMethod", gilState);
-        }
-        Py_DECREF(f);
-        clearLogBuffer();
+    py_safe_run([&]() {
+        callSetter("set_uint64", vr, nvr, makeValueList(values, nValues, [](cppfmu::FMIUInt64 v) { return PyLong_FromUnsignedLongLong(v); }));
     });
 }
 
 void PySlaveInstance::SetBoolean(const cppfmu::FMIValueReference* vr, std::size_t nvr, const cppfmu::FMIBoolean* values, std::size_t nValues)
 {
-    py_safe_run([this, &vr, nvr, &values, nValues](PyGILState_STATE gilState) {
-        PyObject* vrs = PyList_New(nvr);
-        PyObject* refs = PyList_New(nValues);
-        for (int i = 0; i < nvr; i++) {
-            PyList_SetItem(vrs, i, Py_BuildValue("i", vr[i]));
-        }
-        for (int i = 0; i < nValues; i++) {
-            PyList_SetItem(refs, i, PyBool_FromLong(values[i]));
-        }
-
-        auto f = PyObject_CallMethod(pInstance_, "set_boolean", "(OO)", vrs, refs);
-        Py_DECREF(vrs);
-        Py_DECREF(refs);
-        if (f == nullptr) {
-            handle_py_exception("[setBoolean] PyObject_CallMethod", gilState);
-        }
-        Py_DECREF(f);
-        clearLogBuffer();
+    py_safe_run([&]() {
+        callSetter("set_boolean", vr, nvr, makeValueList(values, nValues, [](cppfmu::FMIBoolean v) { return PyBool_FromLong(v ? 1 : 0); }));
     });
 }
 
 void PySlaveInstance::SetString(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIString const* values, std::size_t nValues)
 {
-    py_safe_run([this, &vr, nvr, &values, nValues](PyGILState_STATE gilState) {
-        PyObject* vrs = PyList_New(nvr);
-        PyObject* refs = PyList_New(nvr);
-        for (int i = 0; i < nvr; i++) {
-            PyList_SetItem(vrs, i, Py_BuildValue("i", vr[i]));
-        }
-        for (int i = 0; i < nValues; i++) {
-            PyList_SetItem(refs, i, Py_BuildValue("s", values[i]));
-        }
-
-        auto f = PyObject_CallMethod(pInstance_, "set_string", "(OO)", vrs, refs);
-        Py_DECREF(vrs);
-        Py_DECREF(refs);
-        if (f == nullptr) {
-            handle_py_exception("[setString] PyObject_CallMethod", gilState);
-        }
-        Py_DECREF(f);
-        clearLogBuffer();
+    py_safe_run([&]() {
+        callSetter("set_string", vr, nvr, makeValueList(values, nValues, makeString));
     });
 }
 
 void PySlaveInstance::GetFloat64(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIFloat64* values, std::size_t nValues) const
 {
-    py_safe_run([this, &vr, nvr, &values, nValues](PyGILState_STATE gilState) {
-        PyObject* vrs = PyList_New(nvr);
-        for (int i = 0; i < nvr; i++) {
-            PyList_SetItem(vrs, i, Py_BuildValue("i", vr[i]));
+    py_safe_run([&]() {
+        PyRef refs(callGetter("get_float64", vr, nvr, nValues));
+        for (std::size_t i = 0; i < nValues; i++) {
+            values[i] = PyFloat_AsDouble(PyList_GetItem(refs.get(), i));
         }
-
-        auto refs = PyObject_CallMethod(pInstance_, "get_float64", "O", vrs);
-        Py_DECREF(vrs);
-        if (refs == nullptr) {
-            handle_py_exception("[getFloat64] PyObject_CallMethod", gilState);
-        }
-
-        for (int i = 0; i < nValues; i++) {
-            PyObject* value = PyList_GetItem(refs, i);
-            values[i] = PyFloat_AsDouble(value);
-        }
-        Py_DECREF(refs);
+        if (PyErr_Occurred()) handle_py_exception("[get_float64] conversion");
         clearLogBuffer();
     });
 }
 
 void PySlaveInstance::GetInt32(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIInt32* values, std::size_t nValues) const
 {
-    py_safe_run([this, &vr, nvr, &values, nValues](PyGILState_STATE gilState) {
-        PyObject* vrs = PyList_New(nvr);
-        for (int i = 0; i < nvr; i++) {
-            PyList_SetItem(vrs, i, Py_BuildValue("i", vr[i]));
+    py_safe_run([&]() {
+        PyRef refs(callGetter("get_int32", vr, nvr, nValues));
+        for (std::size_t i = 0; i < nValues; i++) {
+            values[i] = static_cast<cppfmu::FMIInt32>(PyLong_AsLong(PyList_GetItem(refs.get(), i)));
         }
-        auto refs = PyObject_CallMethod(pInstance_, "get_int32", "O", vrs);
-        Py_DECREF(vrs);
-        if (refs == nullptr) {
-            handle_py_exception("[getInt32] PyObject_CallMethod", gilState);
-        }
-
-        for (int i = 0; i < nValues; i++) {
-            PyObject* value = PyList_GetItem(refs, i);
-            values[i] = static_cast<cppfmu::FMIInt32>(PyLong_AsLong(value));
-        }
-        Py_DECREF(refs);
+        if (PyErr_Occurred()) handle_py_exception("[get_int32] conversion");
         clearLogBuffer();
     });
 }
 
 void PySlaveInstance::GetInt64(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIInt64* values, std::size_t nValues) const
 {
-    py_safe_run([this, &vr, nvr, &values, nValues](PyGILState_STATE gilState) {
-        PyObject* vrs = PyList_New(nvr);
-        for (int i = 0; i < nvr; i++) {
-            PyList_SetItem(vrs, i, Py_BuildValue("i", vr[i]));
+    py_safe_run([&]() {
+        PyRef refs(callGetter("get_int64", vr, nvr, nValues));
+        for (std::size_t i = 0; i < nValues; i++) {
+            values[i] = static_cast<cppfmu::FMIInt64>(PyLong_AsLongLong(PyList_GetItem(refs.get(), i)));
         }
-        auto refs = PyObject_CallMethod(pInstance_, "get_int64", "O", vrs);
-        Py_DECREF(vrs);
-        if (refs == nullptr) {
-            handle_py_exception("[getInt64] PyObject_CallMethod", gilState);
-        }
-
-        for (int i = 0; i < nValues; i++) {
-            PyObject* value = PyList_GetItem(refs, i);
-            values[i] = static_cast<cppfmu::FMIInt64>(PyLong_AsLongLong(value));
-        }
-        Py_DECREF(refs);
+        if (PyErr_Occurred()) handle_py_exception("[get_int64] conversion");
         clearLogBuffer();
     });
 }
 
 void PySlaveInstance::GetUInt64(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIUInt64* values, std::size_t nValues) const
 {
-    py_safe_run([this, &vr, nvr, &values, nValues](PyGILState_STATE gilState) {
-        PyObject* vrs = PyList_New(nvr);
-        for (int i = 0; i < nvr; i++) {
-            PyList_SetItem(vrs, i, Py_BuildValue("i", vr[i]));
-        }
-        auto refs = PyObject_CallMethod(pInstance_, "get_uint64", "O", vrs);
-        Py_DECREF(vrs);
-        if (refs == nullptr) {
-            handle_py_exception("[getUInt64] PyObject_CallMethod", gilState);
-        }
-
-        for (int i = 0; i < nValues; i++) {
-            PyObject* item = PyList_GetItem(refs, i);
-            PyObject* value = PyObject_GetAttrString(item, "value");
-            if (value && PyLong_Check(value))
-            {
-                values[i] = static_cast<cppfmu::FMIUInt64>(PyLong_AsUnsignedLongLong(value));
+    py_safe_run([&]() {
+        PyRef refs(callGetter("get_uint64", vr, nvr, nValues));
+        for (std::size_t i = 0; i < nValues; i++) {
+            PyObject* item = PyList_GetItem(refs.get(), i);
+            if (PyLong_Check(item)) {
+                values[i] = static_cast<cppfmu::FMIUInt64>(PyLong_AsUnsignedLongLong(item));
+            } else {
+                // ctypes.c_uint64 (as returned by Fmi3SlaveBase.get_uint64)
+                PyRef value(PyObject_GetAttrString(item, "value"));
+                if (!value) handle_py_exception("[get_uint64] value attribute");
+                values[i] = static_cast<cppfmu::FMIUInt64>(PyLong_AsUnsignedLongLong(value.get()));
             }
         }
-
-        Py_DECREF(refs);
+        if (PyErr_Occurred()) handle_py_exception("[get_uint64] conversion");
         clearLogBuffer();
     });
 }
 
 void PySlaveInstance::GetBoolean(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIBoolean* values, std::size_t nValues) const
 {
-    py_safe_run([this, &vr, nvr, &values, nValues](PyGILState_STATE gilState) {
-        PyObject* vrs = PyList_New(nvr);
-        for (int i = 0; i < nvr; i++) {
-            PyList_SetItem(vrs, i, Py_BuildValue("i", vr[i]));
+    py_safe_run([&]() {
+        PyRef refs(callGetter("get_boolean", vr, nvr, nValues));
+        for (std::size_t i = 0; i < nValues; i++) {
+            const int v = PyObject_IsTrue(PyList_GetItem(refs.get(), i));
+            if (v < 0) handle_py_exception("[get_boolean] conversion");
+            values[i] = v == 1;
         }
-        auto refs = PyObject_CallMethod(pInstance_, "get_boolean", "O", vrs);
-        Py_DECREF(vrs);
-        if (refs == nullptr) {
-            handle_py_exception("[getBoolean] PyObject_CallMethod", gilState);
-        }
-
-        for (int i = 0; i < nValues; i++) {
-            PyObject* value = PyList_GetItem(refs, i);
-            values[i] = PyObject_IsTrue(value);
-        }
-        Py_DECREF(refs);
         clearLogBuffer();
     });
 }
 
 void PySlaveInstance::GetString(const cppfmu::FMIValueReference* vr, std::size_t nvr, cppfmu::FMIString* values, std::size_t nValues) const
 {
-    py_safe_run([this, &vr, nvr, &values, nValues](PyGILState_STATE gilState) {
+    py_safe_run([&]() {
+        // Strings returned to the importer stay valid until the next GetString call.
         clearStrBuffer();
-        PyObject* vrs = PyList_New(nvr);
-        for (int i = 0; i < nvr; i++) {
-            PyList_SetItem(vrs, i, Py_BuildValue("i", vr[i]));
-        }
-        auto refs = PyObject_CallMethod(pInstance_, "get_string", "O", vrs);
-        Py_DECREF(vrs);
-        if (refs == nullptr) {
-            handle_py_exception("[getString] PyObject_CallMethod", gilState);
-        }
-
-        for (int i = 0; i < nValues; i++) {
-            PyObject* value = PyUnicode_AsEncodedString(PyList_GetItem(refs, i), "utf-8", nullptr);
+        PyRef refs(callGetter("get_string", vr, nvr, nValues));
+        for (std::size_t i = 0; i < nValues; i++) {
+            PyObject* value = PyUnicode_AsEncodedString(PyList_GetItem(refs.get(), i), "utf-8", nullptr);
+            if (value == nullptr) handle_py_exception("[get_string] conversion");
             values[i] = PyBytes_AsString(value);
             strBuffer.emplace_back(value);
         }
-        Py_DECREF(refs);
         clearLogBuffer();
     });
 }
 
 void PySlaveInstance::GetContinuousStates(cppfmu::FMIFloat64* continuousStates, std::size_t nStates) const
 {
-    py_safe_run([this, &continuousStates, nStates](PyGILState_STATE gilState) {
-        auto f = PyObject_CallMethod(pInstance_, "get_continuous_states", nullptr);
-        if (f == nullptr) {
-            handle_py_exception("[get_continuous_states] PyObject_CallMethod", gilState);
-        }
-        // Assuming f is a list of floats
+    py_safe_run([&]() {
+        PyRef refs(callListMethod("get_continuous_states", nStates));
         for (std::size_t i = 0; i < nStates; i++) {
-            PyObject* item = PyList_GetItem(f, i);
-            continuousStates[i] = static_cast<cppfmu::FMIFloat64>(PyFloat_AsDouble(item));
+            continuousStates[i] = PyFloat_AsDouble(PyList_GetItem(refs.get(), i));
         }
-        Py_DECREF(f);
+        if (PyErr_Occurred()) handle_py_exception("[get_continuous_states] conversion");
         clearLogBuffer();
     });
 }
 
 void PySlaveInstance::GetContinuousStateDerivatives(cppfmu::FMIFloat64* continuousStateDerivatives, std::size_t nStates) const
 {
-    py_safe_run([this, &continuousStateDerivatives, nStates](PyGILState_STATE gilState) {
-        auto f = PyObject_CallMethod(pInstance_, "get_continuous_state_derivatives", nullptr);
-        if (f == nullptr) {
-            PyErr_Print();
-            handle_py_exception("[get_continuous_state_derivatives] PyObject_CallMethod", gilState);
-        }
-        // Assuming f is a list of floats
+    py_safe_run([&]() {
+        PyRef refs(callListMethod("get_continuous_state_derivatives", nStates));
         for (std::size_t i = 0; i < nStates; i++) {
-            PyObject* item = PyList_GetItem(f, i);
-            continuousStateDerivatives[i] = static_cast<cppfmu::FMIFloat64>(PyFloat_AsDouble(item));
+            continuousStateDerivatives[i] = PyFloat_AsDouble(PyList_GetItem(refs.get(), i));
         }
-        Py_DECREF(f);
+        if (PyErr_Occurred()) handle_py_exception("[get_continuous_state_derivatives] conversion");
         clearLogBuffer();
     });
 }
 
 void PySlaveInstance::GetNominalsOfContinuousStates(cppfmu::FMIFloat64* nominalsOfContinuousStates, std::size_t nStates) const
 {
-    py_safe_run([this, &nominalsOfContinuousStates, nStates](PyGILState_STATE gilState) {
-        auto f = PyObject_CallMethod(pInstance_, "get_nominals_of_continuous_states", "(i)", static_cast<int>(nStates));
-         // Check if f is a valid object
-         if (f == nullptr) {
-            handle_py_exception("[getNominalContinuousStates] PyObject_CallMethod", gilState);
-        }
-        // Assuming f is a list of floats
+    py_safe_run([&]() {
+        PyRef refs(PyObject_CallMethod(pInstance_, "get_nominals_of_continuous_states", "(n)", static_cast<Py_ssize_t>(nStates)));
+        if (!refs) handle_py_exception("[get_nominals_of_continuous_states]");
+        checkListSize(refs.get(), nStates, "get_nominals_of_continuous_states");
         for (std::size_t i = 0; i < nStates; i++) {
-            PyObject* item = PyList_GetItem(f, i);
-            nominalsOfContinuousStates[i] = static_cast<cppfmu::FMIFloat64>(PyFloat_AsDouble(item));
+            nominalsOfContinuousStates[i] = PyFloat_AsDouble(PyList_GetItem(refs.get(), i));
         }
-        Py_DECREF(f);
+        if (PyErr_Occurred()) handle_py_exception("[get_nominals_of_continuous_states] conversion");
         clearLogBuffer();
     });
 }
 
 void PySlaveInstance::SetContinuousStates(const cppfmu::FMIFloat64* continuousStates, std::size_t nStates)
 {
-    py_safe_run([this, &continuousStates, nStates](PyGILState_STATE gilState) {
-        PyObject* refs = PyList_New(nStates);
-        for (int i = 0; i < nStates; i++) {
-            PyList_SetItem(refs, i, Py_BuildValue("d", continuousStates[i]));
-        }
-
-        auto f = PyObject_CallMethod(pInstance_, "set_continuous_states", "(O)", refs);
-        Py_DECREF(refs);
-        if (f == nullptr) {
-            handle_py_exception("[setContinuousStates] PyObject_CallMethod", gilState);
-        }
-        Py_DECREF(f);
+    py_safe_run([&]() {
+        PyRef refs(makeValueList(continuousStates, nStates, [](cppfmu::FMIFloat64 v) { return PyFloat_FromDouble(v); }));
+        if (!refs) handle_py_exception("[set_continuous_states] building values");
+        PyRef result(PyObject_CallMethod(pInstance_, "set_continuous_states", "(O)", refs.get()));
+        if (!result) handle_py_exception("[set_continuous_states]");
         clearLogBuffer();
     });
 }
 
 void PySlaveInstance::GetNumberOfContinuousStates(std::size_t& nStates) const
 {
-    py_safe_run([this, &nStates](PyGILState_STATE gilState) {
-        auto f = PyObject_CallMethod(pInstance_, "get_number_of_continuous_states", nullptr);
-        if (f == nullptr) {
-            handle_py_exception("[getNumberOfContinuousStates] PyObject_CallMethod", gilState);
-        }
-        nStates = static_cast<std::size_t>(PyLong_AsLong(f));
-        Py_DECREF(f);
+    py_safe_run([&]() {
+        PyRef result(PyObject_CallMethod(pInstance_, "get_number_of_continuous_states", nullptr));
+        if (!result) handle_py_exception("[get_number_of_continuous_states]");
+        nStates = PyLong_AsSize_t(result.get());
+        if (PyErr_Occurred()) handle_py_exception("[get_number_of_continuous_states] conversion");
         clearLogBuffer();
     });
 }
 
 void PySlaveInstance::GetNumberOfEventIndicators(std::size_t& nIndicators) const
 {
-    py_safe_run([this, &nIndicators](PyGILState_STATE gilState) {
-         auto f = PyObject_CallMethod(pInstance_, "get_number_of_event_indicators", nullptr);
-         if (f == nullptr) {
-             handle_py_exception("[getNumberOfEventIndicators] PyObject_CallMethod", gilState);
-         }
-         nIndicators = static_cast<std::size_t>(PyLong_AsLong(f));
-         Py_DECREF(f);
-         clearLogBuffer();
+    py_safe_run([&]() {
+        PyRef result(PyObject_CallMethod(pInstance_, "get_number_of_event_indicators", nullptr));
+        if (!result) handle_py_exception("[get_number_of_event_indicators]");
+        nIndicators = PyLong_AsSize_t(result.get());
+        if (PyErr_Occurred()) handle_py_exception("[get_number_of_event_indicators] conversion");
+        clearLogBuffer();
     });
 }
 
 void PySlaveInstance::GetEventIndicators(cppfmu::FMIFloat64* eventIndicators, std::size_t nIndicators) const
 {
-    py_safe_run([this, &eventIndicators, nIndicators](PyGILState_STATE gilState) {
-        auto f = PyObject_CallMethod(pInstance_, "get_event_indicators", nullptr);
-        if (f == nullptr) {
-            handle_py_exception("[getEventIndicators] PyObject_CallMethod", gilState);
-        }
-        // Assuming f is a list of floats
+    py_safe_run([&]() {
+        PyRef refs(callListMethod("get_event_indicators", nIndicators));
         for (std::size_t i = 0; i < nIndicators; i++) {
-            PyObject* item = PyList_GetItem(f, i);
-            eventIndicators[i] = static_cast<cppfmu::FMIFloat64>(PyFloat_AsDouble(item));
+            eventIndicators[i] = PyFloat_AsDouble(PyList_GetItem(refs.get(), i));
         }
-        Py_DECREF(f);
+        if (PyErr_Occurred()) handle_py_exception("[get_event_indicators] conversion");
         clearLogBuffer();
     });
-
 }
-
 
 void PySlaveInstance::SetTime(cppfmu::FMIFloat64 time)
 {
-    py_safe_run([this, time](PyGILState_STATE gilState) {
-        auto f = PyObject_CallMethod(pInstance_, "set_time", "(d)", time);
-        if (f == nullptr) {
-            handle_py_exception("[setTime] PyObject_CallMethod", gilState);
-        }
-        Py_DECREF(f);
+    py_safe_run([this, time]() {
+        PyRef result(PyObject_CallMethod(pInstance_, "set_time", "(d)", time));
+        if (!result) handle_py_exception("[set_time]");
         clearLogBuffer();
     });
 }
@@ -677,174 +675,132 @@ void PySlaveInstance::UpdateDiscreteStates(
     cppfmu::FMIBoolean* nextEventTimeDefined,
     cppfmu::FMIFloat64* nextEventTime)
 {
-    py_safe_run([this, discreteStatesNeedUpdate, terminateSimulation, nominalContinuousStatesChanged, valuesOfContinuousStatesChanged, nextEventTimeDefined, nextEventTime](PyGILState_STATE gilState) {
-        auto f = PyObject_CallMethod(pInstance_, "update_discrete_states", nullptr);
-        if (f == nullptr) {
-            handle_py_exception("[updateDiscreteStates] PyObject_CallMethod", gilState);
+    py_safe_run([&]() {
+        PyRef result(PyObject_CallMethod(pInstance_, "update_discrete_states", nullptr));
+        if (!result) handle_py_exception("[update_discrete_states]");
+        PyObject* f = result.get();
+
+        struct Field
+        {
+            const char* name;
+            cppfmu::FMIBoolean* out;
+        };
+        const Field fields[] = {
+            {"discreteStatesNeedUpdate", discreteStatesNeedUpdate},
+            {"terminateSimulation", terminateSimulation},
+            {"nominalContinuousStatesChanged", nominalContinuousStatesChanged},
+            {"valuesOfContinuousStatesChanged", valuesOfContinuousStatesChanged},
+            {"nextEventTimeDefined", nextEventTimeDefined},
+        };
+        for (const auto& field : fields) {
+            const int v = readBoolAttr(f, field.name, false);
+            if (v < 0) handle_py_exception(std::string("[update_discrete_states] ") + field.name);
+            if (field.out) *field.out = v == 1;
         }
 
-        if (PyObject_HasAttrString(f, "discreteStatesNeedUpdate")) {
-            PyObject * pyDiscreteStatesNeedUpdate = PyObject_GetAttrString(f, "discreteStatesNeedUpdate");
-            *discreteStatesNeedUpdate = static_cast<bool>(PyObject_IsTrue(pyDiscreteStatesNeedUpdate));
-            Py_DECREF(pyDiscreteStatesNeedUpdate);
+        if (nextEventTimeDefined && *nextEventTimeDefined && nextEventTime) {
+            PyRef pyNextEventTime(PyObject_GetAttrString(f, "nextEventTime"));
+            if (!pyNextEventTime) handle_py_exception("[update_discrete_states] nextEventTime");
+            *nextEventTime = PyFloat_AsDouble(pyNextEventTime.get());
+            if (PyErr_Occurred()) handle_py_exception("[update_discrete_states] nextEventTime conversion");
         }
-        if (PyObject_HasAttrString(f, "terminateSimulation")) {
-            PyObject* pyTerminateSimulation = PyObject_GetAttrString(f, "terminateSimulation");
-            *terminateSimulation = static_cast<bool>(PyObject_IsTrue(pyTerminateSimulation));
-            Py_DECREF(pyTerminateSimulation);
-        }
-        if (PyObject_HasAttrString(f, "nominalContinuousStatesChanged")) {
-            PyObject* pyNominalContinuousStatesChanged = PyObject_GetAttrString(f, "nominalContinuousStatesChanged");
-            *nominalContinuousStatesChanged = static_cast<bool>(PyObject_IsTrue(pyNominalContinuousStatesChanged));
-            Py_DECREF(pyNominalContinuousStatesChanged);
-        }
-        if (PyObject_HasAttrString(f, "valuesOfContinuousStatesChanged")) {
-            PyObject* pyValuesOfContinuousStatesChanged = PyObject_GetAttrString(f, "valuesOfContinuousStatesChanged");
-            *valuesOfContinuousStatesChanged = static_cast<bool>(PyObject_IsTrue(pyValuesOfContinuousStatesChanged));
-            Py_DECREF(pyValuesOfContinuousStatesChanged);
-        }
-        if (PyObject_HasAttrString(f, "nextEventTimeDefined")) {
-            PyObject* pyNextEventTimeDefined = PyObject_GetAttrString(f, "nextEventTimeDefined");
-            *nextEventTimeDefined = static_cast<bool>(PyObject_IsTrue(pyNextEventTimeDefined));
-            Py_DECREF(pyNextEventTimeDefined);
-        }
-        if (nextEventTimeDefined && *nextEventTimeDefined) {
-            PyObject* pyNextEventTime = PyObject_GetAttrString(f, "nextEventTime");
-            *nextEventTime = PyFloat_AsDouble(pyNextEventTime);
-            Py_DECREF(pyNextEventTime);
-        }
-
-        Py_DECREF(f);
         clearLogBuffer();
     });
 }
 
 void PySlaveInstance::GetFMUstate(fmi3FMUState& state)
 {
-    py_safe_run([this, &state](PyGILState_STATE gilState) {
-        auto f = PyObject_CallMethod(pInstance_, "_get_fmu_state", nullptr);
-        if (f == nullptr) {
-            handle_py_exception("[_get_fmu_state] PyObject_CallMethod", gilState);
-        }
-        state = reinterpret_cast<fmi3FMUState*>(f);
+    py_safe_run([&]() {
+        PyRef newState(PyObject_CallMethod(pInstance_, "_get_fmu_state", nullptr));
+        if (!newState) handle_py_exception("[_get_fmu_state]");
+        // FMI 3.0: a non-NULL state was returned by an earlier call and must be overwritten.
+        PyObject* previous = reinterpret_cast<PyObject*>(state);
+        state = reinterpret_cast<fmi3FMUState>(newState.release());
+        Py_XDECREF(previous);
         clearLogBuffer();
     });
 }
 
 void PySlaveInstance::SetFMUstate(const fmi3FMUState& state)
 {
-    py_safe_run([this, &state](PyGILState_STATE gilState) {
+    py_safe_run([&]() {
         auto pyState = reinterpret_cast<PyObject*>(state);
-        auto f = PyObject_CallMethod(pInstance_, "_set_fmu_state", "(O)", pyState);
-        if (f == nullptr) {
-            handle_py_exception("[_set_fmu_state] PyObject_CallMethod", gilState);
-        }
+        PyRef result(PyObject_CallMethod(pInstance_, "_set_fmu_state", "(O)", pyState));
+        if (!result) handle_py_exception("[_set_fmu_state]");
         clearLogBuffer();
     });
 }
 
 void PySlaveInstance::FreeFMUstate(fmi3FMUState& state)
 {
-    py_safe_run([this, &state](PyGILState_STATE gilState) {
-        auto f = reinterpret_cast<PyObject*>(state);
-        Py_XDECREF(f);
+    py_safe_run([&]() {
+        Py_XDECREF(reinterpret_cast<PyObject*>(state));
+        state = nullptr;
     });
 }
 
 size_t PySlaveInstance::SerializedFMUstateSize(const fmi3FMUState& state)
 {
-    size_t size;
-    py_safe_run([this, &state, &size](PyGILState_STATE gilState) {
+    return py_safe_run([&]() {
         auto pyState = reinterpret_cast<PyObject*>(state);
-        PyObject* pyStateBytes = PyObject_CallMethod(pClass_, "_fmu_state_to_bytes", "(O)", pyState);
-        if (pyStateBytes == nullptr) {
-            handle_py_exception("[SerializedFMUstateSize] PyObject_CallMethod", gilState);
-        }
-        size = PyBytes_Size(pyStateBytes);
-        Py_DECREF(pyStateBytes);
+        PyRef bytes(PyObject_CallMethod(pClass_, "_fmu_state_to_bytes", "(O)", pyState));
+        if (!bytes) handle_py_exception("[_fmu_state_to_bytes]");
+        const Py_ssize_t size = PyBytes_Size(bytes.get());
+        if (size < 0) handle_py_exception("[_fmu_state_to_bytes] must return bytes");
         clearLogBuffer();
+        return static_cast<size_t>(size);
     });
-    return size;
 }
 
 void PySlaveInstance::SerializeFMUstate(const fmi3FMUState& state, fmi3Byte* bytes, size_t size)
 {
-    py_safe_run([this, &state, &bytes, size](PyGILState_STATE gilState) {
+    py_safe_run([&]() {
         auto pyState = reinterpret_cast<PyObject*>(state);
-        PyObject* pyStateBytes = PyObject_CallMethod(pClass_, "_fmu_state_to_bytes", "(O)", pyState);
-        if (pyStateBytes == nullptr) {
-            handle_py_exception("[SerializeFMUstate] PyObject_CallMethod", gilState);
+        PyRef pyBytes(PyObject_CallMethod(pClass_, "_fmu_state_to_bytes", "(O)", pyState));
+        if (!pyBytes) handle_py_exception("[_fmu_state_to_bytes]");
+        char* data = nullptr;
+        Py_ssize_t length = 0;
+        if (PyBytes_AsStringAndSize(pyBytes.get(), &data, &length) != 0) {
+            handle_py_exception("[_fmu_state_to_bytes] must return bytes");
         }
-        char* c = PyBytes_AsString(pyStateBytes);
-        if (c == nullptr) {
-            handle_py_exception("[SerializeFMUstate] PyBytes_AsString", gilState);
+        if (static_cast<size_t>(length) > size) {
+            throw std::runtime_error("[SerializeFMUstate] buffer is smaller than fmi3SerializedFMUStateSize");
         }
-        for (int i = 0; i < size; i++) {
-            bytes[i] = c[i];
-        }
-        Py_DECREF(pyStateBytes);
+        std::copy(data, data + length, bytes);
         clearLogBuffer();
     });
 }
 
 void PySlaveInstance::DeSerializeFMUstate(const fmi3Byte bytes[], size_t size, fmi3FMUState& state)
 {
-    py_safe_run([this, &bytes, size, &state](PyGILState_STATE gilState) {
-        char const * castedBytes = reinterpret_cast<char const*>(bytes);
-        PyObject* pyStateBytes = PyBytes_FromStringAndSize(castedBytes, size);
-        if (pyStateBytes == nullptr) {
-            handle_py_exception("[DeSerializeFMUstate] PyBytes_FromStringAndSize", gilState);
-        }
-        PyObject* pyState = PyObject_CallMethod(pClass_, "_fmu_state_from_bytes", "(O)", pyStateBytes);
-        if (pyState == nullptr) {
-            handle_py_exception("[DeSerializeFMUstate] PyObject_CallMethod", gilState);
-        }
-        state = reinterpret_cast<fmi3FMUState*>(pyState);
-        Py_DECREF(pyStateBytes);
+    py_safe_run([&]() {
+        PyRef pyBytes(PyBytes_FromStringAndSize(reinterpret_cast<const char*>(bytes), static_cast<Py_ssize_t>(size)));
+        if (!pyBytes) handle_py_exception("[DeSerializeFMUstate] PyBytes_FromStringAndSize");
+        PyRef pyState(PyObject_CallMethod(pClass_, "_fmu_state_from_bytes", "(O)", pyBytes.get()));
+        if (!pyState) handle_py_exception("[_fmu_state_from_bytes]");
+        PyObject* previous = reinterpret_cast<PyObject*>(state);
+        state = reinterpret_cast<fmi3FMUState>(pyState.release());
+        Py_XDECREF(previous);
         clearLogBuffer();
     });
 }
 
-void PySlaveInstance::handle_py_exception(const std::string& what, PyGILState_STATE gilState) const
+void PySlaveInstance::handle_py_exception(const std::string& what) const
 {
-    auto err = PyErr_Occurred();
-    if (err != nullptr) {
-        cleanPyObject();
+    // Must be called with the GIL held. The GIL is released by the enclosing GilGuard
+    // while the exception unwinds; Python objects stay valid so the instance can still
+    // be freed (or reset) safely afterwards.
+    std::string details = fetchPythonError();
+    clearLogBuffer(); // forward messages logged before the failure
 
-        PyObject *pExcType, *pExcValue, *pExcTraceback;
-        PyErr_Fetch(&pExcType, &pExcValue, &pExcTraceback);
-
-        std::ostringstream oss;
-        oss << "Fatal py exception encountered: ";
-        oss << what << "\n";
-        if (pExcValue != nullptr) {
-            PyObject* pRepr = PyObject_Repr(pExcValue);
-            PyObject* pyStr = PyUnicode_AsEncodedString(pRepr, "utf-8", nullptr);
-            oss << PyBytes_AsString(pyStr);
-            Py_DECREF(pyStr);
-            Py_DECREF(pRepr);
-        } else {
-            oss << "unknown error";
-        }
-
-        PyErr_Clear();
-
-        Py_XDECREF(pExcType);
-        Py_XDECREF(pExcValue);
-        Py_XDECREF(pExcTraceback);
-
-        PyGILState_Release(gilState);
-
-        auto msg = oss.str();
-        throw cppfmu::FatalError(msg.c_str());
-    }
+    std::ostringstream oss;
+    oss << "Fatal py exception encountered: " << what << "\n" << details;
+    throw cppfmu::FatalError(oss.str().c_str());
 }
 
 PySlaveInstance::~PySlaveInstance()
 {
-    py_safe_run([this](PyGILState_STATE gilState) {
-        cleanPyObject();
-    });
+    py_safe_run([this]() { cleanPyObject(); });
 }
 
 } // namespace pythonfmu
@@ -866,6 +822,34 @@ namespace {
         static auto* const state = new std::shared_ptr<pythonfmu::PyState>();
         return *state;
     }
+
+    // Turns an FMI 3 resource path (or a legacy file:// URI) into a filesystem path.
+    std::string resourcePathFromLocation(const std::string& location)
+    {
+        std::string path = location;
+        const std::string scheme = "file://";
+        if (path.compare(0, scheme.size(), scheme) == 0) {
+            path.erase(0, scheme.size());
+            // file:///C:/... on Windows -> C:/...
+            if (path.size() > 2 && path[0] == '/' && path[2] == ':') path.erase(0, 1);
+
+            // Percent-decode (URIs only; plain FMI 3 paths may legitimately contain '%')
+            std::string decoded;
+            decoded.reserve(path.size());
+            for (std::size_t i = 0; i < path.size(); i++) {
+                if (path[i] == '%' && i + 2 < path.size() && std::isxdigit(static_cast<unsigned char>(path[i + 1])) &&
+                    std::isxdigit(static_cast<unsigned char>(path[i + 2]))) {
+                    decoded += static_cast<char>(std::stoi(path.substr(i + 1, 2), nullptr, 16));
+                    i += 2;
+                } else {
+                    decoded += path[i];
+                }
+            }
+            path = decoded;
+        }
+        while (path.size() > 1 && (path.back() == '/' || path.back() == '\\')) path.pop_back();
+        return path;
+    }
 }
 
 std::unique_ptr<cppfmu::SlaveInstance> CppfmuInstantiateSlave(
@@ -878,29 +862,19 @@ std::unique_ptr<cppfmu::SlaveInstance> CppfmuInstantiateSlave(
     cppfmu::FMIBoolean,
     const cppfmu::Logger& logger)
 {
-
-    // Convert URI %20 to space
-    auto resources = std::regex_replace(std::string(fmuResourceLocation), std::regex("%20"), " ");
-    auto find = resources.find("file://");
-
-    if (find != std::string::npos) {
-#ifdef _MSC_VER
-        resources.replace(find, 8, "");
-#else
-        resources.replace(find, 7, "");
-#endif
+    if (fmuResourceLocation == nullptr) {
+        throw cppfmu::FatalError("No resource path given: PythonFMU3 needs the FMU resources folder");
     }
+    auto resources = resourcePathFromLocation(fmuResourceLocation);
 
-    {
-        auto const ensurePyStateAlive = [&]() {
-            auto const lock = std::lock_guard{pyStateMutex()};
-            if (nullptr == pyState()) pyState() = std::make_shared<pythonfmu::PyState>();
-            return pyState();
-            };
+    auto const ensurePyStateAlive = [&]() {
+        auto const lock = std::lock_guard{pyStateMutex()};
+        if (nullptr == pyState()) pyState() = std::make_shared<pythonfmu::PyState>();
+        return pyState();
+    };
 
-        return std::make_unique<pythonfmu::PySlaveInstance>(
-            instanceName, resources, logger, visible, ensurePyStateAlive());
-    }
+    return std::make_unique<pythonfmu::PySlaveInstance>(
+        instanceName, resources, logger, visible, ensurePyStateAlive());
 }
 
 extern "C" {

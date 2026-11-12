@@ -95,7 +95,8 @@ fmi3Instance fmi3InstantiateCoSimulation(
     fmi3IntermediateUpdateCallback intermediateUpdate )
 {
     try {
-        auto component = new Component(
+        // Owned until fully constructed, so a failing instantiation does not leak it.
+        auto component = std::make_unique<Component>(
             environment,
             logMessage,
             loggingOn);
@@ -108,7 +109,7 @@ fmi3Instance fmi3InstantiateCoSimulation(
             visible,
             cppfmu::FMIFalse,
             component->logger);
-        return component;
+        return component.release();
     } catch (const cppfmu::FatalError& e) {
         if (logMessage)
         {
@@ -134,7 +135,8 @@ fmi3Instance fmi3InstantiateModelExchange(
     fmi3LogMessageCallback     logMessage)
 {
     try {
-        auto component = new Component(
+        // Owned until fully constructed, so a failing instantiation does not leak it.
+        auto component = std::make_unique<Component>(
             environment,
             logMessage,
             loggingOn);
@@ -147,7 +149,7 @@ fmi3Instance fmi3InstantiateModelExchange(
             visible,
             cppfmu::FMIFalse,
             component->logger);
-        return component;
+        return component.release();
     } catch (const cppfmu::FatalError& e) {
         if (logMessage)
         {
