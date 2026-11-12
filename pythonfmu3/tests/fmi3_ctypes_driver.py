@@ -7,7 +7,7 @@ import sys
 from pathlib import Path
 
 scenario, fmu_dir = sys.argv[1], Path(sys.argv[2])
-lib_path = next((fmu_dir / "binaries").rglob("*.so"))
+lib_path = next(p for p in (fmu_dir / "binaries").rglob("*.so") if "pythonfmu-backend" not in p.name)
 lib = C.CDLL(str(lib_path))
 
 LOGCB = C.CFUNCTYPE(None, C.c_void_p, C.c_int, C.c_char_p, C.c_char_p)
