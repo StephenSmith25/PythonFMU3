@@ -9,10 +9,20 @@ Model Exchange FMUs are used for continuous-time simulation where an external so
 - **Co-Simulation**: Your FMU manages its own time stepping with `do_step()`
 
 ### Required Methods
-For Model Exchange FMUs, you must implement:
-- `get_continuous_state_derivatives()`: Returns derivatives of continuous states
-- `get_nominals_of_continuous_states()`: Returns nominal values for scaling
-- Optional: `get_event_indicators()`, `update_discrete_states()`
+Model Exchange FMUs inherit from `Fmi3SlaveBase` and the `ModelExchange` mixin (add
+`CoSimulation` too for an FMU that supports both interfaces). You must:
+- define `self.time` in `__init__` (the importer sets it through `fmi3SetTime`)
+- implement `get_continuous_state_derivatives()`: return the derivatives of the
+  continuous states, in the order the derivative variables were registered
+
+Optional:
+- `get_nominals_of_continuous_states(n)`: nominal values for scaling (default: all `1.0`)
+- `get_event_indicators()`: one value per variable registered with `has_event_indicator=True`
+- `update_discrete_states()`: return an `Fmi3UpdateDiscreteStatesResult` (see below)
+
+The continuous states are the variables referenced by each derivative's `derivative=`
+value reference: the importer reads and writes them through `fmi3GetContinuousStates` and
+`fmi3SetContinuousStates`.
 
 
 
@@ -39,7 +49,10 @@ self.register_variable(Float64("x0",
 self.register_variable(Float64("derx0", 
                               causality=Fmi3Causality.local,
                               variability=Fmi3Variability.continuous,
-                              derivative=1))                # Derivative of variable 1 (x0)
+                              derivative=1))                # value reference of x0
+
+# Value references are assigned in registration order, starting at 0:
+# here time = 0, x0 = 1, derx0 = 2
 ```
 <!-- /skip-test -->
 
@@ -112,7 +125,7 @@ pythonfmu3 build -f van_der_pol.py
 
 ## Usage Example
 
-The generated FMU can be used with any FMI-compatible tool:
+The generated FMU can be used with any FMI 3.0 Model Exchange importer:
 
 <!-- skip-test -->
 ```python
@@ -152,18 +165,25 @@ self.register_variable(Float64("h", causality=Fmi3Causality.output, start=1, var
 <!-- /skip-test -->
 
 Then define the event methods, `get_event_indicators()` and `update_discrete_states`.
+An event is triggered when an indicator changes sign.
 
 <!-- skip-test -->
 ```python
 def get_event_indicators(self):
-    return [0.2]
+    return [self.h]          # one value per registered event indicator
 
 def update_discrete_states(self):
     """Handle discrete state updates after events"""
-    fdsr = Fmi3UpdateDiscreteStatesResult()
-    fdsr.valuesOfContinuousStatesChanged = True
+    result = Fmi3UpdateDiscreteStatesResult()
+    result.valuesOfContinuousStatesChanged = True
+    return result
 ```
 <!-- /skip-test -->
+
+`Fmi3UpdateDiscreteStatesResult` has the fields of `fmi3UpdateDiscreteStates`, all
+defaulting to `False` (and `nextEventTime` to `0.0`): `discreteStatesNeedUpdate`,
+`terminateSimulation`, `nominalContinuousStatesChanged`, `valuesOfContinuousStatesChanged`,
+`nextEventTimeDefined` and `nextEventTime`.
 
 
 ### Example

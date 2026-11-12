@@ -17,9 +17,14 @@ The typical Co-simulation FMU lifecycle follows this sequence:
 
 ### Required Methods
 For Co-simulation FMUs, you must implement:
-- `__init__()`: Initialize variables and register them
-- `do_step()`: Advance simulation by one time step
+- `__init__()`: create the attributes, then register them as variables
+- `do_step(current_time, step_size)`: advance the simulation by one step. Return `True`
+  (success), `False` (the step is discarded) or an `Fmi3StepResult` (see below)
 - Optional: `enter_initialization_mode()`, `exit_initialization_mode()`, `terminate()`
+
+Create each attribute **before** registering it: `register_variable` only creates a
+setter for attributes that already exist, and without a setter the importer cannot set
+inputs or parameters. Alternatively pass `getter=` and `setter=` explicitly.
 
 ## Key Implementation Details
 
@@ -42,7 +47,7 @@ self.register_variable(Float64("gain", causality=Fmi3Causality.parameter,
 
 ### PID Controller Example
 ```python
-from pythonfmu3 import Fmi3Causality, Fmi3Slave, Float64
+from pythonfmu3 import Fmi3Causality, Fmi3Slave, Fmi3Variability, Float64
 
 class PIDController(Fmi3Slave):
     """PID Controller implementation"""
@@ -56,14 +61,14 @@ class PIDController(Fmi3Slave):
         # Inputs
         self.setpoint = 0.0
         self.measurement = 0.0
-        
+
         # Outputs
-        self.control_output = 0.0
+        self.output = 0.0
 
         # Parameters
-        self.kp = 1.0  # Proportional gain
-        self.ki = 0.1  # Integral gain
-        self.kd = 0.01 # Derivative gain
+        self.Kp = 1.0   # Proportional gain
+        self.Ki = 0.1   # Integral gain
+        self.Kd = 0.01  # Derivative gain
 
         # Internal states
         self.integral_error = 0.0
@@ -74,30 +79,30 @@ class PIDController(Fmi3Slave):
         self.register_variable(Float64("setpoint", causality=Fmi3Causality.input, start=0.0))
         self.register_variable(Float64("measurement", causality=Fmi3Causality.input, start=0.0))
         self.register_variable(Float64("output", causality=Fmi3Causality.output))
-        self.register_variable(Float64("Kp", causality=Fmi3Causality.parameter, start=1.0))
-        self.register_variable(Float64("Ki", causality=Fmi3Causality.parameter, start=0.1))
-        self.register_variable(Float64("Kd", causality=Fmi3Causality.parameter, start=0.01))
+        self.register_variable(Float64("Kp", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable, start=1.0))
+        self.register_variable(Float64("Ki", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable, start=0.1))
+        self.register_variable(Float64("Kd", causality=Fmi3Causality.parameter, variability=Fmi3Variability.tunable, start=0.01))
 
     def do_step(self, current_time, step_size):
         # Calculate error
         error = self.setpoint - self.measurement
 
         # Proportional term
-        p_term = self.kp * error
+        p_term = self.Kp * error
 
         # Integral term
         self.integral_error += error * step_size
-        i_term = self.ki * self.integral_error
+        i_term = self.Ki * self.integral_error
 
         # Derivative term
         if self.first_step:
             d_term = 0.0
             self.first_step = False
         else:
-            d_term = self.kd * (error - self.previous_error) / step_size
+            d_term = self.Kd * (error - self.previous_error) / step_size
 
         # PID output
-        self.control_output = p_term + i_term + d_term
+        self.output = p_term + i_term + d_term
 
         # Store error for next iteration
         self.previous_error = error
@@ -108,18 +113,21 @@ class PIDController(Fmi3Slave):
 
 ### Units
 
-Units can be added to this example through the `Unit` class along with `register_units` and the `unit` kwarg in `register_variable`
+Units are declared with the `Unit` class (SI base-unit exponents as keyword arguments),
+registered with `register_units`, and referenced by name through the `unit` argument of a
+variable:
 
 <!-- skip-test -->
 ```python
 from pythonfmu3 import Unit
+
+# inside __init__
 velocity_unit = Unit(name="m/s", m=1, s=-1)
-```
-which can now be utilized in the register variables call,
-```
-velocity_unit =  Unit(name="m/s", m=1, s=-1)
 self.register_units([velocity_unit])
-self.register_variable(Float64("v", causality=Fmi3Causality.output, start=0, variability=Fmi3Variability.continuous, initial=Fmi3Initial.exact, unit=velocity_unit.name))
+
+self.v = 0.0
+self.register_variable(Float64("v", causality=Fmi3Causality.output, start=0, variability=Fmi3Variability.continuous,
+                               initial=Fmi3Initial.exact, unit=velocity_unit.name))
 ```
 <!-- /skip-test -->
 
@@ -164,26 +172,46 @@ class LinearTransform(Fmi3Slave):
         return True
 ```
 
-The `do_step` function can also return a tuple of flags, corresponding to those expected by the FMI standard. This can be achieved through use of the `FmiStepResult` tuple,
+Array sizes are taken from the dimensions when the FMU is instantiated. Changing a
+structural parameter such as `m` in Configuration Mode does not resize the arrays.
 
+### Step results
+
+Instead of `True`/`False`, `do_step` can return an `Fmi3StepResult` with the flags the FMI
+standard defines for `fmi3DoStep`:
+
+| Field | Default | Meaning |
+| --- | --- | --- |
+| `status` | `Fmi3Status.ok` | Status of the step (`ok`, `warning`, `discard`, `error`, `fatal`) |
+| `terminateSimulation` | `False` | The model asks the importer to stop the simulation |
+| `eventHandlingNeeded` | `False` | Passed to the importer as `eventHandlingNeeded` |
+| `earlyReturn` | `False` | Passed to the importer as `earlyReturn` |
 
 ```python
 from pythonfmu3 import Fmi3Status, Fmi3StepResult
 
 def do_step(self, current_time, step_size):
-    self.y = 1 + 2 + 3 + 4 + ...
-    terminate = False
-    status = Fmi3Status.ok
-    return Fmi3StepResult(status=Fmi3Status.ok, terminateSimulation=terminate)
+    self.y = self.scalar * self.A.dot(self.u) + self.offset
+    finished = current_time + step_size >= 10.0
+    return Fmi3StepResult(status=Fmi3Status.ok, terminateSimulation=finished)
 ```
+
+### Logging
+
+`self.log(msg, status=Fmi3Status.ok, category=None, debug=False)` sends a message to the
+importer's logger. If `category` is omitted it is derived from the status
+(`logStatusWarning`, `logStatusError`, ...); debug messages are only forwarded when the
+importer enables debug logging. Exceptions raised in your code are reported with their
+Python traceback and make the call fail with `fmi3Fatal`.
 
 ### Create the FMU
 
 ```bash
-    pythonfmu3 build -f pythonslave.py myproject
+pythonfmu3 build -f pythonslave.py myproject
 ```
 
-In this example a python class named `PythonSlave` that extends `Fmi3Slave` is declared in a file named `pythonslave.py`,
+In this example a python class named `PythonSlave` that extends `Fmi3Slave` is declared in a file named `pythonslave.py`
+(keep a single FMU class per script),
 where `myproject` is an optional folder containing additional project files required by the python script.
 Project folders such as this will be recursively copied into the FMU. Multiple project files/folders may be added.
 

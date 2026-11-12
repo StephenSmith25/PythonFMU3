@@ -11,13 +11,19 @@ Alternatively, the project can installed from source. First clone the repo,
 git clone https://github.com/StephenSmith25/PythonFMU3.git
 ```
 
-Next build the C++ code,
+Next build the C++ wrapper. You need CMake (3.10 or later), a C++17 compiler and the
+Python development headers (e.g. `python3-dev` on Debian/Ubuntu). The library is written
+to `pythonfmu3/resources/binaries/<platform>/`.
+
 ```bash
-mkdir build
-cd build 
-cmake -S ../pythonfmu3/pythonfmu-export/
-make
+cd PythonFMU3
+cmake -S pythonfmu3/pythonfmu-export -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build --config Release
 ```
+
+On Windows, add `-A x64` to the first command for a 64-bit build. Prebuilt libraries in the
+PyPI package cover Windows x86_64 and Linux x86_64; on macOS (Intel or Apple Silicon) and
+ARM Linux, install from source this way.
 Next the python project may be installed with either,
 
 ```bash

@@ -14,8 +14,10 @@ This project is a fork of the original PythonFMU repository available at https:/
 
 ### Support:
 
-Please take a look at the examples to see the supported features.
-We currently support both the Model exchange and Cosimulation Interfaces.
+Both the Model Exchange and Co-simulation interfaces are supported, with Float64, Int32,
+Int64, UInt64, Boolean, String and Enumeration variables (plus NumPy arrays of the numeric
+types). See the [documentation](https://pythonfmu3.readthedocs.io/) for the full list of
+supported features and current limitations, and the `examples` folder for more models.
 
 See the [changelog](docs/changelog.md) for what changed in each release.
 
@@ -46,35 +48,37 @@ pip install pythonfmu3
 ```
 
 2. Create a new class extending the `Fmi3Slave` class declared in the `pythonfmu3.fmi3slave` module (see below for an example).
+   Keep a single FMU class per script.
 3. Run `pythonfmu3 build` to create the fmu.
 
 ```
-usage: pythonfmu3 build [-h] -f SCRIPT_FILE [-d DEST] [--doc DOCUMENTATION_FOLDER] [--terminals TERMINALS_FILE] [--no-external-tool]
-                       [--no-variable-step] [--interpolate-inputs] [--only-one-per-process] [--handle-state]
-                       [--serialize-state] [--use-memory-management]
-                       [Project files [Project files ...]]
+usage: pythonfmu3 build [-h] -f SCRIPT_FILE [-d DEST] [--doc DOCUMENTATION_FOLDER] [--terminals TERMINALS]
+                        [--no-external-tool] [--only-one-per-process] [--handle-state] [--serialize-state]
+                        [--no-variable-step] [--needs-completed-step]
+                        [Project files ...]
 
 Build an FMU from a Python script.
 
 positional arguments:
   Project files         Additional project files required by the Python script.
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   -f SCRIPT_FILE, --file SCRIPT_FILE
                         Path to the Python script.
   -d DEST, --dest DEST  Where to save the FMU.
   --doc DOCUMENTATION_FOLDER
                         Documentation folder to include in the FMU.
-  --terminals TERMINALS_FILE
+  --terminals TERMINALS
                         Terminals file (terminalsAndIcons.xml) to include in the FMU.
   --no-external-tool    If given, needsExecutionTool=false
-  --no-variable-step    If given, canHandleVariableCommunicationStepSize=false
-  --interpolate-inputs  If given, canInterpolateInputs=true
   --only-one-per-process
                         If given, canBeInstantiatedOnlyOncePerProcess=true
-  --handle-state        If given, canGetAndSetFMUstate=true
-  --serialize-state     If given, canSerializeFMUstate=true
+  --handle-state        If given, canGetAndSetFMUState=true
+  --serialize-state     If given, canSerializeFMUState=true
+  --no-variable-step    If given, canHandleVariableCommunicationStepSize=false
+  --needs-completed-step
+                        If given, needsCompletedIntegratorStep=true
 ```
 
 ### How do I build an FMU from python code with third-party dependencies?
@@ -84,7 +88,7 @@ _PythonFMU_ does not package a full environment within the FMU.
 However, you can package a `requirements.txt` or `environment.yml` file within your FMU following these steps:
 
 1. Install _pythonfmu_ package: `pip install pythonfmu3`
-2. Create a new class extending the `Fmi3Slave` class declared in the `pythonfmu3.fmi3slave` module (see below for an example).
+2. Create a new class extending the `Fmi3Slave` class declared in the `pythonfmu3.fmi3slave` module (see the examples below).
 3. Create a `requirements.txt` file (to use _pip_ manager) and/or a `environment.yml` file (to use _conda_ manager) that defines your dependencies.
 4. Run `pythonfmu3 build -f myscript.py requirements.txt` to create the fmu including the dependencies file.
 
@@ -126,6 +130,8 @@ class PythonSlave(Fmi3Slave):
         self.author = "John Doe"
         self.description = "A simple description"
 
+        # Create attributes before registering them: register_variable only adds a setter
+        # (needed for inputs and parameters) for attributes that already exist.
         self.time = 0.0
         self.intOut = 1
         self.realOut = 3.0
@@ -165,7 +171,7 @@ To create a model exchange FMU you must inherit from `Fmi3SlaveBase` and one of 
 
 ```python
 
-from pythonfmu3 import Fmi3Causality, Fmi3SlaveBase, Float64, ModelExchange
+from pythonfmu3 import Fmi3Causality, Fmi3Initial, Fmi3SlaveBase, Fmi3Variability, Float64, ModelExchange
 from typing import List
 
 
@@ -200,7 +206,9 @@ class PythonSlaveMX(Fmi3SlaveBase, ModelExchange):
 
 ```
 
-Note: There is a hard requirement that we have a `self.time` member in the derived class.
+Note: Model Exchange classes must define a `self.time` member. Derivative variables give the
+value reference of their state with `derivative=`; value references are assigned in
+registration order starting at 0 (here `time` = 0, `x0` = 1, `x1` = 2).
 
 #### Create the FMU
 

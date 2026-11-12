@@ -3,6 +3,45 @@ import pathlib
 import re
 import tempfile
 
+from pythonfmu3 import Fmi3Causality, Fmi3SlaveBase, Fmi3Variability
+
+
+def check_model(cls):
+    """Instantiate a documented model and check it would work as an FMU.
+
+    Every variable must be readable, inputs and non-constant parameters must be
+    settable, and the model description must be generated without errors.
+    """
+    instance = cls(instance_name="doc_test")
+    for var in instance.vars.values():
+        var.getter()
+        settable = var.causality in (Fmi3Causality.input, Fmi3Causality.parameter, Fmi3Causality.structuralParameter)
+        if settable and var.variability != Fmi3Variability.constant:
+            assert var.setter is not None, f"{cls.__name__}.{var.name}: no setter (is the attribute created before register_variable?)"
+    instance.to_xml()
+    return instance
+
+
+def models_in(namespace):
+    return [
+        obj for obj in namespace.values()
+        if isinstance(obj, type) and issubclass(obj, Fmi3SlaveBase) and obj.__module__ == "__main__"
+        and obj.__name__ not in ("Fmi3Slave", "Fmi3SlaveBase")
+    ]
+
+
+def run_blocks(md_file):
+    namespace = {"__name__": "__main__"}
+    exec("from pythonfmu3 import *", namespace)
+    for i, code in enumerate(extract_python_code_from_md(md_file)):
+        try:
+            exec(code, namespace)
+        except Exception as e:
+            pytest.fail(f"{pathlib.Path(md_file).name}: code block {i+1} failed: {e}\nCode:\n{code}")
+    for model in models_in(namespace):
+        check_model(model)
+    return namespace
+
 def extract_python_code_from_md(md_file):
     """Extract Python code blocks from markdown, excluding skip blocks"""
     content = pathlib.Path(md_file).read_text()
@@ -21,78 +60,48 @@ def extract_python_code_from_md(md_file):
     
     return python_blocks
 
+ROOT = pathlib.Path(__file__).parent.parent.parent
+
+
+def _doc(*parts):
+    path = ROOT.joinpath(*parts)
+    if not path.exists():
+        pytest.skip(f"{path.name} is only available in a source checkout")
+    return path
+
+
 @pytest.mark.doc
 def test_readme():
-    test_dir = pathlib.Path(__file__).parent
-    fpath = test_dir.parent.parent / "README.md"
-    
-    # extract Python code
-    code_blocks = extract_python_code_from_md(fpath)
+    namespace = run_blocks(_doc("README.md"))
+    assert "PythonSlave" in namespace and "PythonSlaveMX" in namespace
 
-    namespace = {}
-    exec("from pythonfmu3 import *", namespace)
 
-    for i, code in enumerate(code_blocks):
-        try:
-            exec(code, namespace)
-            print(f"✅ Code block {i+1} executed successfully")
-        except Exception as e:
-            pytest.fail(f"Code block {i+1} failed: {e}\nCode:\n{code}")
-    
-
+@pytest.mark.doc
+def test_index():
+    namespace = run_blocks(_doc("docs", "index.md"))
+    assert "MyModel" in namespace
 
 
 @pytest.mark.doc
 def test_cosimulation_examples():
     """Test that all Python examples in usage.md actually work"""
-    test_dir = pathlib.Path(__file__).parent
-    usage_file = test_dir.parent.parent / "docs" / "usage.md"
-    
-    # Extract Python code
-    code_blocks = extract_python_code_from_md(usage_file)
-    
-    # Create a test namespace
-    namespace = {}
-    exec("from pythonfmu3 import *", namespace)
-    
-    # Execute each code block
-    for i, code in enumerate(code_blocks):
-        try:
-            exec(code, namespace)
-            print(f"✅ Code block {i+1} executed successfully")
-        except Exception as e:
-            pytest.fail(f"Code block {i+1} failed: {e}\nCode:\n{code}")
-            
-    assert 'LinearTransform' in namespace, "LinearTransform class not found"
-    assert 'PIDController' in namespace, "PIDController class not found"
-
-    # Test instantiation
-    lt = namespace['LinearTransform'](instance_name="test")
-    pc = namespace['PIDController'](instance_name="test")
+    namespace = run_blocks(_doc("docs", "usage.md"))
+    assert "LinearTransform" in namespace, "LinearTransform class not found"
+    assert "PIDController" in namespace, "PIDController class not found"
 
 
 @pytest.mark.doc
 def test_model_exchange_examples():
     """Test Model Exchange examples"""
-    test_dir = pathlib.Path(__file__).parent
-    mx_file = test_dir.parent.parent / "docs" / "usageMX.md"
-    
-    code_blocks = extract_python_code_from_md(mx_file)
-    
-    namespace = {}
-    exec("from pythonfmu3 import *", namespace)
-    
-    for i, code in enumerate(code_blocks):
-        try:
-            exec(code, namespace)
-        except Exception as e:
-            pytest.fail(f"MX Code block {i+1} failed: {e}")
-    
-    # Test that classes were actually created
-    assert 'VanDerPol' in namespace, "VanDerPol class not found"
-    assert 'BouncingBall' in namespace, "BouncingBall class not found"
-    
-    # Test instantiation
-    vdp = namespace['VanDerPol'](instance_name="test")
-    
-    bb = namespace['BouncingBall'](instance_name="test")
+    namespace = run_blocks(_doc("docs", "usageMX.md"))
+    assert "VanDerPol" in namespace, "VanDerPol class not found"
+    assert "BouncingBall" in namespace, "BouncingBall class not found"
+
+
+def test_update_discrete_states_result_aliases():
+    from pythonfmu3 import Fmi3UpdateDiscreteStatesResult
+
+    result = Fmi3UpdateDiscreteStatesResult()
+    result.discreteStateNeedsUpdate = True
+    result.nominalsOfContinuousStatesChanged = True
+    assert result.discreteStatesNeedUpdate and result.nominalContinuousStatesChanged
