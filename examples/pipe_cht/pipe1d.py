@@ -22,6 +22,10 @@ Heat transfer: fully developed Nusselt number, Nu = 3.66 (laminar, Re < 2300) an
 Gnielinski (Re > 4000), blended linearly in between. Friction: f = 64/Re (laminar) and
 Petukhov (turbulent). Constant fluid properties (defaults: water at about 40 C).
 
+The number of segments N is a structural parameter: set it in Configuration Mode
+(fmi3EnterConfigurationMode, fmi3SetUInt64, fmi3ExitConfigurationMode) before
+initialisation, and every per-segment array is resized to N.
+
 Build:  pythonfmu3 build -f pipe1d.py
 """
 import math
@@ -35,11 +39,11 @@ from pythonfmu3 import (
     Fmi3Slave,
     Fmi3Variability,
     Float64,
+    UInt64,
     Unit,
 )
 
-# Number of axial segments. Array sizes are fixed when the FMU is built: change this
-# value and rebuild for a different resolution.
+# Default number of axial segments (the structural parameter N can override it).
 N_SEGMENTS = 20
 
 RE_LAMINAR = 2300.0
@@ -82,8 +86,8 @@ class Pipe1D(Fmi3Slave):
         self.author = "PythonFMU3 examples"
         self.description = "1D pipe flow with wall heat transfer for CHT coupling with a solid solver"
 
-        n = N_SEGMENTS
         self.time = 0.0
+        self._n = N_SEGMENTS
 
         # Parameters
         self.length = 2.0          # m
@@ -94,17 +98,15 @@ class Pipe1D(Fmi3Slave):
         self.mu = 6.53e-4          # Pa.s
         self.T_initial = 293.15    # K, initial fluid temperature
 
-        # Inputs
+        # Inputs (T_wall is allocated in _allocate)
         self.m_dot = 0.05                       # kg/s (positive: from x=0 to x=L)
         self.T_in = 293.15                      # K, temperature of the entering fluid
-        self.T_wall = np.full(n, 293.15)        # K, wall temperature per segment
 
-        # Outputs
-        self.T_fluid = np.full(n, self.T_initial)   # K, bulk temperature per segment
-        self.h = np.zeros(n)                        # W/(m2.K)
-        self.q_wall = np.zeros(n)                   # W/m2, wall -> fluid
-        self.Q_wall = np.zeros(n)                   # W per segment, wall -> fluid
-        self.x = (np.arange(n) + 0.5) * self.length / n   # m, segment centres
+        # Per-segment arrays: T_wall (input, K), T_fluid (K), h (W/(m2.K)),
+        # q_wall (W/m2, wall -> fluid), Q_wall (W per segment), x (m, segment centres)
+        self._allocate(self._n)
+
+        # Scalar outputs
         self.T_out = self.T_initial                 # K
         self.Q_total = 0.0                          # W, wall -> fluid over the whole pipe
         self.Re = 0.0
@@ -125,12 +127,17 @@ class Pipe1D(Fmi3Slave):
             Unit(name="Pa.s", kg=1, m=-1, s=-1),
         ])
 
-        segments = [Dimension(start=str(n))]
         parameter = dict(causality=Fmi3Causality.parameter, variability=Fmi3Variability.fixed)
         output = dict(causality=Fmi3Causality.output, variability=Fmi3Variability.continuous,
                       initial=Fmi3Initial.calculated)
 
         self.register_variable(Float64("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
+
+        # Structural parameter: the arrays below have N elements (setting N resizes them)
+        n_var = UInt64("N", causality=Fmi3Causality.structuralParameter, variability=Fmi3Variability.fixed,
+                       start=self._n, description="number of axial segments")
+        self.register_variable(n_var)
+        segments = [Dimension(valueReference=str(n_var.value_reference))]
 
         self.register_variable(Float64("length", start=self.length, unit="m", **parameter))
         self.register_variable(Float64("diameter", start=self.diameter, unit="m", **parameter))
@@ -159,10 +166,34 @@ class Pipe1D(Fmi3Slave):
         self.register_variable(Float64("Nu", **output))
         self.register_variable(Float64("dp", unit="Pa", **output))
 
+    # --- structural parameter ----------------------------------------------------------
+
+    @property
+    def N(self) -> int:
+        return self._n
+
+    @N.setter
+    def N(self, value):
+        value = int(value)
+        if value < 1:
+            raise ValueError(f"N must be at least 1, got {value}")
+        if value != self._n or len(self.T_fluid) != value:
+            self._allocate(value)
+
+    def _allocate(self, n: int):
+        """(Re)allocate every per-segment array for n segments."""
+        self._n = n
+        self.T_wall = np.full(n, self.T_initial)
+        self.T_fluid = np.full(n, self.T_initial)
+        self.h = np.zeros(n)
+        self.q_wall = np.zeros(n)
+        self.Q_wall = np.zeros(n)
+        self.x = (np.arange(n) + 0.5) * self.length / n
+
     # --- FMI callbacks -----------------------------------------------------------------
 
     def exit_initialization_mode(self):
-        n = N_SEGMENTS
+        n = self._n
         self.T_fluid = np.full(n, self.T_initial)
         self.x = (np.arange(n) + 0.5) * self.length / n
         self._update_heat_transfer()
@@ -189,13 +220,13 @@ class Pipe1D(Fmi3Slave):
         self.Re = abs(self.m_dot) * self.diameter / (self._area * self.mu)
         pr = self.mu * self.cp / self.k_fluid
         self.Nu = nusselt(self.Re, pr)
-        self.h = np.full(N_SEGMENTS, self.Nu * self.k_fluid / self.diameter)
+        self.h = np.full(self._n, self.Nu * self.k_fluid / self.diameter)
         velocity = abs(self.m_dot) / (self.rho * self._area)
         self.dp = friction_factor(self.Re) * self.length / self.diameter * 0.5 * self.rho * velocity ** 2
 
     def _advance(self, T_old, dt):
         """One implicit-Euler step of the upwind finite-volume energy equation."""
-        n = N_SEGMENTS
+        n = self._n
         dx = self.length / n
         T_wall = np.asarray(self.T_wall, dtype=float).reshape(n)
         storage = self.rho * self.cp * self._area * dx / dt     # W/K
@@ -211,8 +242,8 @@ class Pipe1D(Fmi3Slave):
         return T_new
 
     def _update_outputs(self):
-        T_wall = np.asarray(self.T_wall, dtype=float).reshape(N_SEGMENTS)
+        T_wall = np.asarray(self.T_wall, dtype=float).reshape(self._n)
         self.q_wall = self.h * (T_wall - self.T_fluid)
-        self.Q_wall = self.q_wall * self._perimeter * self.length / N_SEGMENTS
+        self.Q_wall = self.q_wall * self._perimeter * self.length / self._n
         self.Q_total = float(np.sum(self.Q_wall))
         self.T_out = float(self.T_fluid[-1] if self.m_dot >= 0.0 else self.T_fluid[0])

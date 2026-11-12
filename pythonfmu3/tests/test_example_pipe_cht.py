@@ -20,8 +20,9 @@ import pipe1d  # noqa: E402
 from pipe1d import N_SEGMENTS, Pipe1D  # noqa: E402
 
 
-def make_pipe(**inputs):
+def make_pipe(n=N_SEGMENTS, **inputs):
     pipe = Pipe1D(instance_name="test")
+    pipe.N = n
     pipe.enter_initialization_mode()
     pipe.exit_initialization_mode()
     for name, value in inputs.items():
@@ -44,10 +45,38 @@ def test_constant_wall_temperature_matches_analytic(m_dot):
 
     # Exact steady solution of the continuous problem: T_w - T = (T_w - T_in) exp(-h P x / (m_dot cp))
     ntu_per_length = pipe.h[0] * math.pi * pipe.diameter / (m_dot * pipe.cp)
-    expected = T_w - (T_w - T_in) * np.exp(-ntu_per_length * (pipe.x + pipe.length / (2 * N_SEGMENTS)))
+    expected = T_w - (T_w - T_in) * np.exp(-ntu_per_length * (pipe.x + pipe.length / (2 * pipe.N)))
     # first-order upwind: compare the outlet (end of the last segment) within 2% of the temperature rise
     assert abs(pipe.T_out - expected[-1]) < 0.02 * (T_w - T_in)
     assert np.all(np.diff(pipe.T_fluid) > 0)
+
+
+def test_resolution_converges_to_analytic():
+    """First-order upwind: the outlet error shrinks as N grows."""
+    T_in, T_w, m_dot = 293.15, 353.15, 0.005
+    errors = []
+    for n in (10, 40, 160):
+        pipe = run_to_steady_state(make_pipe(n=n, m_dot=m_dot, T_in=T_in, T_wall=np.full(n, T_w)))
+        ntu = pipe.h[0] * math.pi * pipe.diameter * pipe.length / (m_dot * pipe.cp)
+        errors.append(abs(pipe.T_out - (T_w - (T_w - T_in) * math.exp(-ntu))))
+    assert errors[0] > errors[1] > errors[2]
+    assert errors[2] < 0.25 * errors[0]
+
+
+def test_setting_N_resizes_arrays_through_the_fmi_api():
+    pipe = Pipe1D(instance_name="test")
+    n_vr = next(v.value_reference for v in pipe.vars.values() if v.name == "N")
+    wall_vr = next(v.value_reference for v in pipe.vars.values() if v.name == "T_wall")
+    fluid_vr = next(v.value_reference for v in pipe.vars.values() if v.name == "T_fluid")
+    pipe.set_uint64([n_vr], [35])
+    pipe.set_float64([wall_vr], list(np.linspace(300.0, 340.0, 35)))
+    pipe.enter_initialization_mode()
+    pipe.exit_initialization_mode()
+    pipe.do_step(0.0, 1.0)
+    assert len(pipe.get_float64([fluid_vr])) == 35
+    assert pipe.T_wall.shape == (35,)
+    with pytest.raises(ValueError):
+        pipe.N = 0
 
 
 def test_energy_is_conserved_at_steady_state():
@@ -86,9 +115,11 @@ def test_build_fmu(tmp_path):
     with zipfile.ZipFile(fmu) as z:
         md = fromstring(z.read("modelDescription.xml"))
     variables = {v.get("name"): v for v in md.find("ModelVariables")}
-    for name in ("T_wall", "T_fluid", "h"):
+    n = variables["N"]
+    assert n.tag == "UInt64" and n.get("causality") == "structuralParameter" and n.get("start") == str(N_SEGMENTS)
+    for name in ("T_wall", "T_fluid", "h", "x"):
         dims = variables[name].findall("Dimension")
-        assert [d.get("start") for d in dims] == [str(N_SEGMENTS)]
+        assert [d.get("valueReference") for d in dims] == [n.get("valueReference")]
     assert variables["T_wall"].get("causality") == "input"
     assert variables["h"].get("causality") == "output"
 
@@ -107,7 +138,8 @@ def test_fmu_matches_python_model(tmp_path):
         md = fromstring(z.read("modelDescription.xml"))
     vr = {v.get("name"): int(v.get("valueReference")) for v in md.find("ModelVariables")}
 
-    T_wall = np.linspace(300.0, 380.0, N_SEGMENTS)
+    n = 35   # not the default, set through Configuration Mode
+    T_wall = np.linspace(300.0, 380.0, n)
     script = textwrap.dedent(f"""
         import ctypes as C, json, sys
         from pathlib import Path
@@ -119,8 +151,9 @@ def test_fmu_matches_python_model(tmp_path):
             C.c_bool, C.c_void_p, C.c_size_t, C.c_void_p, C.c_void_p, C.c_void_p]
         for f in ("fmi3EnterInitializationMode",):
             getattr(lib, f).argtypes = [C.c_void_p, C.c_bool, C.c_double, C.c_double, C.c_bool, C.c_double]
-        for f in ("fmi3ExitInitializationMode", "fmi3FreeInstance"):
+        for f in ("fmi3ExitInitializationMode", "fmi3FreeInstance", "fmi3EnterConfigurationMode", "fmi3ExitConfigurationMode"):
             getattr(lib, f).argtypes = [C.c_void_p]
+        lib.fmi3SetUInt64.argtypes = [C.c_void_p, C.POINTER(C.c_uint32), C.c_size_t, C.POINTER(C.c_uint64), C.c_size_t]
         lib.fmi3DoStep.argtypes = [C.c_void_p, C.c_double, C.c_double, C.c_bool, C.c_void_p, C.c_void_p, C.c_void_p, C.c_void_p]
         for f in ("fmi3SetFloat64", "fmi3GetFloat64"):
             getattr(lib, f).argtypes = [C.c_void_p, C.POINTER(C.c_uint32), C.c_size_t, C.POINTER(C.c_double), C.c_size_t]
@@ -128,6 +161,9 @@ def test_fmu_matches_python_model(tmp_path):
         c = lib.fmi3InstantiateCoSimulation(b"pipe", b"", str(root / "resources").encode(), False, False, False, False,
                                             None, 0, None, None, None)
         assert c
+        assert lib.fmi3EnterConfigurationMode(c) == 0
+        assert lib.fmi3SetUInt64(c, vrs({vr}["N"]), 1, (C.c_uint64 * 1)({n}), 1) == 0
+        assert lib.fmi3ExitConfigurationMode(c) == 0
         assert lib.fmi3EnterInitializationMode(c, False, 0, 0, False, 0) == 0
         assert lib.fmi3ExitInitializationMode(c) == 0
         def set_(name, values):
@@ -143,7 +179,7 @@ def test_fmu_matches_python_model(tmp_path):
         for _ in range(5):
             assert lib.fmi3DoStep(c, t, 10.0, True, C.byref(flags, 0), C.byref(flags, 1), C.byref(flags, 2), C.byref(last)) == 0
             t += 10.0
-        print(json.dumps({{"T_fluid": get("T_fluid", {N_SEGMENTS}), "h": get("h", {N_SEGMENTS}), "T_out": get("T_out", 1)}}))
+        print(json.dumps({{"T_fluid": get("T_fluid", {n}), "h": get("h", {n}), "T_out": get("T_out", 1)}}))
         lib.fmi3FreeInstance(c)
     """)
     proc = subprocess.run([sys.executable, "-c", script], capture_output=True, text=True, timeout=120)
@@ -151,11 +187,12 @@ def test_fmu_matches_python_model(tmp_path):
     import json
     result = json.loads(proc.stdout.strip().splitlines()[-1])
 
-    reference = make_pipe(m_dot=0.03, T_in=290.0, T_wall=T_wall)
+    reference = make_pipe(n=n, m_dot=0.03, T_in=290.0, T_wall=T_wall)
     t = 0.0
     for _ in range(5):
         reference.do_step(t, 10.0)
         t += 10.0
+    assert len(result["T_fluid"]) == n
     np.testing.assert_allclose(result["T_fluid"], reference.T_fluid, rtol=1e-12)
     np.testing.assert_allclose(result["h"], reference.h, rtol=1e-12)
     assert result["T_out"][0] == pytest.approx(reference.T_out)

@@ -8,8 +8,8 @@ around it, is resolved by that solver, typically in 3D. Only the fluid is in the
 
 ## Coupling
 
-The pipe is split into `N_SEGMENTS` equal axial segments. The FMU and the solid solver
-exchange one value per segment, every communication step:
+The pipe is split into `N` equal axial segments. The FMU and the solid solver exchange one
+value per segment, every communication step:
 
 | Direction | Variable | Meaning |
 | --- | --- | --- |
@@ -33,6 +33,7 @@ One coupling step (what `cht_demo.py` does):
 
 | Name | Default | Unit | Meaning |
 | --- | --- | --- | --- |
+| `N` | 20 | – | number of axial segments (structural parameter, `UInt64`) |
 | `length` | 2.0 | m | pipe length |
 | `diameter` | 0.02 | m | inner (hydraulic) diameter |
 | `rho` | 992.2 | kg/m³ | fluid density |
@@ -40,10 +41,25 @@ One coupling step (what `cht_demo.py` does):
 | `k_fluid` | 0.631 | W/(m·K) | fluid thermal conductivity |
 | `mu` | 6.53e-4 | Pa·s | fluid dynamic viscosity |
 | `T_initial` | 293.15 | K | initial fluid temperature |
-| `N_SEGMENTS` | 20 | – | number of axial segments: a constant at the top of `pipe1d.py`, so edit it and rebuild the FMU to change it |
 
 The fluid properties are constant; the defaults are water at about 40 °C. The parameters
 are fixed, so set them before `fmi3ExitInitializationMode`.
+
+`N` sizes every per-segment array (each has `<Dimension valueReference="…"/>` pointing at
+`N` in the model description). Set it in Configuration Mode, before initialisation:
+
+```
+fmi3InstantiateCoSimulation(...)
+fmi3EnterConfigurationMode(instance)
+fmi3SetUInt64(instance, {vr of N}, 1, {50}, 1)
+fmi3ExitConfigurationMode(instance)
+fmi3EnterInitializationMode(...)       # T_wall, T_fluid, h, ... now have 50 elements
+```
+
+In the Python class, `N` is a property whose setter reallocates the arrays. That's the
+pattern to use for any PythonFMU3 model whose array sizes depend on a structural
+parameter, since arrays are not resized automatically. Importers that don't support
+Configuration Mode use the default from the model description (20).
 
 ## Inputs and outputs
 
@@ -80,6 +96,7 @@ pip install pythonfmu3 numpy
 pythonfmu3 build -f pipe1d.py          # creates Pipe1D.fmu
 
 python cht_demo.py                      # Python class + simple solid model
+python cht_demo.py --segments 50        # finer axial resolution
 python cht_demo.py --fmu Pipe1D.fmu     # same coupling through the FMU (needs FMPy)
 python cht_demo.py --plot profile.png   # save the temperature profile (needs matplotlib)
 ```

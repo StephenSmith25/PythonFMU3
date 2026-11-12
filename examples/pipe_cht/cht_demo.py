@@ -3,7 +3,7 @@
 A heated, thick-walled steel tube: the heater applies a uniform heat flux on the outer
 surface of the middle third of the tube, the rest of the outer surface is insulated, and
 water flows inside. The solid stands in for your 3D solver: it is an axisymmetric (x, r)
-conduction model with N axial segments matching the pipe, and M radial cells.
+conduction model with the same N axial segments as the pipe, and M radial cells.
 
 Coupling (Robin / "h and T_fluid" exchange), every communication step dt:
     1. solid -> pipe:  T_wall[i]   (inner-surface temperature of segment i)
@@ -12,6 +12,7 @@ Coupling (Robin / "h and T_fluid" exchange), every communication step dt:
     4. solid advances dt with q'' = h[i] * (T_surface - T_fluid[i]) on the inner surface
 
 Run:  python cht_demo.py            (uses the Pipe1D class directly)
+      python cht_demo.py --segments 50
       python cht_demo.py --fmu Pipe1D.fmu   (uses the built FMU through FMPy)
 
 With a 3D solver, replace SolidWall by your solver: area-average its wetted-wall
@@ -26,7 +27,7 @@ from pathlib import Path
 import numpy as np
 
 sys.path.insert(0, str(Path(__file__).parent))
-from pipe1d import N_SEGMENTS, Pipe1D  # noqa: E402
+from pipe1d import Pipe1D  # noqa: E402
 
 
 class SolidWall:
@@ -80,8 +81,9 @@ class SolidWall:
 class PythonPipe:
     """Drives the Pipe1D class directly, through the same calls an importer would make."""
 
-    def __init__(self, **parameters):
+    def __init__(self, segments, **parameters):
         self.model = Pipe1D(instance_name="pipe")
+        self.model.N = segments          # structural parameter: resizes the arrays
         for name, value in parameters.items():
             setattr(self.model, name, value)
         self.model.enter_initialization_mode()
@@ -100,16 +102,20 @@ class PythonPipe:
 class FmuPipe:
     """Drives the built FMU through FMPy (pip install fmpy)."""
 
-    def __init__(self, fmu_path, **parameters):
+    def __init__(self, fmu_path, segments, **parameters):
         from fmpy import extract, read_model_description
         from fmpy.fmi3 import FMU3Slave
 
         md = read_model_description(fmu_path)
         self.vr = {v.name: v.valueReference for v in md.modelVariables}
-        self.size = {v.name: (N_SEGMENTS if v.dimensions else 1) for v in md.modelVariables}
+        self.size = {v.name: (segments if v.dimensions else 1) for v in md.modelVariables}
         self.fmu = FMU3Slave(guid=md.guid, unzipDirectory=extract(fmu_path),
                              modelIdentifier=md.coSimulation.modelIdentifier, instanceName="pipe")
         self.fmu.instantiate()
+        # The structural parameter N is set in Configuration Mode
+        self.fmu.enterConfigurationMode()
+        self.fmu.setUInt64([self.vr["N"]], [segments])
+        self.fmu.exitConfigurationMode()
         self.fmu.enterInitializationMode()
         for name, value in parameters.items():
             self.set(name, value)
@@ -131,21 +137,23 @@ def main():
     parser.add_argument("--fmu", help="use this built Pipe1D FMU (via FMPy) instead of the Python class")
     parser.add_argument("--end", type=float, default=1200.0, help="end time [s]")
     parser.add_argument("--dt", type=float, default=1.0, help="communication step [s]")
+    parser.add_argument("--segments", type=int, default=20, help="number of axial segments N")
     parser.add_argument("--plot", help="save a plot to this file (needs matplotlib)")
     args = parser.parse_args()
 
     length, d_inner, d_outer = 2.0, 0.02, 0.03
     m_dot, T_in, heat_flux = 0.1, 293.15, 50e3      # kg/s, K, W/m2 on the heated outer surface
 
+    n = args.segments
     params = dict(length=length, diameter=d_inner, T_initial=T_in)
-    pipe = FmuPipe(args.fmu, **params) if args.fmu else PythonPipe(**params)
+    pipe = FmuPipe(args.fmu, n, **params) if args.fmu else PythonPipe(n, **params)
     pipe.set("m_dot", m_dot)
     pipe.set("T_in", T_in)
 
-    solid = SolidWall(length, d_inner / 2, d_outer / 2, N_SEGMENTS, T0=T_in)
-    third = N_SEGMENTS // 3
+    solid = SolidWall(length, d_inner / 2, d_outer / 2, n, T0=T_in)
+    third = n // 3
     solid.q_outer[third:2 * third] = heat_flux
-    heater_power = heat_flux * math.pi * d_outer * (length / N_SEGMENTS) * third
+    heater_power = heat_flux * math.pi * d_outer * (length / n) * third
 
     h, T_fluid = pipe.get("h"), pipe.get("T_fluid")
     t = 0.0
@@ -171,7 +179,7 @@ def main():
         x = pipe.get("x")
         plt.plot(x, solid.wall_temperature(h, T_fluid) - 273.15, label="wall (inner surface)")
         plt.plot(x, T_fluid - 273.15, label="fluid (bulk)")
-        plt.axvspan(x[third] - length / N_SEGMENTS / 2, x[2 * third - 1] + length / N_SEGMENTS / 2,
+        plt.axvspan(x[third] - length / n / 2, x[2 * third - 1] + length / n / 2,
                     alpha=0.15, label="heated section")
         plt.xlabel("x [m]")
         plt.ylabel("temperature [°C]")
