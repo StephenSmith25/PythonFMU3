@@ -48,11 +48,43 @@ else ()
   set(TARGET_PLATFORM linux)
 endif ()
 
-if ("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
-  set(TARGET_PLATFORM x86_64-${TARGET_PLATFORM})
+# FMI 3.0 platform tuple <arch>-<sys>; must match pythonfmu3/osutil.py:get_fmu_arch().
+# The architecture is the one being *built for*: the Visual Studio -A option, or a single
+# CMAKE_OSX_ARCHITECTURES entry on macOS, take precedence over the host processor.
+if (CMAKE_GENERATOR_PLATFORM)
+  set(_arch "${CMAKE_GENERATOR_PLATFORM}")
+elseif (APPLE AND CMAKE_OSX_ARCHITECTURES)
+  list(LENGTH CMAKE_OSX_ARCHITECTURES _n_arch)
+  if (NOT _n_arch EQUAL 1)
+    message(FATAL_ERROR "Universal builds are not supported: set CMAKE_OSX_ARCHITECTURES to a single architecture")
+  endif ()
+  set(_arch "${CMAKE_OSX_ARCHITECTURES}")
 else ()
-  set(TARGET_PLATFORM x86-${TARGET_PLATFORM})
+  set(_arch "${CMAKE_SYSTEM_PROCESSOR}")
 endif ()
+string(TOLOWER "${_arch}" _arch)
+
+if (_arch MATCHES "^(aarch64|arm64|armv8)")
+  set(_fmi_arch aarch64)
+elseif (_arch MATCHES "^arm")
+  set(_fmi_arch aarch32)
+elseif (_arch MATCHES "^(x86_64|amd64|x64|i[3-6]86|x86|win32)$")
+  set(_fmi_arch x86)
+else ()
+  set(_fmi_arch "${_arch}")
+endif ()
+
+if ("${CMAKE_SIZEOF_VOID_P}" STREQUAL "8")
+  if (_fmi_arch STREQUAL "x86")
+    set(_fmi_arch x86_64)
+  elseif (_fmi_arch STREQUAL "aarch32")
+    set(_fmi_arch aarch64)
+  endif ()
+elseif (_fmi_arch STREQUAL "aarch64")
+  set(_fmi_arch aarch32)
+endif ()
+
+set(TARGET_PLATFORM ${_fmi_arch}-${TARGET_PLATFORM})
 
 message("Building pythonfmu-export for platform ${TARGET_PLATFORM}")
 
