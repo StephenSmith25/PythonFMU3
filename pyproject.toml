@@ -1,0 +1,70 @@
+[build-system]
+# >= 77 for the SPDX `license` expression (PEP 639)
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "pythonfmu3"
+dynamic = ["version"]
+description = "A lightweight framework that enables the packaging of Python 3 code as FMI 3.0 co-simulation and model exchange FMUs."
+readme = "README.md"
+requires-python = ">=3.9"
+license = "MIT"
+license-files = ["LICENSE"]
+authors = [{ name = "Stephen Smith" }]
+keywords = ["FMI", "FMI3", "FMU", "co-simulation", "model exchange", "simulation"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Intended Audience :: End Users/Desktop",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Natural Language :: English",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: POSIX :: Linux",
+    "Operating System :: MacOS",
+    "Programming Language :: C++",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Scientific/Engineering",
+]
+dependencies = []
+
+[project.optional-dependencies]
+tests = ["pytest", "fmpy"]
+
+[project.urls]
+Homepage = "https://github.com/StephenSmith25/PythonFMU3"
+Documentation = "https://pythonfmu3.readthedocs.io/"
+Issues = "https://github.com/StephenSmith25/PythonFMU3/issues"
+
+[project.scripts]
+pythonfmu3 = "pythonfmu3.__main__:cli_main"
+
+[tool.setuptools.dynamic]
+version = { attr = "pythonfmu3._version.__version__" }
+
+[tool.setuptools.packages.find]
+include = ["pythonfmu3*"]
+
+[tool.setuptools.package-data]
+# Prebuilt wrapper libraries, the wrapper sources (embedded in every FMU) and test data
+pythonfmu3 = [
+    "resources/binaries/*/*",
+    "pythonfmu-export/**/*",
+    "tests/data/*",
+    "tests/slaves/*",
+]
+
+[tool.setuptools.exclude-package-data]
+pythonfmu3 = ["pythonfmu-export/build/**", "**/__pycache__/*"]
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: marks integration tests",
+    "doc: marks documentation tests",
+]
