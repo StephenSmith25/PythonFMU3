@@ -5,4 +5,5 @@ nav:
     - Co-simulation: usage.md
     - Model Exchange: usageMX.md
     - Dependencies: dependencies.md
+    - Changelog: changelog.md
 theme: readthedocs

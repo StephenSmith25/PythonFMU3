@@ -6,10 +6,11 @@ import logging
 import re
 import shutil
 import sys
+import sysconfig
 import tempfile
 import zipfile
 from pathlib import Path
-from typing import Iterable, Optional, Tuple, Union
+from typing import Iterable, List, Optional, Tuple, Union
 from xml.dom.minidom import parseString
 from xml.etree.ElementTree import Element, SubElement, tostring
 from .osutil import get_lib_extension, get_platform
@@ -93,6 +94,29 @@ def get_model_description(filepath: Path, module_name: str) -> Tuple[str, Elemen
         )
     # Produce the xml
     return instance.modelName, instance.to_xml(), class_name
+
+
+def _is_fmu_entry_library(path: Path) -> bool:
+    """True for the library exporting the FMI functions (renamed to the model identifier)."""
+    return path.stem in ("pythonfmu-export", "libpythonfmu-export")
+
+
+def _libpython_candidates() -> List[str]:
+    """Paths of the shared libpython of the running interpreter, if it has one."""
+    if sys.platform == "win32":
+        return []  # the Windows library links python3.dll directly
+    libdir = sysconfig.get_config_var("LIBDIR") or ""
+    framework_prefix = sysconfig.get_config_var("PYTHONFRAMEWORKPREFIX") or ""
+    candidates = []
+    for name in (sysconfig.get_config_var("INSTSONAME"), sysconfig.get_config_var("LDLIBRARY")):
+        if not name or name.endswith(".a"):
+            continue  # statically linked interpreter: nothing to point at
+        for base in (libdir, framework_prefix):
+            if base:
+                candidate = Path(base) / name
+                if candidate.is_file() and str(candidate) not in candidates:
+                    candidates.append(str(candidate))
+    return candidates
 
 
 class FmuBuilder:
@@ -200,6 +224,15 @@ class FmuBuilder:
                         relative_f = f.relative_to(temp_dir)
                         zip_fmu.write(f, arcname=(resource / relative_f))
 
+                # Hint for the Linux/macOS shim: where the Python that built this FMU
+                # keeps its shared library (used when the importer is not Python itself).
+                libpython_hints = _libpython_candidates()
+                if libpython_hints:
+                    zip_fmu.writestr(
+                        str(resource.joinpath("pythonfmu_libpython.txt")),
+                        "\n".join(libpython_hints) + "\n",
+                    )
+
                 # Add information for the Python loader: line 1 is the module, line 2 the class.
                 # Older wrappers only read the first line, so this stays backward compatible.
                 zip_fmu.writestr(
@@ -226,12 +259,13 @@ class FmuBuilder:
                     src_binaries.rglob("*.dylib"),
                 ):
                     relative_f = f.relative_to(src_binaries)
-                    arcname = (
-                        binaries
-                        / relative_f.parent
-                        / f"{model_identifier}{relative_f.suffix}"
-                    )
-                    zip_fmu.write(f, arcname=arcname)
+                    # Only the FMI entry-point library takes the model identifier's name;
+                    # helper libraries (the Linux/macOS backend) keep their own name.
+                    if _is_fmu_entry_library(f):
+                        name = f"{model_identifier}{relative_f.suffix}"
+                    else:
+                        name = relative_f.name
+                    zip_fmu.write(f, arcname=(binaries / relative_f.parent / name))
 
                 # Add the documentation folder
                 if documentation_folder is not None:

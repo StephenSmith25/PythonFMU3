@@ -85,12 +85,19 @@ import fmpy
 result = fmpy.simulate_fmu('MyModel.fmu', stop_time=10.0)
 ```
 
+The FMU also runs in native FMI 3.0 importers such as OMSimulator, `fmusim` or Simulink.
+The simulating machine needs Python 3 with a shared Python library and your model's
+packages; see [Running FMUs outside Python](install.md#running-fmus-outside-python-linux-and-macos).
+
 ## Architecture
 
 PythonFMU3 uses a hybrid architecture combining the performance of C++ with the flexibility of Python:
 
 - **C++ Runtime**: High-performance FMI interface implementation
 - **Embedded Python**: Isolated Python interpreter for model execution
+- **Python loader (Linux/macOS)**: the FMU's library has no link-time dependency on
+  Python. It uses the host's interpreter when there is one, and otherwise loads
+  `libpython` on first instantiation, so native (non-Python) importers can load the FMU
 - **Smart Bridging**: Efficient data exchange between C++ and Python
 - **Memory Management**: Automatic resource cleanup and garbage collection
 

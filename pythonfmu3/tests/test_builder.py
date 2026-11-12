@@ -62,7 +62,7 @@ def test_zip_content(tmp_path):
         pkg_folder = Path(pythonfmu3.__path__[0])
         for f in pkg_folder.rglob("*.py"):
             relative_f = f.relative_to(pkg_folder).as_posix()
-            if "test" not in relative_f:
+            if "test" not in relative_f and not relative_f.startswith("pythonfmu-export/"):
                 assert "/".join(("resources", "pythonfmu3", relative_f)) in names
 
         assert len(names) >= nfiles  # Library + python script + XML + module name + sources

@@ -17,6 +17,26 @@ This project is a fork of the original PythonFMU repository available at https:/
 Please take a look at the examples to see the supported features.
 We currently support both the Model exchange and Cosimulation Interfaces.
 
+See the [changelog](docs/changelog.md) for what changed in each release.
+
+### Where can I run the FMU?
+
+In any FMI 3.0 importer: Python-based tools such as FMPy, and native tools such as
+OMSimulator, `fmusim` or Simulink.
+
+The machine running the simulation needs Python 3 with a **shared** Python library, plus
+the packages your model imports (see `pythonfmu3 deploy` below). Inside a Python-based
+importer the FMU uses that interpreter. Otherwise, on Linux and macOS the FMU finds and
+loads `libpython` itself; if it picks the wrong one, or none, point it at the right library:
+
+```bash
+export PYTHONFMU_PYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.12.so.1.0
+```
+
+On Windows, `python3.dll` must be on the `PATH`. See
+[Running FMUs outside Python](docs/install.md#running-fmus-outside-python-linux-and-macos)
+for the full lookup order.
+
 ### How do I build an FMU from python code?
 
 1. Install `pythonfmu3` package:

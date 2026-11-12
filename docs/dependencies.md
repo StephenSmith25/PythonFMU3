@@ -29,3 +29,15 @@ optional arguments:
   -e ENVIRONMENT, --env ENVIRONMENT
                         Requirements or environment file.
 ```
+
+### Which Python environment does the FMU use?
+
+- **Python-based importer** (e.g. FMPy): the interpreter running the importer, with its
+  packages. Run `pythonfmu3 deploy` in that same environment.
+- **Native importer on Linux/macOS** (OMSimulator, `fmusim`, Simulink, ...): the Python
+  whose `libpython` the FMU loads (see
+  [Running FMUs outside Python](install.md#running-fmus-outside-python-linux-and-macos)).
+  That is a base installation, not a virtual environment: packages installed only in a
+  venv are not found unless you add its `site-packages` folder to `PYTHONPATH`, e.g.
+  `export PYTHONPATH=/path/to/venv/lib/python3.12/site-packages`.
+- **Windows**: the Python providing the `python3.dll` found on the `PATH`.
