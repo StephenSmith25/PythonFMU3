@@ -17,6 +17,10 @@
   `resources/pythonfmu_libpython.txt` records the building interpreter's Python library.
 - The builder finds the model class by importing the script, so class definitions whose
   base classes span several lines work. A script must define a single FMU class.
+- `Fmi3UpdateDiscreteStatesResult` fields renamed to the FMI names
+  `discreteStatesNeedUpdate` and `nominalContinuousStatesChanged`. The old names
+  (`discreteStateNeedsUpdate`, `nominalsOfContinuousStatesChanged`) still work as aliases.
+- Python 3.9 or later is required; the package is built from `pyproject.toml`.
 
 ### Fixed
 - Crash (use-after-free) when freeing an instance after a Python exception.
@@ -30,3 +34,11 @@
   building from Python (e.g. `canHandleVariableCommunicationStepSize` came out `false`).
 - `--terminals` packed the wrong file as `terminalsAndIcons.xml`.
 - Array variable setters on NumPy 2.5 or later.
+- `discreteStatesNeedUpdate` and `nominalContinuousStatesChanged` returned from
+  `update_discrete_states` were ignored because of the field-name mismatch above.
+- FMUs built on Apple Silicon and ARM Linux use the correct platform folders
+  (`aarch64-darwin`, `aarch64-linux`).
+- Documentation: corrected the PID controller and quick-start examples (their inputs and
+  parameters could not be set), the `pythonfmu3 build` options, the list of supported
+  types, and added a limitations section. Documentation examples are now checked to
+  produce working models in the test suite.

@@ -3,12 +3,27 @@ from dataclasses import dataclass
 
 @dataclass
 class Fmi3UpdateDiscreteStatesResult:
-    discreteStateNeedsUpdate: bool = False
+    """Return value of `update_discrete_states`, mirroring the outputs of fmi3UpdateDiscreteStates."""
+    discreteStatesNeedUpdate: bool = False
     terminateSimulation: bool = False
-    nominalsOfContinuousStatesChanged: bool = False
+    nominalContinuousStatesChanged: bool = False
     valuesOfContinuousStatesChanged: bool = False
     nextEventTimeDefined: bool = False
     nextEventTime: float = 0.0
+
+
+def _alias(field_name: str) -> property:
+    return property(
+        lambda self: getattr(self, field_name),
+        lambda self, value: setattr(self, field_name, value),
+        doc=f"Deprecated alias of `{field_name}`.",
+    )
+
+
+# Earlier releases used these names, which the FMU wrapper never read (so the flags were
+# silently ignored). Kept as aliases so existing models keep working - and now take effect.
+Fmi3UpdateDiscreteStatesResult.discreteStateNeedsUpdate = _alias("discreteStatesNeedUpdate")
+Fmi3UpdateDiscreteStatesResult.nominalsOfContinuousStatesChanged = _alias("nominalContinuousStatesChanged")
 
 class RequireTimeMeta(ABCMeta):
     def __init__(cls, name, bases, namespace):
