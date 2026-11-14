@@ -137,6 +137,9 @@ def test_fmu_matches_python_model(tmp_path):
         z.extractall(target)
         md = fromstring(z.read("modelDescription.xml"))
     vr = {v.get("name"): int(v.get("valueReference")) for v in md.find("ModelVariables")}
+    # the FMU may hold binaries for several platforms: load the one for this machine
+    from pythonfmu3.osutil import get_lib_extension, get_platform
+    library = target / "binaries" / get_platform() / f"Pipe1D.{get_lib_extension()}"
 
     n = 35   # not the default, set through Configuration Mode
     T_wall = np.linspace(300.0, 380.0, n)
@@ -144,8 +147,7 @@ def test_fmu_matches_python_model(tmp_path):
         import ctypes as C, json, sys
         from pathlib import Path
         root = Path({str(target)!r})
-        lib = C.CDLL(str(next(p for p in (root / "binaries").rglob("*.*")
-                              if p.suffix in (".so", ".dylib", ".dll") and "backend" not in p.name)))
+        lib = C.CDLL({str(library)!r})
         lib.fmi3InstantiateCoSimulation.restype = C.c_void_p
         lib.fmi3InstantiateCoSimulation.argtypes = [C.c_char_p, C.c_char_p, C.c_char_p, C.c_bool, C.c_bool, C.c_bool,
             C.c_bool, C.c_void_p, C.c_size_t, C.c_void_p, C.c_void_p, C.c_void_p]

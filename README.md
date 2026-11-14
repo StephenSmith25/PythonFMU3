@@ -39,6 +39,14 @@ On Windows, `python3.dll` must be on the `PATH`. See
 [Running FMUs outside Python](docs/install.md#running-fmus-outside-python-linux-and-macos)
 for the full lookup order.
 
+### PythonFMU3 Studio
+
+`pythonfmu3 studio` opens a local web app to write, check, simulate, build and inspect
+FMUs, with live plots, a model-description preview, an FMU inspector and templates. It
+needs no extra dependencies. See the [Studio docs](docs/studio.md).
+
+![PythonFMU3 Studio](docs/assets/studio-simulate.png)
+
 ### How do I build an FMU from python code?
 
 1. Install `pythonfmu3` package:

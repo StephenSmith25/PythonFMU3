@@ -1,6 +1,19 @@
 # Changelog
 
-## Unreleased
+## 1.1.0 (2026-11-14)
+
+### Added
+- **PythonFMU3 Studio** (`pythonfmu3 studio`): a local web app to write, check, simulate,
+  build and inspect FMUs, with no extra dependencies. It has an editor that checks the
+  model on every save, a Python-preview simulator with live sliders (plus fmusim and
+  FMPy), an FMU inspector for any FMI 2.0/3.0 FMU, and seven model templates. See
+  [PythonFMU3 Studio](studio.md).
+- Example: 1D pipe flow for conjugate heat transfer co-simulation
+  (`examples/pipe_cht`), with the number of segments as a structural parameter.
+- [Migrating from PythonFMU](migration.md): a guide for moving FMI 2.0 PythonFMU models
+  to PythonFMU3.
+
+## 1.0.0 (2026-11-12)
 
 ### Added
 - FMUs can be loaded by native (non-Python) FMI importers on Linux and macOS, such as

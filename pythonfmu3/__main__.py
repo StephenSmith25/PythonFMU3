@@ -43,6 +43,14 @@ def cli_main():
     )
     deploy.create_command_parser(deploy_parser)
 
+    studio_parser = subparsers.add_parser(
+        "studio",
+        description="Open PythonFMU3 Studio, a local web app to edit, check, simulate, build and inspect FMUs.",
+        help="Open the PythonFMU3 Studio web app."
+    )
+    from .studio.server import create_command_parser as create_studio_parser
+    create_studio_parser(studio_parser)
+
     options = vars(parser.parse_args())
     execute = options.pop("execute")
     execute(**options)

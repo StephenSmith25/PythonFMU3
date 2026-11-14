@@ -151,6 +151,7 @@ Explore comprehensive examples and documentation:
 
 - **[Co-simulation Examples](usage.md)**: PID controller, units, arrays, step results
 - **[Model Exchange Examples](usageMX.md)**: Van der Pol oscillator, bouncing ball with events
+- **[PythonFMU3 Studio](studio.md)**: the `pythonfmu3 studio` web app for editing, simulating and inspecting FMUs
 - **[Installation Guide](install.md)**: installing, building from source, and running FMUs
   outside Python
 - **[Dependencies](dependencies.md)**: third-party packages and which Python an FMU uses
