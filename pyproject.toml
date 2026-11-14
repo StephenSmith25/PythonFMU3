@@ -58,6 +58,8 @@ pythonfmu3 = [
     "pythonfmu-export/**/*",
     "tests/data/*",
     "tests/slaves/*",
+    "studio/static/*",
+    "studio/templates/*.py",
 ]
 
 [tool.setuptools.exclude-package-data]
