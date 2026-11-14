@@ -7,5 +7,8 @@ recursive-include pythonfmu3/tests/slaves *
 recursive-include pythonfmu3/resources *
 recursive-include pythonfmu3/pythonfmu-export *
 
+recursive-include pythonfmu3/studio/static *
+recursive-include pythonfmu3/studio/templates *.py
+
 prune pythonfmu3/pythonfmu-export/build
 global-exclude __pycache__ *.py[cod]

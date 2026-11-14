@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PythonFMU3 Studio</title>
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="stylesheet" href="app.css">
+<script src="app.js" defer></script>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <img src="logo.svg" alt="" width="30" height="30">
+    <span>PythonFMU3 <span class="accent">Studio</span></span>
+  </div>
+  <nav class="tabs" aria-label="Studio sections">
+    <button type="button" class="tab" data-view="editor">Editor</button>
+    <button type="button" class="tab" data-view="simulate">Simulate</button>
+    <button type="button" class="tab" data-view="inspector">Inspector</button>
+    <button type="button" class="tab" data-view="templates">Templates</button>
+  </nav>
+  <div class="spacer"></div>
+  <div class="actions">
+    <label class="file-picker">
+      <span class="sr-only">Model file</span>
+      <select id="file-select"></select>
+    </label>
+    <button type="button" class="btn" id="btn-save" title="Save (Ctrl+S)">Save</button>
+    <button type="button" class="btn" id="btn-validate">Validate</button>
+    <button type="button" class="btn primary" id="btn-build">Build FMU</button>
+    <button type="button" class="btn gold" id="btn-simulate">Simulate</button>
+  </div>
+</header>
+
+<div id="banner" class="banner" role="status" aria-live="polite" hidden></div>
+
+<main>
+  <!-- Editor -->
+  <section id="view-editor" class="view" aria-label="Editor">
+    <div class="row">
+      <section class="panel code-panel" aria-label="Model code">
+        <div class="code-head">
+          <span id="code-name">No file open</span>
+          <span id="dirty" class="dirty" hidden>unsaved</span>
+          <span class="muted push">Ctrl+S saves and re-checks</span>
+        </div>
+        <div class="code-body">
+          <pre id="gutter" class="gutter" aria-hidden="true"></pre>
+          <label class="sr-only" for="code">Model source</label>
+          <textarea id="code" spellcheck="false" autocapitalize="off" autocomplete="off" wrap="off"></textarea>
+        </div>
+      </section>
+      <section class="panel preview" aria-label="FMU preview">
+        <div role="tablist" aria-label="Preview" class="subtabs">
+          <button type="button" role="tab" class="subtab" data-preview="fmu">FMU block</button>
+          <button type="button" role="tab" class="subtab" data-preview="xml">modelDescription.xml</button>
+          <button type="button" role="tab" class="subtab" data-preview="checks">Checks <span id="issue-badge" class="badge">0</span></button>
+        </div>
+        <div id="preview-fmu" class="preview-body"></div>
+        <pre id="preview-xml" class="preview-body xml" hidden></pre>
+        <div id="preview-checks" class="preview-body checks" hidden></div>
+      </section>
+    </div>
+    <section class="panel" aria-label="Variables">
+      <div class="panel-head">
+        <h2>Variables</h2>
+        <span class="muted">Read from the model; value references follow registration order</span>
+      </div>
+      <div class="table-wrap"><table id="var-table" class="table"></table></div>
+    </section>
+  </section>
+
+  <!-- Simulate -->
+  <section id="view-simulate" class="view" aria-label="Simulate" hidden>
+    <div class="row top">
+      <section class="panel settings" aria-label="Simulation settings">
+        <h2>Run settings</h2>
+        <fieldset>
+          <legend>Simulator</legend>
+          <div id="sim-choice" class="chips"></div>
+          <p id="sim-note" class="muted small"></p>
+        </fieldset>
+        <div class="grid2">
+          <label>Interface <select id="sim-interface"></select></label>
+          <label>Stop time [s] <input id="sim-stop" type="number" min="0" step="any" value="10"></label>
+          <label>Output interval [s] <input id="sim-step" type="number" min="0" step="any" value="0.01"></label>
+          <label class="check"><input id="sim-live" type="checkbox" checked> Re-run on change</label>
+        </div>
+        <div>
+          <h3>Parameters and inputs</h3>
+          <div id="sim-params" class="params"></div>
+        </div>
+        <div class="btn-row">
+          <button type="button" class="btn primary" id="btn-run">Run</button>
+          <button type="button" class="btn" id="btn-reset">Reset values</button>
+          <button type="button" class="btn" id="btn-csv">Download CSV</button>
+        </div>
+      </section>
+      <section class="results" aria-label="Results">
+        <div id="sim-stats" class="stats"></div>
+        <div id="sim-series" class="series-picker" aria-label="Variables to plot"></div>
+        <div id="sim-charts" class="charts"></div>
+        <details id="sim-log-wrap" class="panel log" hidden><summary>Output and log</summary><pre id="sim-log"></pre></details>
+      </section>
+    </div>
+  </section>
+
+  <!-- Inspector -->
+  <section id="view-inspector" class="view" aria-label="Inspector" hidden>
+    <div id="drop" class="drop" tabindex="0">
+      <img src="logo.svg" alt="" width="28" height="28">
+      <div class="grow">
+        <strong>Drop any .fmu here</strong>
+        <span class="muted small">FMI 2.0 or 3.0, from any tool. The file stays on this computer.</span>
+      </div>
+      <label class="btn">Open FMU… <input id="fmu-input" type="file" accept=".fmu" class="sr-only"></label>
+      <label class="file-picker"><span class="sr-only">FMU in workspace</span><select id="fmu-select"><option value="">FMUs in this folder…</option></select></label>
+    </div>
+    <div id="inspect-out"></div>
+  </section>
+
+  <!-- Templates -->
+  <section id="view-templates" class="view narrow" aria-label="Templates" hidden>
+    <h1>Start from a template</h1>
+    <p class="muted">Each template is a working model. Using one copies it into your folder and opens it in the editor.</p>
+    <div class="toolbar">
+      <label class="search"><span class="sr-only">Search templates</span><input id="tpl-search" type="search" placeholder="Search templates"></label>
+      <div id="tpl-cats" class="chips" role="group" aria-label="Filter by category"></div>
+    </div>
+    <div id="tpl-grid" class="cards"></div>
+  </section>
+</main>
+
+<footer class="statusbar">
+  <span id="status-env"></span>
+  <span class="spacer"></span>
+  <span id="status-ws"></span>
+</footer>
+</body>
+</html>
