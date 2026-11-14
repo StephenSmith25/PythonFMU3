@@ -51,6 +51,19 @@ needs no extra dependencies. See the [Studio docs](docs/studio.md).
 
 ![PythonFMU3 Studio](docs/assets/studio-simulate.png)
 
+### AI agents (MCP)
+
+`pythonfmu3 mcp` lets AI agents (Claude, GitHub Copilot in VS Code, Cursor, ...) write,
+check, simulate and build FMUs for you:
+
+```bash
+pip install "pythonfmu3[mcp]"
+claude mcp add pythonfmu3 -- pythonfmu3 mcp ~/fmu-models
+```
+
+Then ask, for example: "Make me a bouncing ball FMU and simulate it for 5 s." See
+[AI agents (MCP)](docs/mcp.md).
+
 ### How do I build an FMU from python code?
 
 1. Install `pythonfmu3` package:

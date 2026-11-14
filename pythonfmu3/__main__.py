@@ -51,6 +51,16 @@ def cli_main():
     from .studio.server import create_command_parser as create_studio_parser
     create_studio_parser(studio_parser)
 
+    mcp_parser = subparsers.add_parser(
+        "mcp",
+        description="Run PythonFMU3 as an MCP server (over stdio) so AI agents can write, check, "
+                    "simulate and build FMUs. "
+                    'Needs: pip install "pythonfmu3[mcp]"',
+        help="Run the MCP server for AI agents."
+    )
+    from .mcp_server import create_command_parser as create_mcp_parser
+    create_mcp_parser(mcp_parser)
+
     options = vars(parser.parse_args())
     execute = options.pop("execute")
     execute(**options)

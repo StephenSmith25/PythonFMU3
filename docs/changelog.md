@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.0 (unreleased)
+
+### Added
+- **MCP server for AI agents** (`pythonfmu3 mcp`): Claude, GitHub Copilot in VS Code,
+  Cursor and other MCP clients can write, check, simulate and build FMUs, using the same
+  checks and simulators as the Studio. Install with `pip install "pythonfmu3[mcp]"`
+  (Python 3.10+). See [AI agents (MCP)](mcp.md).
+
 ## 1.1.0 (2026-11-14)
 
 ### Added

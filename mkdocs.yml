@@ -6,6 +6,7 @@ nav:
     - Model Exchange: usageMX.md
     - Dependencies: dependencies.md
     - Studio: studio.md
+    - AI agents (MCP): mcp.md
     - Migrating from PythonFMU: migration.md
     - Changelog: changelog.md
 theme: readthedocs
