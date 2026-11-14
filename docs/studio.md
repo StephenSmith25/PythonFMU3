@@ -4,6 +4,14 @@ PythonFMU3 Studio is a local web app for writing, checking, simulating, building
 inspecting FMUs. It ships with PythonFMU3, needs no extra packages, and runs entirely on
 your computer.
 
+> **Try it without installing anything:** the
+> [web version](https://stephensmith25.github.io/pythonfmu3-app/) runs in your browser
+> using [Pyodide](https://pyodide.org). It has the editor, the Python preview, building
+> and downloading FMUs, the Inspector and the templates. It can't run fmusim or FMPy, or
+> models that import packages Pyodide doesn't have, and it keeps your files in the browser
+> rather than in a folder. Source:
+> [StephenSmith25/pythonfmu3-app](https://github.com/StephenSmith25/pythonfmu3-app).
+
 ![Simulating a model in PythonFMU3 Studio](assets/studio-simulate.png)
 
 ## Getting started
