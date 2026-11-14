@@ -5,5 +5,6 @@ nav:
     - Co-simulation: usage.md
     - Model Exchange: usageMX.md
     - Dependencies: dependencies.md
+    - Migrating from PythonFMU: migration.md
     - Changelog: changelog.md
 theme: readthedocs
