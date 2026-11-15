@@ -1,4 +1,5 @@
 site_name: pythonfmu3
+site_url: https://pythonfmu3.readthedocs.io/en/latest/
 nav:
     - Home: index.md
     - Installation: install.md
@@ -10,3 +11,5 @@ nav:
     - Migrating from PythonFMU: migration.md
     - Changelog: changelog.md
 theme: readthedocs
+hooks:
+    - docs_hooks/llms.py

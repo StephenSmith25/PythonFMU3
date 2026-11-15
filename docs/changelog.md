@@ -7,6 +7,8 @@
   Cursor and other MCP clients can write, check, simulate and build FMUs, using the same
   checks and simulators as the Studio. Install with `pip install "pythonfmu3[mcp]"`
   (Python 3.10+). See [AI agents (MCP)](mcp.md).
+- `llms.txt` and `llms-full.txt` on the documentation site, so AI assistants can learn the
+  PythonFMU3 API and its rules.
 
 ## 1.1.0 (2026-11-14)
 
