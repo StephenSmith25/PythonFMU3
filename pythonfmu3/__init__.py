@@ -8,3 +8,9 @@ from .variables import Boolean, Enumeration, Int32, Int64, UInt64, Float64, Stri
 from .default_experiment import DefaultExperiment
 from .variable_types import Float64Type, EnumerationType
 from .unit import BaseUnit, Unit
+
+
+def load_ipython_extension(ipython):
+    """``%load_ext pythonfmu3`` in Jupyter: adds the ``%%fmu`` cell magic (see pythonfmu3.notebook)."""
+    from .notebook import load_ipython_extension as load
+    load(ipython)

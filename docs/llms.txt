@@ -67,6 +67,7 @@ Rules that are easy to get wrong:
 - [Model Exchange](https://pythonfmu3.readthedocs.io/en/latest/usageMX/): states, derivatives and events
 - [Dependencies](https://pythonfmu3.readthedocs.io/en/latest/dependencies/): FMUs that use third-party packages
 - [Studio](https://pythonfmu3.readthedocs.io/en/latest/studio/): `pythonfmu3 studio`, a local web app to edit, check, simulate and inspect models
+- [Jupyter notebooks](https://pythonfmu3.readthedocs.io/en/latest/notebooks/): the `%%fmu` cell magic, simulations as pandas DataFrames, building and inspecting FMUs
 - [AI agents (MCP)](https://pythonfmu3.readthedocs.io/en/latest/mcp/): `pythonfmu3 mcp`, an MCP server for Claude, GitHub Copilot and Cursor
 - [All docs in one file](https://pythonfmu3.readthedocs.io/en/latest/llms-full.txt): every page above, as Markdown
 
