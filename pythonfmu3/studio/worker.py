@@ -269,7 +269,9 @@ def simulate_python(req: Dict[str, Any]) -> Dict[str, Any]:
                 events.append({"t": t, "kind": f"status {int(result.status)}"})
     else:
         times, series, events = _simulate_me(instance, recorded, start, stop, step)
-    return {"interface": interface, "time": times, "series": series, "events": events, "simulator": "python"}
+    causality = {v.name: (v.causality.name if v.causality else "local") for v in recorded}
+    return {"interface": interface, "time": times, "series": series, "events": events, "simulator": "python",
+            "causality": causality}
 
 
 def _simulate_me(instance, recorded, start, stop, step):
