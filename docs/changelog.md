@@ -3,6 +3,9 @@
 ## 1.2.0 (unreleased)
 
 ### Added
+- **macOS binaries:** the PyPI packages now include the native library for Apple Silicon
+  (`aarch64-darwin`) and Intel Macs (`x86_64-darwin`), so FMUs build on macOS without
+  compiling anything. CI also runs the tests on macOS.
 - **MCP server for AI agents** (`pythonfmu3 mcp`): Claude, GitHub Copilot in VS Code,
   Cursor and other MCP clients can write, check, simulate and build FMUs, using the same
   checks and simulators as the Studio. Install with `pip install "pythonfmu3[mcp]"`
