@@ -15,7 +15,7 @@
 //   - the PYTHONFMU_PYTHON_LIBRARY environment variable (a full path),
 //   - resources/pythonfmu_libpython.txt (written by the builder: the library of the
 //     Python that built the FMU, one candidate path per line),
-//   - common library names for Python 3.8 - 3.14.
+//   - common library names for Python 3.8 - 3.20 (newest first).
 
 #include "shim/shim_loader.hpp"
 
@@ -83,7 +83,7 @@ std::vector<std::string> libpythonCandidates(const std::string& resources)
             if (!line.empty()) candidates.push_back(line);
         }
     }
-    for (int minor = 14; minor >= 8; --minor) {
+    for (int minor = 20; minor >= 8; --minor) {
         const std::string v = "3." + std::to_string(minor);
 #ifdef __APPLE__
         candidates.push_back("libpython" + v + ".dylib");

@@ -49,7 +49,7 @@ this order:
    `export PYTHONFMU_PYTHON_LIBRARY=/usr/lib/x86_64-linux-gnu/libpython3.12.so.1.0`;
 2. the library of the Python that built the FMU (recorded in
    `resources/pythonfmu_libpython.txt`);
-3. standard library names for Python 3.8 to 3.14 (and the usual Homebrew and
+3. standard library names for Python 3.8 to 3.20, newest first (and the usual Homebrew and
    python.org framework locations on macOS).
 
 If none can be loaded, instantiation fails with a message listing the paths tried.

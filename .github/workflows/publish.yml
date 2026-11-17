@@ -87,4 +87,13 @@ jobs:
         TWINE_PASSWORD: ${{ secrets.PYPI_PYTHONFMU_API_TOKEN }}
       run: |
         python -m build
+        python - <<'PY'
+        import glob, zipfile
+        wheel = glob.glob("dist/*.whl")[0]
+        names = zipfile.ZipFile(wheel).namelist()
+        expected = ["x86_64-linux", "x86_64-windows", "aarch64-darwin", "x86_64-darwin"]
+        missing = [p for p in expected if not any(n.startswith(f"pythonfmu3/resources/binaries/{p}/") for n in names)]
+        print(wheel, "missing binaries:", missing or "none")
+        raise SystemExit(1 if missing else 0)
+        PY
         twine upload dist/*
