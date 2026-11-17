@@ -353,42 +353,66 @@ def find_fmusim() -> Optional[str]:
     return candidate if candidate and Path(candidate).exists() else None
 
 
-def simulate_fmusim(req: Dict[str, Any]) -> Dict[str, Any]:
+def _run_fmusim(fmu: str, req: Dict[str, Any], tmp: Path) -> Dict[str, Any]:
     fmusim = find_fmusim()
     if not fmusim:
         raise RuntimeError("fmusim was not found on PATH (or in PYTHONFMU3_FMUSIM)")
-    path = Path(req["path"]).resolve()
-    with tempfile.TemporaryDirectory(prefix="studio_") as tmp:
-        fmu = _build(path, Path(tmp))["fmu"]
-        out = Path(tmp) / "result.csv"
-        cmd = [fmusim, "simulate", fmu, "--stop-time", str(req["stopTime"]),
-               "--output-interval", str(req["stepSize"]), "--output-file", str(out)]
-        if req.get("interface"):
-            cmd += ["--interface-type", req["interface"]]
-        for name, value in (req.get("startValues") or {}).items():
-            cmd += ["--start-value", f"{name}={value}"]
-        proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
-        if proc.returncode != 0 or not out.exists():
-            raise RuntimeError(f"fmusim failed:\n{proc.stdout}\n{proc.stderr}".strip())
-        times, series = _read_csv(out)
+    out = Path(tmp) / "result.csv"
+    cmd = [fmusim, "simulate", str(fmu), "--stop-time", str(req["stopTime"]),
+           "--output-interval", str(req["stepSize"]), "--output-file", str(out)]
+    if req.get("interface"):
+        cmd += ["--interface-type", req["interface"]]
+    for name, value in (req.get("startValues") or {}).items():
+        cmd += ["--start-value", f"{name}={value}"]
+    proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+    if proc.returncode != 0 or not out.exists():
+        raise RuntimeError(f"fmusim failed:\n{proc.stdout}\n{proc.stderr}".strip())
+    times, series = _read_csv(out)
     return {"interface": req.get("interface"), "time": times, "series": series, "events": [],
             "simulator": "fmusim", "log": proc.stderr[-4000:]}
 
 
-def simulate_fmpy(req: Dict[str, Any]) -> Dict[str, Any]:
+def _run_fmpy(fmu: str, req: Dict[str, Any]) -> Dict[str, Any]:
     import fmpy
 
-    path = Path(req["path"]).resolve()
-    with tempfile.TemporaryDirectory(prefix="studio_") as tmp:
-        fmu = _build(path, Path(tmp))["fmu"]
-        result = fmpy.simulate_fmu(
-            fmu, stop_time=float(req["stopTime"]), output_interval=float(req["stepSize"]),
-            fmi_type={"cs": "CoSimulation", "me": "ModelExchange"}.get(req.get("interface"), None),
-            start_values=req.get("startValues") or {},
-        )
+    result = fmpy.simulate_fmu(
+        str(fmu), stop_time=float(req["stopTime"]), output_interval=float(req["stepSize"]),
+        fmi_type={"cs": "CoSimulation", "me": "ModelExchange"}.get(req.get("interface"), None),
+        start_values=req.get("startValues") or {},
+    )
     times = [float(t) for t in result["time"]]
     series = {name: [float(v) for v in result[name]] for name in result.dtype.names if name != "time"}
     return {"interface": req.get("interface"), "time": times, "series": series, "events": [], "simulator": "fmpy"}
+
+
+def simulate_fmusim(req: Dict[str, Any]) -> Dict[str, Any]:
+    with tempfile.TemporaryDirectory(prefix="studio_") as tmp:
+        fmu = _build(Path(req["path"]).resolve(), Path(tmp))["fmu"]
+        return _run_fmusim(fmu, req, Path(tmp))
+
+
+def simulate_fmpy(req: Dict[str, Any]) -> Dict[str, Any]:
+    with tempfile.TemporaryDirectory(prefix="studio_") as tmp:
+        fmu = _build(Path(req["path"]).resolve(), Path(tmp))["fmu"]
+        return _run_fmpy(fmu, req)
+
+
+def simulate_built(req: Dict[str, Any]) -> Dict[str, Any]:
+    """Simulate an existing .fmu with fmpy or fmusim (``req["simulator"]``, default: whichever is available)."""
+    import importlib.util
+
+    fmu = Path(req["fmu"]).resolve()
+    simulator = req.get("simulator")
+    if simulator is None:
+        simulator = "fmpy" if importlib.util.find_spec("fmpy") else "fmusim" if find_fmusim() else None
+        if simulator is None:
+            raise RuntimeError("Simulating an FMU needs FMPy (pip install fmpy) or fmusim on PATH")
+    if simulator == "fmpy":
+        return _run_fmpy(str(fmu), req)
+    if simulator == "fmusim":
+        with tempfile.TemporaryDirectory(prefix="studio_") as tmp:
+            return _run_fmusim(str(fmu), req, Path(tmp))
+    raise ValueError(f"Unknown simulator {simulator!r}: use 'fmpy' or 'fmusim'")
 
 
 def _read_csv(path: Path):
@@ -498,7 +522,8 @@ def inspect_fmu(req: Dict[str, Any]) -> Dict[str, Any]:
     }
 
 
-COMMANDS = {"analyze": analyze, "simulate": simulate, "build": build, "validate": validate, "inspect": inspect_fmu}
+COMMANDS = {"analyze": analyze, "simulate": simulate, "build": build, "validate": validate, "inspect": inspect_fmu,
+            "simulate_fmu": simulate_built}
 
 
 def main():

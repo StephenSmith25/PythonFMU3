@@ -51,6 +51,21 @@ needs no extra dependencies. See the [Studio docs](docs/studio.md).
 
 ![PythonFMU3 Studio](docs/assets/studio-simulate.png)
 
+### Jupyter notebooks
+
+Write a model in a notebook cell with `%%fmu`, check it, simulate it into a pandas
+DataFrame and build the FMU:
+
+```ipython
+%load_ext pythonfmu3
+# %%fmu cell with your class, then:
+res = Tank.simulate(stop_time=100)
+fmu = Tank.build()
+```
+
+See [Jupyter notebooks](docs/notebooks.md) and the
+[example notebook](examples/notebooks/getting_started.ipynb), which also runs in Google Colab.
+
 ### AI agents (MCP)
 
 `pythonfmu3 mcp` lets AI agents (Claude, GitHub Copilot in VS Code, Cursor, ...) write,

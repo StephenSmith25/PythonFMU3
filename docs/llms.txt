@@ -1,0 +1,82 @@
+# PythonFMU3
+
+> PythonFMU3 packages a Python class as an FMI 3.0 FMU (Functional Mock-up Unit) that
+> simulation tools such as FMPy, OMSimulator, fmusim and Simulink can import. It supports
+> Co-Simulation and Model Exchange, Float64, Int32, Int64, UInt64, Boolean, String and
+> Enumeration variables, NumPy arrays and structural parameters. Install with
+> `pip install pythonfmu3`; build an FMU with `pythonfmu3 build -f model.py`.
+
+A minimal Co-Simulation model:
+
+```python
+from pythonfmu3 import Fmi3Causality, Fmi3Slave, Fmi3Variability, Float64
+
+
+class Gain(Fmi3Slave):
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        self.author = "Jane Doe"
+        self.description = "Multiplies the input by a gain"
+
+        self.time = 0.0
+        self.u = 0.0
+        self.k = 2.0
+        self.y = 0.0
+
+        self.register_variable(Float64("time", causality=Fmi3Causality.independent,
+                                       variability=Fmi3Variability.continuous))
+        self.register_variable(Float64("u", causality=Fmi3Causality.input, start=0.0))
+        self.register_variable(Float64("k", causality=Fmi3Causality.parameter,
+                                       variability=Fmi3Variability.tunable, start=2.0))
+        self.register_variable(Float64("y", causality=Fmi3Causality.output))
+
+    def do_step(self, current_time, step_size):
+        self.y = self.k * self.u
+        self.time = current_time + step_size
+        return True
+```
+
+Rules that are easy to get wrong:
+
+- Subclass `Fmi3Slave` for Co-Simulation, or `Fmi3SlaveBase` plus `ModelExchange` for Model
+  Exchange (add `CoSimulation` as well to support both). One model class per file.
+- Always register a Float64 `time` variable (causality `independent`, variability
+  `continuous`) and keep `self.time` up to date.
+- Create each attribute (`self.u = 0.0`) before `register_variable`, otherwise no setter is
+  created and importers can't set inputs or parameters.
+- Only Float64 variables can be `continuous`. Int32, Boolean and the other types use
+  `discrete`, or `fixed`/`tunable` for parameters.
+- Set `author`, `description`, `license`, `version` and `copyright` in `__init__`
+  (`self.author = ...`); class-level values are ignored.
+- Variable names map to attributes; leading underscores are stripped, so don't start names
+  with `_`.
+- Units: `register_units([Unit(name="m/s", m=1, s=-1)])`, then `unit="m/s"`.
+- Model Exchange: register each state and its derivative (`derivative=<value reference of
+  the state>`, counting from 0 in registration order) and implement
+  `get_continuous_state_derivatives()`.
+- The machine that runs the FMU needs Python with a shared library and the packages the
+  model imports. Pack a `requirements.txt` into the FMU
+  (`pythonfmu3 build -f model.py requirements.txt`) and install it on the target with
+  `pythonfmu3 deploy`.
+
+## Docs
+
+- [Installation](https://pythonfmu3.readthedocs.io/en/latest/install/): installing, the native library, running FMUs outside Python
+- [Co-Simulation](https://pythonfmu3.readthedocs.io/en/latest/usage/): writing and building a Co-Simulation FMU
+- [Model Exchange](https://pythonfmu3.readthedocs.io/en/latest/usageMX/): states, derivatives and events
+- [Dependencies](https://pythonfmu3.readthedocs.io/en/latest/dependencies/): FMUs that use third-party packages
+- [Studio](https://pythonfmu3.readthedocs.io/en/latest/studio/): `pythonfmu3 studio`, a local web app to edit, check, simulate and inspect models
+- [Jupyter notebooks](https://pythonfmu3.readthedocs.io/en/latest/notebooks/): the `%%fmu` cell magic, simulations as pandas DataFrames, building and inspecting FMUs
+- [AI agents (MCP)](https://pythonfmu3.readthedocs.io/en/latest/mcp/): `pythonfmu3 mcp`, an MCP server for Claude, GitHub Copilot and Cursor
+- [All docs in one file](https://pythonfmu3.readthedocs.io/en/latest/llms-full.txt): every page above, as Markdown
+
+## Examples
+
+- [Examples folder](https://github.com/StephenSmith25/PythonFMU3/tree/HEAD/examples): Co-Simulation, Model Exchange, arrays, enumerations, events, and 1D pipe flow for conjugate heat transfer with a structural parameter
+- [Web app](https://stephensmith25.github.io/pythonfmu3-app/): try PythonFMU3 in the browser
+
+## Optional
+
+- [Migrating from PythonFMU](https://pythonfmu3.readthedocs.io/en/latest/migration/): moving FMI 2.0 PythonFMU models to PythonFMU3
+- [Changelog](https://pythonfmu3.readthedocs.io/en/latest/changelog/)
