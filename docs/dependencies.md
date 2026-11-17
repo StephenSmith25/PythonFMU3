@@ -1,43 +1,55 @@
-## FMU Dependencies
+# Dependencies
 
-Often, Python scripts depends on non-builtin libraries like `numpy`, `scipy`, etc.
-_PythonFMU3_ does not package a full environment within the FMU.
-However, you can package a `requirements.txt` or `environment.yml` file within your FMU following these steps:
+PythonFMU3 doesn't package a Python environment inside the FMU. The FMU runs in a
+Python installation on the machine that simulates it, so that Python needs the packages
+your model imports (NumPy, SciPy, a machine-learning library, ...).
 
-1. Install _pythonfmu3_ package: `pip install pythonfmu3`
-2. Create a new class extending the `Fmi3Slave` class declared in the `pythonfmu3.fmi3slave` module (see the [Co-simulation examples](usage.md)).
-3. Create a `requirements.txt` file (to use _pip_ manager) and/or a `environment.yml` file (to use _conda_ manager) that defines your dependencies.
-4. Run `pythonfmu3 build -f myscript.py requirements.txt` to create the fmu including the dependencies file.
+## Shipping your requirements with the FMU
 
-And using `pythonfmu3 deploy`, end users will be able to update their local Python environment. The steps to achieve that:
+**1. List the packages** in a `requirements.txt` (for pip) or an `environment.yml` (for
+conda):
 
-1. Install _pythonfmu3_ package: `pip install pythonfmu3`
-2. Be sure to be in the Python environment to be updated. Then execute `pythonfmu3 deploy -f my.fmu`
-
-```
-usage: pythonfmu3 deploy [-h] -f FMU [-e ENVIRONMENT] [{pip,conda}]
-
-Deploy a Python FMU. The command will look in the `resources` folder for one of the following files:
-`requirements.txt` or `environment.yml`. If you specify a environment file but no package manager, `conda` will be selected for `.yaml` and `.yml` otherwise `pip` will be used. The tool assume the Python environment in which the FMU should be executed is the current one.
-
-positional arguments:
-  {pip,conda}           Python packages manager
-
-optional arguments:
-  -h, --help            show this help message and exit
-  -f FMU, --file FMU    Path to the Python FMU.
-  -e ENVIRONMENT, --env ENVIRONMENT
-                        Requirements or environment file.
+```text
+numpy>=1.24
+scipy
 ```
 
-### Which Python environment does the FMU use?
+**2. Pass the file to `pythonfmu3 build`** after the script. It is packed into the FMU's
+`resources/` folder:
 
-- **Python-based importer** (e.g. FMPy): the interpreter running the importer, with its
-  packages. Run `pythonfmu3 deploy` in that same environment.
-- **Native importer on Linux/macOS** (OMSimulator, `fmusim`, Simulink, ...): the Python
+```bash
+pythonfmu3 build -f my_model.py requirements.txt
+```
+
+**3. On the machine that runs the FMU,** activate the Python environment the FMU will use
+(see below) and install the packages from the FMU:
+
+```bash
+pythonfmu3 deploy -f MyModel.fmu
+```
+
+`deploy` finds `requirements.txt` or `environment.yml` in the FMU and installs it with pip
+or conda. Choose the tool explicitly with `pythonfmu3 deploy -f MyModel.fmu pip` (or
+`conda`), or name a different file inside the FMU with `-e`.
+
+The machine running the FMU needs PythonFMU3 installed only if you use `deploy`: the FMU
+itself carries its own copy of the `pythonfmu3` package.
+
+## Which Python environment does the FMU use?
+
+- **Python-based importer** (FMPy, for example): the interpreter running the importer,
+  with its packages. Run `pythonfmu3 deploy` in that same environment.
+- **Native importer on Linux or macOS** (OMSimulator, `fmusim`, Simulink, ...): the Python
   whose `libpython` the FMU loads (see
   [Running FMUs outside Python](install.md#running-fmus-outside-python-linux-and-macos)).
   That is a base installation, not a virtual environment: packages installed only in a
-  venv are not found unless you add its `site-packages` folder to `PYTHONPATH`, e.g.
+  venv aren't found unless you add its `site-packages` folder to `PYTHONPATH`, for example
   `export PYTHONPATH=/path/to/venv/lib/python3.12/site-packages`.
-- **Windows**: the Python providing the `python3.dll` found on the `PATH`.
+- **Windows:** the Python that provides the `python3.dll` found on the `PATH`.
+
+## Keeping dependencies light
+
+Every package a model imports has to be installed wherever the FMU runs, so the fewer the
+better. The standard library and NumPy cover most models. For a trained machine-learning
+model, consider exporting its weights and evaluating them with NumPy, rather than
+requiring the full framework on every machine that runs the FMU.
