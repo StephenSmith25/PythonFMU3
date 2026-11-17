@@ -118,11 +118,14 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-22.04, windows-2022, macos-15]
-        python-version: ['3.9', '3.10', '3.11', '3.12', '3.13', '3.14']
-        exclude:
-          - os: macos-15          # setup-python has no arm64 build of Python 3.9
-            python-version: '3.9'
+        # Every supported Python on Linux; the oldest and newest on Windows and macOS.
+        os: [ubuntu-22.04]
+        python-version: ['3.11', '3.12', '3.13', '3.14', '3.15']
+        include:
+          - {os: windows-2022, python-version: '3.11'}
+          - {os: windows-2022, python-version: '3.15'}
+          - {os: macos-15, python-version: '3.11'}
+          - {os: macos-15, python-version: '3.15'}
     timeout-minutes: 15
 
     steps:
