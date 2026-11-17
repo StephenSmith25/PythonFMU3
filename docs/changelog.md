@@ -1,22 +1,32 @@
 # Changelog
 
-## 1.2.0 (unreleased)
+## 1.3.0 (unreleased)
 
 ### Added
-- **macOS binaries:** the PyPI packages now include the native library for Apple Silicon
-  (`aarch64-darwin`) and Intel Macs (`x86_64-darwin`), so FMUs build on macOS without
-  compiling anything. CI also runs the tests on macOS.
-- **MCP server for AI agents** (`pythonfmu3 mcp`): Claude, GitHub Copilot in VS Code,
-  Cursor and other MCP clients can write, check, simulate and build FMUs, using the same
-  checks and simulators as the Studio. Install with `pip install "pythonfmu3[mcp]"`
-  (Python 3.10+). See [AI agents (MCP)](mcp.md).
 - **Jupyter support** (`%load_ext pythonfmu3`): the `%%fmu` cell magic saves, checks and
   displays a model; `simulate()` returns pandas DataFrames; `build()` builds the FMU; and
   `pythonfmu3.notebook.FMU` inspects and simulates any FMU. Install with
   `pip install "pythonfmu3[notebook]"`. See [Jupyter notebooks](notebooks.md) and
   `examples/notebooks/getting_started.ipynb`.
+- **macOS binaries:** the PyPI packages now include the native library for Apple Silicon
+  (`aarch64-darwin`) and Intel Macs (`x86_64-darwin`), so FMUs build on macOS without
+  compiling anything. CI also runs the tests on macOS.
 - `llms.txt` and `llms-full.txt` on the documentation site, so AI assistants can learn the
   PythonFMU3 API and its rules.
+
+### Changed
+- Clearer documentation: a variables guide (causality and variability), what the importer
+  calls in your class, build options, per-platform installation, and dependencies.
+- CI tests every supported Python version (3.11 to 3.15) on Linux, and the oldest and
+  newest on Windows and macOS.
+
+## 1.2.0 (2026-11-16)
+
+### Added
+- **MCP server for AI agents** (`pythonfmu3 mcp`): Claude, GitHub Copilot in VS Code,
+  Cursor and other MCP clients can write, check, simulate and build FMUs, using the same
+  checks and simulators as the Studio. Install with `pip install "pythonfmu3[mcp]"`
+  (Python 3.10+). See [AI agents (MCP)](mcp.md).
 
 ## 1.1.0 (2026-11-14)
 
