@@ -9,6 +9,7 @@
 [![Downloads](https://static.pepy.tech/badge/pythonfmu3)](https://pepy.tech/projects/pythonfmu3)
 [![conda-forge](https://img.shields.io/conda/vn/conda-forge/pythonfmu3)](https://anaconda.org/conda-forge/pythonfmu3)
 [![Read the Docs](https://readthedocs.org/projects/pythonfmu3/badge/?version=latest)](https://pythonfmu3.readthedocs.io/)
+[![Listed on fmi-standard.org](https://img.shields.io/badge/FMI_tools-fmi--standard.org-2F5D8A)](https://fmi-standard.org/tools/)
 
 **Try it in your browser, no install:** [PythonFMU3 Studio on the web](https://stephensmith25.github.io/pythonfmu3-app/)
 lets you write a model, simulate it and download the FMU. It has an AI assistant that
@@ -16,6 +17,7 @@ writes and tests models for you, and you can share a model as a link.
 
 ### Highlights
 
+- **Listed on the [FMI tools page](https://fmi-standard.org/tools/)** at fmi-standard.org.
 - **Runs in any FMI 3.0 importer:** Python-based tools such as FMPy, and native tools such
   as Simulink, OMSimulator and `fmusim`.
 - **Co-Simulation and Model Exchange**, with events, arrays, structural parameters, units,

@@ -105,6 +105,8 @@ Otherwise (Simulink, OMSimulator, `fmusim`, ...) the FMU loads a Python installa
 itself; on Linux and macOS it looks for `libpython` in several places, and you can point it
 at a specific one with `PYTHONFMU_PYTHON_LIBRARY`.
 
+PythonFMU3 is listed on the [FMI tools page](https://fmi-standard.org/tools/).
+
 PythonFMU3 is a fork of [PythonFMU](https://github.com/NTNU-IHB/PythonFMU), which supports
 FMI 2.0, extended to FMI 3.0. Many thanks to the PythonFMU authors. Moving a PythonFMU
 model across? See [Migrating from PythonFMU](migration.md).
