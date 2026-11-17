@@ -1,6 +1,6 @@
 # Model Exchange Examples
 
-Model Exchange FMUs are used for continuous-time simulation where an external solver integrates the system of differential equations. The FMU provides the derivative function and state information, while the master algorithm handles time stepping and numerical integration.
+Model Exchange FMUs are used for continuous-time simulation where an external solver integrates the system of differential equations. The FMU provides the derivative function and state information, while the importer's solver handles time stepping and numerical integration.
 
 ## Key Concepts
 

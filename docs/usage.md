@@ -1,49 +1,97 @@
-# Co-simulation Examples
+# Co-Simulation
 
-Co-simulation FMUs are self-contained simulation units that manage their own time stepping and internal solver. Unlike Model Exchange FMUs, Co-simulation FMUs encapsulate both the model equations and the numerical methods used to solve them. The master algorithm coordinates multiple FMUs by calling their `do_step()` method and exchanging input/output values.
+A Co-Simulation FMU advances itself: the importer (the simulation tool that loads the
+FMU) sets the inputs, asks the FMU to step forward with `do_step`, reads the outputs, and
+exchanges them with the other models in the simulation. How the FMU gets from one
+communication point to the next is up to you, which makes Co-Simulation the natural
+choice for controllers, logic, and models with their own solver.
 
-## Key Concepts
+In Model Exchange, by contrast, the FMU only provides derivatives and the importer's
+solver integrates them; see [Model Exchange](usageMX.md).
 
-### Co-simulation vs Model Exchange
-- **Co-simulation**: FMU manages its own time stepping with `do_step()` method
-- **Model Exchange**: External solver manages time stepping and calls derivative functions
+## Writing a model
 
-### FMU Lifecycle
-The typical Co-simulation FMU lifecycle follows this sequence:
-1. **Instantiation**: Create FMU instance with `fmi3InstantiateCoSimulation()`
-2. **Initialization**: Set parameters and inputs with `fmi3EnterInitializationMode()`
-3. **Simulation**: Repeatedly call `fmi3DoStep()` to advance time
-4. **Termination**: Clean up with `fmi3Terminate()` and `fmi3FreeInstance()`
+Subclass `Fmi3Slave` and, in `__init__`, create your attributes and register the ones the
+importer should see as variables. Then implement `do_step`:
 
-### Required Methods
-For Co-simulation FMUs, you must implement:
-- `__init__()`: create the attributes, then register them as variables
-- `do_step(current_time, step_size)`: advance the simulation by one step. Return `True`
-  (success), `False` (the step is discarded) or an `Fmi3StepResult` (see below)
-- Optional: `enter_initialization_mode()`, `exit_initialization_mode()`, `terminate()`
+- `do_step(current_time, step_size)` advances the model from `current_time` to
+  `current_time + step_size`. Return `True` for success, `False` to discard the step (the
+  importer may retry with a smaller step), or an `Fmi3StepResult` (see
+  [Step results](#step-results)).
+- Update `self.time` at the end of the step.
 
 Create each attribute **before** registering it: `register_variable` only creates a
-setter for attributes that already exist, and without a setter the importer cannot set
-inputs or parameters. Alternatively pass `getter=` and `setter=` explicitly.
+setter for attributes that already exist, and without a setter the importer can't set
+inputs or parameters. If a value lives somewhere else, pass `getter=` and `setter=`
+functions instead.
 
-## Key Implementation Details
+Set `self.author`, `self.description`, `self.license`, `self.version` and
+`self.copyright` in `__init__`; they go into the model description. Keep one model class
+per script.
 
-### Variable Registration
-Co-simulation FMUs support various variable types and causalities:
+### What the importer calls, and what runs in your class
+
+| Importer calls | PythonFMU3 runs | Use it to |
+| --- | --- | --- |
+| `fmi3InstantiateCoSimulation` | `__init__(**kwargs)` | create attributes and register variables. `self.resources` is the FMU's resources folder, for data files |
+| `fmi3Set...` / `fmi3Get...` | the variables' setters and getters (your attributes) | |
+| `fmi3EnterInitializationMode` | `enter_initialization_mode()` | optional |
+| `fmi3ExitInitializationMode` | `exit_initialization_mode()` | optional: compute values that depend on the parameters the importer set |
+| `fmi3DoStep` | `do_step(current_time, step_size)` | advance the model |
+| `fmi3Terminate` | `terminate()` | optional: close files, write results |
+
+Parameters are set before `fmi3ExitInitializationMode`, so anything derived from them
+(array sizes, precomputed constants, initial outputs) belongs in
+`exit_initialization_mode`, not in `__init__`, which runs before the importer has set
+anything.
+
+## Variables explained
+
+Every variable has a type (`Float64`, `Int32`, `Int64`, `UInt64`, `Boolean`, `String`,
+`Enumeration`), a **causality** (who sets it) and a **variability** (when it can change).
+
+| Causality | Meaning | Typical variability |
+| --- | --- | --- |
+| `input` | Set by the importer before each step, typically from another model's output | `continuous` (Float64) or `discrete` |
+| `output` | Computed by your model, read by the importer | `continuous` (Float64) or `discrete` |
+| `parameter` | A value the user sets before the simulation | `fixed` or `tunable` |
+| `calculatedParameter` | Computed from parameters, constant during the simulation | `fixed` or `tunable` |
+| `structuralParameter` | Changes the model's structure, such as array sizes; set in Configuration Mode | `fixed` or `tunable` |
+| `local` | Internal, but visible to the importer for plotting and debugging | any |
+| `independent` | Time. Exactly one, a `Float64` with variability `continuous` | `continuous` |
+
+| Variability | Can change |
+| --- | --- |
+| `constant` | Never |
+| `fixed` | Only before the simulation starts (until `exit_initialization_mode`) |
+| `tunable` | Between steps, when the importer sets it; typically used for parameters |
+| `discrete` | Only at steps or events. The default for Int32, Boolean, String and the other non-Float64 types |
+| `continuous` | At any time. Only `Float64` variables can be continuous |
+
+Give inputs and parameters a `start` value: it is the value importers show and use
+until they set their own. `initial` (`exact`, `approx` or `calculated`) says how a start
+value is used; the defaults suit most models, and you only need it for Model Exchange
+states (`initial=Fmi3Initial.exact`).
 
 <!-- skip-test -->
 ```python
-# Input variables (set by master algorithm)
-self.register_variable(Float64("input_signal", causality=Fmi3Causality.input, start=0.0))
+# An input, set by the importer before each step
+self.register_variable(Float64("u", causality=Fmi3Causality.input, start=0.0))
 
-# Output variables (read by master algorithm)
-self.register_variable(Float64("output_signal", causality=Fmi3Causality.output))
+# An output, computed by the model
+self.register_variable(Float64("y", causality=Fmi3Causality.output))
 
-# Parameters (configurable, usually fixed during simulation)
+# A parameter the user can change between steps
 self.register_variable(Float64("gain", causality=Fmi3Causality.parameter,
-                              variability=Fmi3Variability.tunable, start=1.0))
+                               variability=Fmi3Variability.tunable, start=1.0))
+
+# An integer mode switch: non-Float64 types are discrete (or fixed/tunable as parameters)
+self.register_variable(Int32("mode", causality=Fmi3Causality.parameter,
+                             variability=Fmi3Variability.fixed, start=0))
 ```
 <!-- /skip-test -->
+
+## Examples
 
 ### PID Controller Example
 ```python
@@ -57,6 +105,8 @@ class PIDController(Fmi3Slave):
 
         self.author = "PythonFMU3 Team"
         self.description = "PID Controller"
+
+        self.time = 0.0
 
         # Inputs
         self.setpoint = 0.0
@@ -76,6 +126,7 @@ class PIDController(Fmi3Slave):
         self.first_step = True
 
         # Register variables
+        self.register_variable(Float64("time", causality=Fmi3Causality.independent, variability=Fmi3Variability.continuous))
         self.register_variable(Float64("setpoint", causality=Fmi3Causality.input, start=0.0))
         self.register_variable(Float64("measurement", causality=Fmi3Causality.input, start=0.0))
         self.register_variable(Float64("output", causality=Fmi3Causality.output))
@@ -107,6 +158,7 @@ class PIDController(Fmi3Slave):
         # Store error for next iteration
         self.previous_error = error
 
+        self.time = current_time + step_size
         return True
 
 ```
@@ -172,8 +224,15 @@ class LinearTransform(Fmi3Slave):
         return True
 ```
 
-Array sizes are taken from the dimensions when the FMU is instantiated. Changing a
-structural parameter such as `m` in Configuration Mode does not resize the arrays.
+Arrays are NumPy arrays of the declared size. A dimension is either a fixed size
+(`Dimension(start="2")`) or the value reference of a structural parameter
+(`Dimension(valueReference="1")`, here `m`), which tells importers where the size comes
+from.
+
+PythonFMU3 doesn't resize your arrays when an importer changes a structural parameter in
+Configuration Mode: make the parameter a Python property whose setter reallocates them.
+The [1D pipe flow example](https://github.com/StephenSmith25/PythonFMU3/tree/HEAD/examples/pipe_cht)
+does this for its number of segments `N`.
 
 ### Step results
 
@@ -204,23 +263,38 @@ importer's logger. If `category` is omitted it is derived from the status
 importer enables debug logging. Exceptions raised in your code are reported with their
 Python traceback and make the call fail with `fmi3Fatal`.
 
-### Create the FMU
+## Building the FMU
 
 ```bash
-pythonfmu3 build -f pythonslave.py myproject
+pythonfmu3 build -f pid_controller.py                      # writes PIDController.fmu here
+pythonfmu3 build -f pid_controller.py -d build             # ...into build/
+pythonfmu3 build -f model.py lookup_table.csv data/        # with extra files and folders
 ```
 
-In this example a python class named `PythonSlave` that extends `Fmi3Slave` is declared in a file named `pythonslave.py`
-(keep a single FMU class per script),
-where `myproject` is an optional folder containing additional project files required by the python script.
-Project folders such as this will be recursively copied into the FMU. Multiple project files/folders may be added.
+The FMU is named after the class. Extra files and folders listed after the script are
+copied into the FMU's `resources/` folder next to your script, so the model can open them
+relative to its own file, or through `self.resources`. Pass a `requirements.txt` the same
+way to ship your dependencies (see [Dependencies](dependencies.md)).
+
+Build options set capability flags in the model description:
+
+| Option | Effect |
+| --- | --- |
+| `--handle-state` | Importers may save and restore the FMU's state (`canGetAndSetFMUState`) |
+| `--serialize-state` | ...and serialize it to bytes (`canSerializeFMUState`) |
+| `--no-variable-step` | The FMU only handles a constant step size (`canHandleVariableCommunicationStepSize=false`) |
+| `--only-one-per-process` | Importers may create only one instance per process |
+| `--no-external-tool` | Sets `needsExecutionTool=false` |
+| `--doc FOLDER` | Include a documentation folder |
+| `--terminals FILE` | Include a `terminalsAndIcons.xml` |
+| `-d DIR` | Where to write the FMU (default: the current folder) |
 
 ## Integration and Testing
 
 ### Using FMPy for Testing
 <!-- skip-test -->
 ```python
-# Example of co-simulation setup
+# Simulate the FMU with FMPy
 import fmpy
 from fmpy import simulate_fmu
 import matplotlib.pyplot as plt

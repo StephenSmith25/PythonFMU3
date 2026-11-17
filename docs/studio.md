@@ -7,7 +7,8 @@ your computer.
 > **Try it without installing anything:** the
 > [web version](https://stephensmith25.github.io/pythonfmu3-app/) runs in your browser
 > using [Pyodide](https://pyodide.org). It has the editor, the Python preview, building
-> and downloading FMUs, the Inspector and the templates. It can't run fmusim or FMPy, or
+> and downloading FMUs, the Inspector and the templates, plus an AI assistant (with your
+> own Anthropic API key) and shareable links to models. It can't run fmusim or FMPy, or
 > models that import packages Pyodide doesn't have, and it keeps your files in the browser
 > rather than in a folder. Source:
 > [StephenSmith25/pythonfmu3-app](https://github.com/StephenSmith25/pythonfmu3-app).
