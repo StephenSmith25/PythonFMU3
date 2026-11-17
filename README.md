@@ -1,29 +1,41 @@
 # PythonFMU3
 
-> A lightweight framework that enables the packaging of Python 3 code as FMUs (following FMI version 3.0).
+> Turn a Python class into an FMI 3.0 FMU that Simulink, OMSimulator, FMPy, `fmusim` and
+> other simulation tools can import.
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg?style=flat)](https://github.com/StephenSmith25/PythonFMU3/issues)
-
 [![CI](https://github.com/StephenSmith25/PythonFMU3/workflows/CI/badge.svg)](https://github.com/StephenSmith25/PythonFMU3/actions?query=workflow%3ACI)
 [![PyPI](https://img.shields.io/pypi/v/pythonfmu3)](https://pypi.org/project/pythonfmu3/)
+[![Downloads](https://static.pepy.tech/badge/pythonfmu3)](https://pepy.tech/projects/pythonfmu3)
+[![conda-forge](https://img.shields.io/conda/vn/conda-forge/pythonfmu3)](https://anaconda.org/conda-forge/pythonfmu3)
 [![Read the Docs](https://readthedocs.org/projects/pythonfmu3/badge/?version=latest)](https://pythonfmu3.readthedocs.io/)
 
-**Try it in your browser, no install:** [PythonFMU3 Studio](https://stephensmith25.github.io/pythonfmu3-app/)
-lets you write a model, simulate it and download the FMU, all in the browser. To run it on
-your computer instead, use `pythonfmu3 studio` (see [the Studio docs](docs/studio.md)).
+**Try it in your browser, no install:** [PythonFMU3 Studio on the web](https://stephensmith25.github.io/pythonfmu3-app/)
+lets you write a model, simulate it and download the FMU. It has an AI assistant that
+writes and tests models for you, and you can share a model as a link.
 
+### Highlights
 
-This project is a fork of the original PythonFMU repository available at https://github.com/NTNU-IHB/PythonFMU, which was used as the basis for adding support for FMI 3.0. While we have made efforts to expand the functionality of this project, it currently has some limitations and does not support all the features of FMI 3.0. We would like to acknowledge and give credit to the original PythonFMU project for their contributions to this work.
+- **Runs in any FMI 3.0 importer:** Python-based tools such as FMPy, and native tools such
+  as Simulink, OMSimulator and `fmusim`.
+- **Co-Simulation and Model Exchange**, with events, arrays, structural parameters, units,
+  enumerations and FMU state.
+- **[PythonFMU3 Studio](docs/studio.md):** `pythonfmu3 studio` opens a local app to write,
+  check, simulate, build and inspect FMUs, with live plots and model templates. There is
+  also a [web version](https://stephensmith25.github.io/pythonfmu3-app/).
+- **[Jupyter notebooks](docs/notebooks.md):** write a model in a cell with `%%fmu`,
+  simulate it into a pandas DataFrame, build the FMU.
+- **[AI agents](docs/mcp.md):** `pythonfmu3 mcp` lets Claude, GitHub Copilot and Cursor
+  write, check, simulate and build FMUs. The docs also publish
+  [`llms.txt`](https://pythonfmu3.readthedocs.io/en/latest/llms.txt) so AI assistants
+  get the API right.
+- **[Examples](examples/README.md)** tested in FMPy and `fmusim`, including
+  [1D pipe flow for conjugate heat transfer](examples/pipe_cht/).
+- **Coming from PythonFMU (FMI 2.0)?** See the [migration guide](docs/migration.md).
 
-### Support:
-
-Both the Model Exchange and Co-simulation interfaces are supported, with Float64, Int32,
-Int64, UInt64, Boolean, String and Enumeration variables (plus NumPy arrays of the numeric
-types). See the [documentation](https://pythonfmu3.readthedocs.io/) for the full list of
-supported features and current limitations, and the `examples` folder for more models.
-
-See the [changelog](docs/changelog.md) for what changed in each release.
+See the [documentation](https://pythonfmu3.readthedocs.io/) for the full feature list and
+current limitations, and the [changelog](docs/changelog.md) for what changed in each
+release.
 
 ### Where can I run the FMU?
 
@@ -255,3 +267,9 @@ registration order starting at 0 (here `time` = 0, `x0` = 1, `x1` = 2).
 ```
 pythonfmu3 build -f pythonslaveMX.py
 ```
+
+### Credits
+
+PythonFMU3 is a fork of [PythonFMU](https://github.com/NTNU-IHB/PythonFMU), which
+supports FMI 2.0, extended to FMI 3.0. Many thanks to the PythonFMU authors for the
+foundation this project is built on.

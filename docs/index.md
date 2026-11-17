@@ -86,7 +86,9 @@ packages your model imports; see
 [Running FMUs outside Python](install.md#running-fmus-outside-python-linux-and-macos) and
 [Dependencies](dependencies.md).
 
-Prefer not to install anything yet? [Try PythonFMU3 in your browser](https://stephensmith25.github.io/pythonfmu3-app/).
+Prefer not to install anything yet? [Try PythonFMU3 in your browser](https://stephensmith25.github.io/pythonfmu3-app/):
+the web version has the editor and simulator, an AI assistant that writes and tests models,
+and shareable links.
 
 ## How it works
 
@@ -130,7 +132,8 @@ derivatives and the importer's solver integrates them), or both in one FMU.
 - logging to the importer, with Python exceptions reported with their traceback;
 - extra files (data, trained models, `requirements.txt`) packed into the FMU.
 
-**Tools around it:** [PythonFMU3 Studio](studio.md) (a local web app),
+**Tools around it:** [PythonFMU3 Studio](studio.md) (a local app, plus a
+[web version](https://stephensmith25.github.io/pythonfmu3-app/) with an AI assistant),
 [Jupyter notebooks](notebooks.md), and an [MCP server for AI agents](mcp.md).
 
 ### Limitations
