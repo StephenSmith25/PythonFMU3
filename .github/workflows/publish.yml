@@ -10,7 +10,7 @@ jobs:
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:
-        os: [ubuntu-22.04, windows-2022]
+        os: [ubuntu-22.04, windows-2022, macos-15]
     
     steps:
       - uses: actions/checkout@v4
@@ -18,7 +18,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.x'
-          architecture: 'x64'
+          architecture: ${{ runner.os == 'macOS' && 'arm64' || 'x64' }}
       - name: Compile wrapper on Windows
         if: startsWith(runner.os, 'Windows')
         run: |
@@ -27,13 +27,31 @@ jobs:
           cmake $Env:github_workspace/pythonfmu3/pythonfmu-export -DCMAKE_BUILD_TYPE=Release -A x64
           cmake --build . --config Release
           cd ..
-      - name: Compile wrapper on Linux / macOS
-        if: startsWith(runner.os, 'Linux') || startsWith(runner.os, 'macOS')
+      - name: Compile wrapper on Linux
+        if: runner.os == 'Linux'
         run: |
           docker build -f DockerFile -t pythonfmu3-wrapper --target build .
       
+      - name: Compile wrapper on macOS (Apple Silicon and Intel)
+        if: runner.os == 'macOS'
+        run: |
+          # One runner builds both architectures: arm64 natively, x86_64 by cross-compiling.
+          # CMake puts each in its FMI platform folder (aarch64-darwin, x86_64-darwin).
+          for arch in arm64 x86_64; do
+            cmake -S pythonfmu3/pythonfmu-export -B build-$arch -DCMAKE_BUILD_TYPE=Release \
+              -DCMAKE_OSX_ARCHITECTURES=$arch -DCMAKE_OSX_DEPLOYMENT_TARGET=11.0
+            cmake --build build-$arch --config Release
+          done
+          for platform in aarch64-darwin x86_64-darwin; do
+            for lib in libpythonfmu-export.dylib libpythonfmu-backend.dylib; do
+              test -f pythonfmu3/resources/binaries/$platform/$lib || { echo "missing $platform/$lib"; exit 1; }
+            done
+          done
+          lipo -archs pythonfmu3/resources/binaries/aarch64-darwin/libpythonfmu-export.dylib
+          lipo -archs pythonfmu3/resources/binaries/x86_64-darwin/libpythonfmu-export.dylib
+
       - name: Create container and copy out artifact
-        if : startsWith(runner.os, 'Linux') || startsWith(runner.os, 'macOS')
+        if: runner.os == 'Linux'
         run: |
           docker create --name extract pythonfmu3-wrapper
           docker cp extract:/io/pythonfmu3/resources $GITHUB_WORKSPACE/pythonfmu3
@@ -69,4 +87,13 @@ jobs:
         TWINE_PASSWORD: ${{ secrets.PYPI_PYTHONFMU_API_TOKEN }}
       run: |
         python -m build
+        python - <<'PY'
+        import glob, zipfile
+        wheel = glob.glob("dist/*.whl")[0]
+        names = zipfile.ZipFile(wheel).namelist()
+        expected = ["x86_64-linux", "x86_64-windows", "aarch64-darwin", "x86_64-darwin"]
+        missing = [p for p in expected if not any(n.startswith(f"pythonfmu3/resources/binaries/{p}/") for n in names)]
+        print(wheel, "missing binaries:", missing or "none")
+        raise SystemExit(1 if missing else 0)
+        PY
         twine upload dist/*
