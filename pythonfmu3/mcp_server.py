@@ -153,12 +153,27 @@ def _summarize_analysis(a: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _summarize_simulation(res: Dict[str, Any]) -> Dict[str, Any]:
+    """Summarise a result: scalars get initial/final/min/max and 11 samples over time; arrays
+    (series named x[1], x[2], ...) get their final profile along the elements, and the overall
+    min/max. Scalars come first so they are never crowded out by long arrays."""
     t = res["time"]
     n = len(t)
     idx = sorted({round(i * (n - 1) / 10) for i in range(11)})
+
+    def finite(ys):
+        return [y for y in ys if isinstance(y, (int, float)) and y == y and abs(y) != float("inf")]
+
+    scalars, arrays = {}, {}
+    for name, ys in res["series"].items():
+        base, _, rest = name.partition("[")
+        if rest:
+            arrays.setdefault(base, []).append(ys)
+        else:
+            scalars[name] = ys
+
     variables = {}
-    for name, ys in list(res["series"].items())[:30]:
-        nums = [y for y in ys if isinstance(y, (int, float)) and y == y and abs(y) != float("inf")]
+    for name, ys in list(scalars.items())[:30]:
+        nums = finite(ys)
         if not nums:
             variables[name] = {"note": "not numeric or not finite", "final": ys[-1] if ys else None}
             continue
@@ -166,6 +181,18 @@ def _summarize_simulation(res: Dict[str, Any]) -> Dict[str, Any]:
                            "samples": [ys[i] for i in idx]}
         if len(nums) < len(ys):
             variables[name]["non_finite"] = len(ys) - len(nums)
+
+    for name, columns in list(arrays.items())[:10]:
+        final = [col[-1] for col in columns]
+        nums = finite([y for col in columns for y in col])
+        entry = {"elements": len(columns), "min": min(nums) if nums else None, "max": max(nums) if nums else None}
+        if len(final) <= 24:
+            entry["final"] = final
+        else:                                   # long arrays: 24 evenly spaced elements
+            picks = sorted({round(i * (len(final) - 1) / 23) for i in range(24)})
+            entry["final_sampled"] = {f"[{i + 1}]": final[i] for i in picks}
+        variables[name] = entry
+
     return {"ok": True, "simulator": res.get("simulator"), "interface": res.get("interface"), "points": n,
             "end_time": t[-1] if t else None, "sample_times": [t[i] for i in idx],
             "events": len(res.get("events", [])), "first_events": res.get("events", [])[:5],
@@ -298,7 +325,8 @@ def create_server(workspace: Path):
         if stop_time / step > 200_000:
             raise ValueError("Too many output points: increase step_size")
         r = _worker({"command": "simulate", "path": str(p), "simulator": simulator, "interface": interface,
-                     "stopTime": stop_time, "stepSize": step, "startValues": start_values or {}}, p.parent)
+                     "stopTime": stop_time, "stepSize": step, "startValues": start_values or {},
+                     "maxArrayElements": 1000, "strictStartValues": True}, p.parent)
         if not r.get("ok"):
             return _failure(r)
         res = r["result"]

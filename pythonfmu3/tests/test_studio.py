@@ -147,3 +147,24 @@ def test_static_page_is_served(app):
     status, body = call(httpd, "/", token=False)
     assert status == 200 and b"PythonFMU3 Studio" in body
     assert call(httpd, "/../server.py", token=False)[0] == 404
+
+
+def test_read_csv_expands_fmusim_arrays_and_booleans(tmp_path):
+    from pythonfmu3.studio import worker as w
+    csv_file = tmp_path / "r.csv"
+    csv_file.write_text("time,T,on,x\n0,1 2 3,true,0.5\n1,4 5 6,false,1.5\n")
+    w._MAX_ARRAY_ELEMENTS = 16
+    times, series = w._read_csv(csv_file)
+    assert times == [0.0, 1.0]
+    assert series["T[3]"] == [3.0, 6.0] and "T" not in series
+    assert series["on"] == [1.0, 0.0] and series["x"] == [0.5, 1.5]
+
+
+def test_strict_start_values():
+    from pythonfmu3.studio import worker as w
+    path = TEMPLATES / "pid_controller.py"
+    lenient = w.simulate_python({"path": str(path), "stopTime": 0.1, "stepSize": 0.05, "startValues": {"nope": 1}})
+    assert lenient["time"]
+    with pytest.raises(ValueError, match="Unknown variable 'nope'"):
+        w.simulate_python({"path": str(path), "stopTime": 0.1, "stepSize": 0.05, "startValues": {"nope": 1},
+                           "strictStartValues": True})

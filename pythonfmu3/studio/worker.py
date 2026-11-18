@@ -193,12 +193,17 @@ def analyze(req: Dict[str, Any]) -> Dict[str, Any]:
 
 # --- simulate ----------------------------------------------------------------------------
 
-def _set_start_values(instance, values: Dict[str, Any]):
+def _set_start_values(instance, values: Dict[str, Any], strict: bool = False):
     by_name = {v.name: v for v in instance.vars.values()}
     for name, value in (values or {}).items():
         var = by_name.get(name)
         if var is None or var.setter is None:
-            continue
+            if not strict:          # the Studio may still hold values for a renamed variable
+                continue
+            if var is None:
+                raise ValueError(f"Unknown variable {name!r} in the start values; the model has "
+                                 f"{', '.join(sorted(by_name))}")
+            raise ValueError(f"{name!r} can't be set: only inputs and parameters with a setter can")
         kind = type(var).__name__
         if kind in ("Int32", "Int64", "UInt64", "Enumeration"):
             value = int(float(value))
@@ -221,11 +226,16 @@ def _recorded(instance, names: Optional[List[str]]):
     return keep
 
 
+# How many elements of each array variable are recorded. The Studio plots up to 16; the MCP
+# server asks for more, so the whole profile (e.g. every pipe segment) is in the results.
+_MAX_ARRAY_ELEMENTS = 16
+
+
 def _sample(series, recorded):
     for var in recorded:
         value = jsonable(var.getter())
         if isinstance(value, list):
-            for i, item in enumerate(value[:16]):
+            for i, item in enumerate(value[:_MAX_ARRAY_ELEMENTS]):
                 series.setdefault(f"{var.name}[{i + 1}]", []).append(_num(item))
         else:
             series.setdefault(var.name, []).append(_num(value))
@@ -234,6 +244,8 @@ def _sample(series, recorded):
 def _num(value):
     if isinstance(value, bool):
         return 1.0 if value else 0.0
+    if isinstance(value, str) and value.strip().lower() in ("true", "false"):   # fmusim Booleans
+        return 1.0 if value.strip().lower() == "true" else 0.0
     try:
         return float(value)
     except (TypeError, ValueError):
@@ -247,9 +259,11 @@ def simulate_python(req: Dict[str, Any]) -> Dict[str, Any]:
     interface = req.get("interface") or interfaces_of(instance)[0]
     start, stop = float(req.get("startTime", 0.0)), float(req["stopTime"])
     step = float(req["stepSize"])
-    _set_start_values(instance, req.get("startValues"))
+    _set_start_values(instance, req.get("startValues"), bool(req.get("strictStartValues")))
     instance.enter_initialization_mode()
     instance.exit_initialization_mode()
+    global _MAX_ARRAY_ELEMENTS
+    _MAX_ARRAY_ELEMENTS = int(req.get("maxArrayElements", 16))
     recorded = _recorded(instance, req.get("outputs"))
     times, series, events = [start], {}, []
     _sample(series, recorded)
@@ -354,6 +368,8 @@ def find_fmusim() -> Optional[str]:
 
 
 def _run_fmusim(fmu: str, req: Dict[str, Any], tmp: Path) -> Dict[str, Any]:
+    global _MAX_ARRAY_ELEMENTS
+    _MAX_ARRAY_ELEMENTS = int(req.get("maxArrayElements", 16))
     fmusim = find_fmusim()
     if not fmusim:
         raise RuntimeError("fmusim was not found on PATH (or in PYTHONFMU3_FMUSIM)")
@@ -363,6 +379,8 @@ def _run_fmusim(fmu: str, req: Dict[str, Any], tmp: Path) -> Dict[str, Any]:
     if req.get("interface"):
         cmd += ["--interface-type", req["interface"]]
     for name, value in (req.get("startValues") or {}).items():
+        if isinstance(value, (list, tuple)):          # arrays: fmusim takes space-separated values
+            value = " ".join(str(v) for v in value)
         cmd += ["--start-value", f"{name}={value}"]
     proc = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
     if proc.returncode != 0 or not out.exists():
@@ -416,17 +434,22 @@ def simulate_built(req: Dict[str, Any]) -> Dict[str, Any]:
 
 
 def _read_csv(path: Path):
+    """Read a result CSV. fmusim writes an array variable as one column of space-separated
+    values; those are expanded into name[1], name[2], ... like the Python preview does."""
     import csv
     with open(path, newline="") as f:
-        rows = list(csv.reader(f))
+        rows = [row for row in csv.reader(f) if row]
     header = [h.strip().strip('"') for h in rows[0]]
-    times, series = [], {h: [] for h in header[1:]}
+    times, series = [], {}
     for row in rows[1:]:
-        if not row:
-            continue
         times.append(float(row[0]))
         for h, cell in zip(header[1:], row[1:]):
-            series[h].append(_num(cell.split(" ")[0]) if cell else None)
+            parts = cell.split()
+            if len(parts) > 1:
+                for i, part in enumerate(parts[:_MAX_ARRAY_ELEMENTS]):
+                    series.setdefault(f"{h}[{i + 1}]", []).append(_num(part))
+            else:
+                series.setdefault(h, []).append(_num(parts[0]) if parts else None)
     return times, series
 
 
