@@ -1,6 +1,17 @@
 # Changelog
 
-## 1.3.0 (unreleased)
+## Unreleased
+
+### Fixed
+- Several FMUs in one Python process (FMPy, or a Python co-simulation script) now each
+  run their own model script. Each FMU's script is loaded under a module name unique to
+  that FMU, so two FMUs whose scripts share a name (two different `model.py`), or a
+  script named like a module the process had already imported, no longer pick up the
+  wrong code. Native importers were not affected.
+- MCP server: array outputs of up to 60 elements, such as a 30-segment pipe profile, are
+  shown in full in simulation summaries; longer arrays as 30 samples.
+
+## 1.3.0 (2026-11-18)
 
 ### Added
 - **Jupyter support** (`%load_ext pythonfmu3`): the `%%fmu` cell magic saves, checks and
@@ -19,6 +30,13 @@
   calls in your class, build options, per-platform installation, and dependencies.
 - CI tests every supported Python version (3.11 to 3.15) on Linux, and the oldest and
   newest on Windows and macOS.
+
+### Fixed
+- MCP simulations record whole array outputs and summarise single-value outputs first,
+  so long arrays no longer hide outputs such as an outlet temperature.
+- Simulating in fmusim: array start values are passed in the format fmusim accepts, and
+  fmusim's array and Boolean results are read correctly.
+- MCP simulations report a misspelt start value instead of silently ignoring it.
 
 ## 1.2.0 (2026-11-16)
 

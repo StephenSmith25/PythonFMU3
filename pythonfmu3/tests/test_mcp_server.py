@@ -155,17 +155,17 @@ class Profile(Fmi3Slave):
         super().__init__(**kwargs)
         self.time = 0.0
         self.gain = 1.0
-        self.T = np.arange(40, dtype=float)
+        self.T = np.arange(100, dtype=float)
         self.total = 0.0
         self.register_variable(Float64("time", causality=Fmi3Causality.independent,
                                        variability=Fmi3Variability.continuous))
         self.register_variable(Float64("gain", causality=Fmi3Causality.parameter,
                                        variability=Fmi3Variability.tunable, start=1.0))
-        self.register_variable(Float64("T", causality=Fmi3Causality.output, dimensions=[Dimension(start="40")]))
+        self.register_variable(Float64("T", causality=Fmi3Causality.output, dimensions=[Dimension(start="100")]))
         self.register_variable(Float64("total", causality=Fmi3Causality.output))
 
     def do_step(self, current_time, step_size):
-        self.T = self.gain * np.arange(40, dtype=float)
+        self.T = self.gain * np.arange(100, dtype=float)
         self.total = float(self.T.sum())
         self.time = current_time + step_size
         return True
@@ -183,13 +183,13 @@ def test_array_outputs_and_start_values(tmp_path):
         err, sim = await call("simulate", path="profile.py", stop_time=1.0, start_values={"gain": 2.0})
         assert not err
         # scalars are summarised even when a long array comes first
-        assert sim["variables"]["total"]["final"] == pytest.approx(2.0 * sum(range(40)))
+        assert sim["variables"]["total"]["final"] == pytest.approx(2.0 * sum(range(100)))
         # the whole array is recorded and summarised as a profile
         profile = sim["variables"]["T"]
-        assert profile["elements"] == 40
-        assert profile["final_sampled"]["[40]"] == pytest.approx(78.0)
+        assert profile["elements"] == 100
+        assert profile["final_sampled"]["[100]"] == pytest.approx(198.0)
         header = (workspace / sim["csv"]).read_text().split("\n", 1)[0]
-        assert "T[40]" in header
+        assert "T[100]" in header
         # a misspelt start value is an error, not silently ignored
         err, msg = await call("simulate", path="profile.py", stop_time=1.0, start_values={"gian": 2.0})
         assert msg["ok"] is False and "Unknown variable 'gian'" in msg["error"]

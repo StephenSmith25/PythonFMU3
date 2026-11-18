@@ -186,10 +186,10 @@ def _summarize_simulation(res: Dict[str, Any]) -> Dict[str, Any]:
         final = [col[-1] for col in columns]
         nums = finite([y for col in columns for y in col])
         entry = {"elements": len(columns), "min": min(nums) if nums else None, "max": max(nums) if nums else None}
-        if len(final) <= 24:
+        if len(final) <= 60:
             entry["final"] = final
-        else:                                   # long arrays: 24 evenly spaced elements
-            picks = sorted({round(i * (len(final) - 1) / 23) for i in range(24)})
+        else:                                   # long arrays: 30 evenly spaced elements
+            picks = sorted({round(i * (len(final) - 1) / 29) for i in range(30)})
             entry["final_sampled"] = {f"[{i + 1}]": final[i] for i in picks}
         variables[name] = entry
 
