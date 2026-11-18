@@ -9,6 +9,7 @@
 #include <algorithm>
 #include <cctype>
 #include <fstream>
+#include <functional>
 #include <mutex>
 #include <regex>
 #include <sstream>
@@ -20,6 +21,57 @@ namespace pythonfmu
 
 namespace
 {
+
+// Loads the model script from this FMU's resources folder under a module name unique to
+// that folder. Importing it by its plain name would reuse any module of the same name
+// already loaded in the process: another FMU's "model.py" when several FMUs share one
+// Python importer (FMPy, a Python co-simulation script), or an unrelated module. Instances
+// of the same FMU (same resources folder) share the module.
+PyObject* loadModelModule(const std::string& resources, const std::string& moduleName)
+{
+    const std::string path = resources + "/" + moduleName + ".py";
+    std::ostringstream unique;
+    unique << "pythonfmu3_fmu_" << std::hex << std::hash<std::string>{}(resources) << "_" << moduleName;
+    const std::string uniqueName = unique.str();
+
+    PyObject* modules = PyImport_GetModuleDict();   // borrowed
+    if (PyObject* existing = PyDict_GetItemString(modules, uniqueName.c_str())) {   // borrowed
+        Py_INCREF(existing);
+        return existing;
+    }
+
+    PyObject* util = PyImport_ImportModule("importlib.util");
+    if (!util) return nullptr;
+    PyObject* spec = PyObject_CallMethod(util, "spec_from_file_location", "ss", uniqueName.c_str(), path.c_str());
+    PyObject* module = spec ? PyObject_CallMethod(util, "module_from_spec", "O", spec) : nullptr;
+    Py_DECREF(util);
+    if (!module) {
+        Py_XDECREF(spec);
+        return nullptr;
+    }
+    // Registered before running it, as a normal import does (dataclasses, pickling and
+    // relative lookups need sys.modules[__name__]); removed again if running it fails.
+    if (PyDict_SetItemString(modules, uniqueName.c_str(), module) != 0) {
+        Py_DECREF(module);
+        Py_DECREF(spec);
+        return nullptr;
+    }
+    PyObject* loader = PyObject_GetAttrString(spec, "loader");
+    PyObject* result = loader ? PyObject_CallMethod(loader, "exec_module", "O", module) : nullptr;
+    Py_XDECREF(loader);
+    Py_DECREF(spec);
+    if (!result) {
+        PyObject *type, *value, *traceback;
+        PyErr_Fetch(&type, &value, &traceback);        // keep the model's error for the log
+        PyDict_DelItemString(modules, uniqueName.c_str());
+        PyErr_Clear();
+        PyErr_Restore(type, value, traceback);
+        Py_DECREF(module);
+        return nullptr;
+    }
+    Py_DECREF(result);
+    return module;
+}
 
 // Holds the GIL for the lifetime of the object. Releasing in the destructor guarantees
 // the GIL is given back on every exit path, including C++ exceptions.
@@ -220,8 +272,8 @@ PySlaveInstance::PySlaveInstance(std::string instanceName, std::string resources
 
             const auto info = readSlaveModuleInfo(resources_ + "/slavemodule.txt");
             const std::string& moduleName = info.first;
-            PyRef module(PyImport_ImportModule(moduleName.c_str()));
-            if (!module) handle_py_exception("[ctor] PyImport_ImportModule(" + moduleName + ")");
+            PyRef module(loadModelModule(resources_, moduleName));
+            if (!module) handle_py_exception("[ctor] loading " + moduleName + ".py");
 
             std::string className = info.second;
             if (className.empty()) {
